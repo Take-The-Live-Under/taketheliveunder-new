@@ -8,6 +8,8 @@ pydantic-settings==2.6.1
 # Data fetching
 requests==2.31.0
 aiohttp==3.9.1
+kenpompy==0.3.4
+sportsdataverse==0.0.50
 
 # Data processing
 pandas==2.2.3
