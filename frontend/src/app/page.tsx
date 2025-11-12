@@ -13,6 +13,10 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'live' | 'trends' | 'analysis' | 'comparison'>('live');
   const [filter, setFilter] = useState<'all' | 'triggered'>('all');
   const [sortBy, setSortBy] = useState<'confidence' | 'time'>('confidence');
+  const [minRequiredPpm, setMinRequiredPpm] = useState<number>(0);
+  const [maxRequiredPpm, setMaxRequiredPpm] = useState<number>(10);
+  const [minCurrentPpm, setMinCurrentPpm] = useState<number>(0);
+  const [maxCurrentPpm, setMaxCurrentPpm] = useState<number>(10);
 
   // Poll every 20 seconds
   const { data: gamesData, error, mutate } = useSWR(
@@ -25,23 +29,33 @@ export default function Dashboard() {
     refreshInterval: 60000,
   });
 
-  // Authentication disabled for testing
-  // useEffect(() => {
-  //   const token = localStorage.getItem('token');
-  //   if (!token) {
-  //     window.location.href = '/login';
-  //   }
-  // }, []);
+  // Version marker for deployment tracking
+  useEffect(() => {
+    console.log('NCAA Betting Monitor v2.0 - Public Access - No Authentication');
+  }, []);
 
   const liveGames = gamesData?.games || [];
 
-  // Sort games
-  const sortedGames = [...liveGames].sort((a, b) => {
-    if (sortBy === 'confidence') {
-      return parseFloat(b.confidence_score || 0) - parseFloat(a.confidence_score || 0);
-    }
-    return (b.timestamp || '').localeCompare(a.timestamp || '');
-  });
+  // Filter and sort games
+  const sortedGames = [...liveGames]
+    .filter((game) => {
+      const reqPpm = parseFloat(game.required_ppm || 0);
+      const curPpm = parseFloat(game.current_ppm || 0);
+
+      // Apply Required PPM filters
+      if (reqPpm < minRequiredPpm || reqPpm > maxRequiredPpm) return false;
+
+      // Apply Current PPM filters (only if current_ppm exists)
+      if (curPpm > 0 && (curPpm < minCurrentPpm || curPpm > maxCurrentPpm)) return false;
+
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'confidence') {
+        return parseFloat(b.confidence_score || 0) - parseFloat(a.confidence_score || 0);
+      }
+      return (b.timestamp || '').localeCompare(a.timestamp || '');
+    });
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -60,7 +74,7 @@ export default function Dashboard() {
                 <div className="text-right">
                   <div className="text-xs text-gray-400">Win Rate</div>
                   <div className="text-lg font-bold text-green-400">
-                    {perfData.win_rate.toFixed(1)}%
+                    {(perfData.win_rate ?? 0).toFixed(1)}%
                   </div>
                 </div>
               )}
@@ -71,16 +85,6 @@ export default function Dashboard() {
               >
                 Admin
               </a>
-
-              {/* <button
-                onClick={() => {
-                  localStorage.removeItem('token');
-                  window.location.href = '/login';
-                }}
-                className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded text-sm font-medium"
-              >
-                Logout
-              </button> */}
             </div>
           </div>
 
@@ -184,6 +188,71 @@ export default function Dashboard() {
                   Sort by Time
                 </button>
               </div>
+
+              {/* PPM Filters */}
+              <div className="flex gap-4 items-center">
+                <div className="flex gap-2 items-center">
+                  <span className="text-sm text-gray-400">Required PPM:</span>
+                  <input
+                    type="number"
+                    value={minRequiredPpm}
+                    onChange={(e) => setMinRequiredPpm(parseFloat(e.target.value) || 0)}
+                    step="0.5"
+                    min="0"
+                    max="10"
+                    className="w-20 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white"
+                    placeholder="Min"
+                  />
+                  <span className="text-gray-500">-</span>
+                  <input
+                    type="number"
+                    value={maxRequiredPpm}
+                    onChange={(e) => setMaxRequiredPpm(parseFloat(e.target.value) || 10)}
+                    step="0.5"
+                    min="0"
+                    max="10"
+                    className="w-20 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white"
+                    placeholder="Max"
+                  />
+                </div>
+
+                <div className="flex gap-2 items-center">
+                  <span className="text-sm text-gray-400">Current PPM:</span>
+                  <input
+                    type="number"
+                    value={minCurrentPpm}
+                    onChange={(e) => setMinCurrentPpm(parseFloat(e.target.value) || 0)}
+                    step="0.5"
+                    min="0"
+                    max="10"
+                    className="w-20 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white"
+                    placeholder="Min"
+                  />
+                  <span className="text-gray-500">-</span>
+                  <input
+                    type="number"
+                    value={maxCurrentPpm}
+                    onChange={(e) => setMaxCurrentPpm(parseFloat(e.target.value) || 10)}
+                    step="0.5"
+                    min="0"
+                    max="10"
+                    className="w-20 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white"
+                    placeholder="Max"
+                  />
+                </div>
+
+                <button
+                  onClick={() => {
+                    setMinRequiredPpm(0);
+                    setMaxRequiredPpm(10);
+                    setMinCurrentPpm(0);
+                    setMaxCurrentPpm(10);
+                  }}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm font-medium text-gray-300"
+                >
+                  Reset Filters
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -252,21 +321,21 @@ export default function Dashboard() {
               <div>
                 <div className="text-sm text-gray-400">Win Rate</div>
                 <div className="text-2xl font-bold text-green-400">
-                  {perfData.win_rate.toFixed(1)}%
+                  {(perfData.win_rate ?? 0).toFixed(1)}%
                 </div>
               </div>
 
               <div>
                 <div className="text-sm text-gray-400">Unit Profit</div>
-                <div className={clsx('text-2xl font-bold', perfData.total_unit_profit >= 0 ? 'text-green-400' : 'text-red-400')}>
-                  {perfData.total_unit_profit >= 0 ? '+' : ''}{perfData.total_unit_profit.toFixed(2)}u
+                <div className={clsx('text-2xl font-bold', (perfData.total_unit_profit ?? 0) >= 0 ? 'text-green-400' : 'text-red-400')}>
+                  {(perfData.total_unit_profit ?? 0) >= 0 ? '+' : ''}{(perfData.total_unit_profit ?? 0).toFixed(2)}u
                 </div>
               </div>
 
               <div>
                 <div className="text-sm text-gray-400">ROI</div>
-                <div className={clsx('text-2xl font-bold', perfData.roi >= 0 ? 'text-green-400' : 'text-red-400')}>
-                  {perfData.roi >= 0 ? '+' : ''}{perfData.roi.toFixed(1)}%
+                <div className={clsx('text-2xl font-bold', (perfData.roi ?? 0) >= 0 ? 'text-green-400' : 'text-red-400')}>
+                  {(perfData.roi ?? 0) >= 0 ? '+' : ''}{(perfData.roi ?? 0).toFixed(1)}%
                 </div>
               </div>
             </div>
@@ -285,8 +354,8 @@ export default function Dashboard() {
                       <span className="font-bold text-green-400">{data.win_rate?.toFixed(0)}%</span> win rate
                     </div>
                     <div className="text-sm">
-                      <span className={clsx('font-bold', data.profit >= 0 ? 'text-green-400' : 'text-red-400')}>
-                        {data.profit >= 0 ? '+' : ''}{data.profit.toFixed(1)}u
+                      <span className={clsx('font-bold', (data.profit ?? 0) >= 0 ? 'text-green-400' : 'text-red-400')}>
+                        {(data.profit ?? 0) >= 0 ? '+' : ''}{(data.profit ?? 0).toFixed(1)}u
                       </span>
                     </div>
                   </div>

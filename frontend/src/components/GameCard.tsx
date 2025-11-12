@@ -152,12 +152,19 @@ export default function GameCard({ game, onClick }: GameCardProps) {
 
       {/* Metrics */}
       <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="bg-gray-900/50 rounded p-2">
+        <div className={clsx(
+          'rounded p-2 transition-all',
+          requiredPpm > 4.5
+            ? 'bg-green-500/20 animate-pulse border-2 border-green-500/50'
+            : 'bg-gray-900/50'
+        )}>
           <div className="text-xs text-gray-400">Required PPM</div>
           <div className={clsx('text-lg font-bold',
-            betType === 'over' ? 'text-green-400' : 'text-blue-400'
+            requiredPpm > 4.5
+              ? 'text-green-300'
+              : (betType === 'over' ? 'text-green-400' : 'text-blue-400')
           )}>
-            {requiredPpm.toFixed(2)}
+            {(requiredPpm ?? 0).toFixed(2)}
           </div>
         </div>
 
