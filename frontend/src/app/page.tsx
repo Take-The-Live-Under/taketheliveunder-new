@@ -14,7 +14,8 @@ import clsx from 'clsx';
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'live' | 'trends' | 'analysis' | 'comparison'>('live');
   const [filter, setFilter] = useState<'all' | 'triggered'>('all');
-  const [sortBy, setSortBy] = useState<'confidence' | 'time'>('confidence');
+  const [sortBy, setSortBy] = useState<'confidence' | 'time' | 'required_ppm' | 'current_ppm' | 'ppm_difference'>('confidence');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [minRequiredPpm, setMinRequiredPpm] = useState<number>(0);
   const [maxRequiredPpm, setMaxRequiredPpm] = useState<number>(10);
   const [minCurrentPpm, setMinCurrentPpm] = useState<number>(0);
@@ -78,10 +79,30 @@ export default function Dashboard() {
       return true;
     })
     .sort((a, b) => {
-      if (sortBy === 'confidence') {
-        return parseFloat(b.confidence_score || '0') - parseFloat(a.confidence_score || '0');
+      let comparison = 0;
+
+      switch (sortBy) {
+        case 'confidence':
+          comparison = parseFloat(b.confidence_score || '0') - parseFloat(a.confidence_score || '0');
+          break;
+        case 'time':
+          comparison = (b.timestamp || '').localeCompare(a.timestamp || '');
+          break;
+        case 'required_ppm':
+          comparison = parseFloat(b.required_ppm || '0') - parseFloat(a.required_ppm || '0');
+          break;
+        case 'current_ppm':
+          comparison = parseFloat(b.current_ppm || '0') - parseFloat(a.current_ppm || '0');
+          break;
+        case 'ppm_difference':
+          comparison = parseFloat(b.ppm_difference || '0') - parseFloat(a.ppm_difference || '0');
+          break;
+        default:
+          comparison = 0;
       }
-      return (b.timestamp || '').localeCompare(a.timestamp || '');
+
+      // Apply sort direction (desc is default, asc reverses)
+      return sortDirection === 'asc' ? -comparison : comparison;
     });
 
   return (
@@ -228,7 +249,7 @@ export default function Dashboard() {
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   )}
                 >
-                  Sort by Confidence
+                  Confidence
                 </button>
                 <button
                   onClick={() => setSortBy('time')}
@@ -239,9 +260,69 @@ export default function Dashboard() {
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   )}
                 >
-                  Sort by Time
+                  Time
                 </button>
               </div>
+
+              {/* PPM Sort Options */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSortBy('required_ppm')}
+                  className={clsx(
+                    'px-4 py-2 rounded font-medium text-sm',
+                    sortBy === 'required_ppm'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  )}
+                >
+                  Required PPM
+                </button>
+                <button
+                  onClick={() => setSortBy('current_ppm')}
+                  className={clsx(
+                    'px-4 py-2 rounded font-medium text-sm',
+                    sortBy === 'current_ppm'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  )}
+                >
+                  Current PPM
+                </button>
+                <button
+                  onClick={() => setSortBy('ppm_difference')}
+                  className={clsx(
+                    'px-4 py-2 rounded font-medium text-sm',
+                    sortBy === 'ppm_difference'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  )}
+                >
+                  PPM Diff
+                </button>
+              </div>
+
+              {/* Sort Direction Toggle */}
+              <button
+                onClick={() => setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc')}
+                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded font-medium text-sm text-gray-300 flex items-center gap-2"
+                title={`Currently sorting ${sortDirection === 'desc' ? 'high to low' : 'low to high'}`}
+              >
+                {sortDirection === 'desc' ? (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                    High → Low
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                    Low → High
+                  </>
+                )}
+              </button>
 
               {/* PPM Filters */}
               <div className="flex gap-4 items-center">
@@ -318,9 +399,22 @@ export default function Dashboard() {
           <>
             {/* Live Game Count */}
             <div className="mb-6 flex justify-between items-center">
-              <h2 className="text-xl font-bold">
-                {filter === 'triggered' ? 'Active Opportunities' : 'Live Games'} ({liveGames.length})
-              </h2>
+              <div>
+                <h2 className="text-xl font-bold">
+                  {filter === 'triggered' ? 'Active Opportunities' : 'Live Games'} ({sortedGames.length})
+                </h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  Sorted by: <span className="text-purple-400 font-medium">
+                    {sortBy === 'confidence' ? 'Confidence' :
+                     sortBy === 'time' ? 'Time' :
+                     sortBy === 'required_ppm' ? 'Required PPM' :
+                     sortBy === 'current_ppm' ? 'Current PPM' :
+                     sortBy === 'ppm_difference' ? 'PPM Difference' : sortBy}
+                  </span>
+                  {' '}
+                  ({sortDirection === 'desc' ? 'High → Low' : 'Low → High'})
+                </p>
+              </div>
 
               <div className="flex gap-3 items-center">
                 {lastUpdate && (

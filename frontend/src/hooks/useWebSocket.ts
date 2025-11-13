@@ -133,60 +133,48 @@ function showNotification(game: GameData, alertLevel: string, confidence: number
 
 /**
  * Play sound alert for high-confidence opportunities
+ * Uses pleasant tones with smooth fade in/out
  */
 function playAlertSound(alertLevel: string) {
   try {
-    // Create AudioContext for sound generation
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
 
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+    // Helper function to play a pleasant tone with smooth envelope
+    const playTone = (frequency: number, startTime: number, duration: number = 0.15, volume: number = 0.3) => {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
 
-    // Different sounds for different alert levels
+      // Use sine wave for smoother, more pleasant sound
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, startTime);
+
+      // Smooth fade in and out to avoid clicks
+      gainNode.gain.setValueAtTime(0, startTime);
+      gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.02);
+      gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.start(startTime);
+      oscillator.stop(startTime + duration);
+    };
+
+    const now = audioContext.currentTime;
+
+    // Different melodies for different alert levels
     if (alertLevel === 'MAX') {
-      // Urgent triple beep
-      oscillator.frequency.value = 880; // High pitch
-      gainNode.gain.value = 0.3;
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.1);
-
-      setTimeout(() => {
-        const osc2 = audioContext.createOscillator();
-        osc2.connect(gainNode);
-        osc2.frequency.value = 880;
-        osc2.start();
-        osc2.stop(audioContext.currentTime + 0.1);
-      }, 150);
-
-      setTimeout(() => {
-        const osc3 = audioContext.createOscillator();
-        osc3.connect(gainNode);
-        osc3.frequency.value = 880;
-        osc3.start();
-        osc3.stop(audioContext.currentTime + 0.1);
-      }, 300);
+      // Upward melody: C5 -> E5 -> G5 (triumphant sound)
+      playTone(523.25, now, 0.12, 0.25);        // C5
+      playTone(659.25, now + 0.12, 0.12, 0.28); // E5
+      playTone(783.99, now + 0.24, 0.18, 0.3);  // G5
     } else if (alertLevel === 'HIGH') {
-      // Double beep
-      oscillator.frequency.value = 660;
-      gainNode.gain.value = 0.2;
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.1);
-
-      setTimeout(() => {
-        const osc2 = audioContext.createOscillator();
-        osc2.connect(gainNode);
-        osc2.frequency.value = 660;
-        osc2.start();
-        osc2.stop(audioContext.currentTime + 0.1);
-      }, 150);
+      // Two-tone: A4 -> C5 (pleasant notification)
+      playTone(440.00, now, 0.15, 0.22);        // A4
+      playTone(523.25, now + 0.15, 0.2, 0.25);  // C5
     } else {
-      // Single beep
-      oscillator.frequency.value = 440;
-      gainNode.gain.value = 0.15;
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.1);
+      // Single soft tone: G4 (gentle notification)
+      playTone(392.00, now, 0.25, 0.18);        // G4
     }
   } catch (error) {
     console.error('Error playing alert sound:', error);
