@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import useSWR from 'swr';
-import { stats } from '@/lib/api';
+import { games, stats, auth } from '@/lib/api';
 import GameCard from '@/components/GameCard';
 import TrendsView from '@/components/TrendsView';
 import CompletedGamesAnalysis from '@/components/CompletedGamesAnalysis';
@@ -36,6 +36,14 @@ export default function Dashboard() {
   const { data: perfData } = useSWR('performance', stats.getPerformance, {
     refreshInterval: 60000,
   });
+
+  // Authentication check - redirect to login if no token
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      window.location.href = '/login';
+    }
+  }, []);
 
   // Request notification permission on mount
   useEffect(() => {
@@ -166,6 +174,16 @@ export default function Dashboard() {
               >
                 Admin
               </a>
+<<<<<<< HEAD
+=======
+
+              <button
+                onClick={() => auth.logout()}
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded text-sm font-medium"
+              >
+                Logout
+              </button>
+>>>>>>> origin/claude/add-password-protection-01PRWy4JFXCwdnPBw666Ldgb
             </div>
           </div>
 
