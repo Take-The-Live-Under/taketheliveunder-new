@@ -31,7 +31,9 @@ class ConfidenceScorer:
         current_total: int,
         ou_line: float,
         bet_type: Optional[str] = "under",
-        current_ppm: Optional[float] = 0
+        current_ppm: Optional[float] = 0,
+        home_fouls: Optional[int] = None,
+        away_fouls: Optional[int] = None
     ) -> Dict:
         """
         Calculate confidence score for over or under bet
@@ -103,6 +105,13 @@ class ConfidenceScorer:
         def_score, def_breakdown = self._evaluate_defense(home_metrics, away_metrics)
         score += def_score * multiplier
         breakdown["defense"] = def_breakdown
+
+        # === FOUL ANALYSIS ===
+        # For UNDER: high fouls is good (more stoppages, slower game)
+        # For OVER: low fouls is good (game flows faster)
+        foul_score, foul_breakdown = self._evaluate_fouls(home_fouls, away_fouls)
+        score += foul_score * multiplier
+        breakdown["fouls"] = foul_breakdown
 
         # === MATCHUP BONUSES ===
         # For UNDER: both slow-paced teams, both strong defense
@@ -268,6 +277,40 @@ class ConfidenceScorer:
             details["away"] = f"Strong defense ({away_def:.1f}): +{self.weights['strong_defense_bonus']}"
 
         details["total"] = score
+        return score, details
+
+    def _evaluate_fouls(self, home_fouls: Optional[int], away_fouls: Optional[int]) -> Tuple[float, Dict]:
+        """
+        Evaluate foul count impact on game pace
+        High fouls = more stoppages and free throws = slower game = good for UNDER
+        """
+        score = 0
+        details = {}
+
+        if home_fouls is None or away_fouls is None:
+            details["total"] = 0
+            return 0, details
+
+        total_fouls = home_fouls + away_fouls
+
+        # Foul thresholds (adjusted per half):
+        # - High fouls (>15 combined): +5 for under (significant stoppages)
+        # - Very high fouls (>20 combined): +8 for under (lots of free throws)
+        # - Low fouls (<8 combined): +3 for over (game flows faster)
+
+        if total_fouls > 20:
+            score += 8
+            details["very_high"] = f"Very high fouls ({total_fouls}): +8"
+        elif total_fouls > 15:
+            score += 5
+            details["high"] = f"High fouls ({total_fouls}): +5"
+        elif total_fouls < 8:
+            score -= 3  # Negative for under, positive for over when multiplier applied
+            details["low"] = f"Low fouls ({total_fouls}): -3"
+
+        details["total"] = score
+        details["home_fouls"] = home_fouls
+        details["away_fouls"] = away_fouls
         return score, details
 
     def _evaluate_matchup(self, home: Dict, away: Dict) -> Tuple[float, Dict]:

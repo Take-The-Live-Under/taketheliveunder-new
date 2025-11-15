@@ -124,6 +124,69 @@ async def get_me(current_user: User = Depends(get_current_user)):
 
 # ========== GAME DATA ENDPOINTS ==========
 
+def map_game_data(game: dict) -> dict:
+    """
+    Map CSV column names to frontend-friendly field names
+
+    Args:
+        game: Raw game data from CSV with columns like "Team 1", "Score 1", etc.
+
+    Returns:
+        Mapped game dictionary with fields like "away_team", "away_score", etc.
+    """
+    return {
+        "game_id": game.get("Game ID") or game.get("game_id"),
+        "home_team": game.get("Team 2") or game.get("home_team"),
+        "away_team": game.get("Team 1") or game.get("away_team"),
+        "home_score": game.get("Score 2") or game.get("home_score"),
+        "away_score": game.get("Score 1") or game.get("away_score"),
+        "total_points": int(game.get("Score 1", 0)) + int(game.get("Score 2", 0)),
+        "period": game.get("Period") or game.get("period"),
+        "minutes_remaining": game.get("Mins Remaining") or game.get("minutes_remaining"),
+        "seconds_remaining": game.get("Secs Remaining") or game.get("seconds_remaining"),
+        "ou_line": game.get("OU Line") or game.get("ou_line"),
+        "sportsbook": game.get("Sportsbook") or game.get("sportsbook", ""),
+        "espn_closing_total": game.get("ESPN Closing Total") or game.get("espn_closing_total"),
+        "home_fouls": game.get("Home Fouls") or game.get("home_fouls"),
+        "away_fouls": game.get("Away Fouls") or game.get("away_fouls"),
+        "required_ppm": game.get("Required PPM") or game.get("required_ppm"),
+        "time_weighted_threshold": game.get("Time Weighted Threshold") or game.get("time_weighted_threshold"),
+        "current_ppm": game.get("Current PPM") or game.get("current_ppm"),
+        "ppm_difference": game.get("PPM Diff") or game.get("ppm_difference"),
+        "projected_final_score": game.get("Projected Final") or game.get("projected_final_score"),
+        "total_time_remaining": game.get("Total Time Left") or game.get("total_time_remaining"),
+        "bet_type": game.get("Bet Type") or game.get("bet_type", ""),
+        "trigger_flag": game.get("Trigger") in ["YES", "True", True] or game.get("trigger_flag") in ["True", True],
+        "confidence_score": game.get("Confidence") or game.get("confidence_score", 0),
+        "unit_size": game.get("Units") or game.get("unit_size", 0),
+        "timestamp": game.get("Timestamp") or game.get("timestamp"),
+        "home_kenpom_rank": game.get("Home KenPom Rank") or game.get("home_kenpom_rank"),
+        "away_kenpom_rank": game.get("Away KenPom Rank") or game.get("away_kenpom_rank"),
+        "home_off_eff": game.get("Home Off Eff") or game.get("home_off_eff"),
+        "away_off_eff": game.get("Away Off Eff") or game.get("away_off_eff"),
+        "home_pace": game.get("Home Pace") or game.get("home_pace"),
+        "away_pace": game.get("Away Pace") or game.get("away_pace"),
+        "home_def_eff": game.get("Home Def Eff") or game.get("home_def_eff"),
+        "away_def_eff": game.get("Away Def Eff") or game.get("away_def_eff"),
+        "home_adj_em": game.get("Home AdjEM") or game.get("home_adj_em"),
+        "away_adj_em": game.get("Away AdjEM") or game.get("away_adj_em"),
+        "home_avg_ppm": game.get("Home Avg PPM") or game.get("home_avg_ppm"),
+        "away_avg_ppm": game.get("Away Avg PPM") or game.get("away_avg_ppm"),
+        "home_avg_ppg": game.get("Home Avg PPG") or game.get("home_avg_ppg"),
+        "away_avg_ppg": game.get("Away Avg PPG") or game.get("away_avg_ppg"),
+        "home_efg_pct": game.get("Home eFG%") or game.get("home_efg_pct"),
+        "away_efg_pct": game.get("Away eFG%") or game.get("away_efg_pct"),
+        "home_ts_pct": game.get("Home TS%") or game.get("home_ts_pct"),
+        "away_ts_pct": game.get("Away TS%") or game.get("away_ts_pct"),
+        "home_2p_pct": game.get("Home 2P%") or game.get("home_2p_pct"),
+        "away_2p_pct": game.get("Away 2P%") or game.get("away_2p_pct"),
+        "home_eff_margin": game.get("Home Eff Margin") or game.get("home_eff_margin"),
+        "away_eff_margin": game.get("Away Eff Margin") or game.get("away_eff_margin"),
+        "ou_peak": game.get("OU Peak") or game.get("ou_peak"),
+        "ou_valley": game.get("OU Valley") or game.get("ou_valley"),
+        "ou_position": game.get("OU Position") or game.get("ou_position"),
+    }
+
 @app.get("/api/games/live")
 async def get_live_games():  # Auth disabled for testing
     """Get all live games with confidence scores"""
@@ -215,53 +278,14 @@ async def get_live_games():  # Auth disabled for testing
         game_id = game.get("Game ID") or game.get("game_id")
         ou_peak, ou_valley, ou_position, current_ou = calculate_ou_peak_valley(game_id, logs)
 
-        mapped_game = {
-            "game_id": game_id,
-            "home_team": game.get("Team 2") or game.get("home_team"),
-            "away_team": game.get("Team 1") or game.get("away_team"),
-            "home_score": game.get("Score 2") or game.get("home_score"),
-            "away_score": game.get("Score 1") or game.get("away_score"),
-            "total_points": int(game.get("Score 1", 0)) + int(game.get("Score 2", 0)),
-            "period": game.get("Period") or game.get("period"),
-            "minutes_remaining": game.get("Mins Remaining") or game.get("minutes_remaining"),
-            "seconds_remaining": game.get("Secs Remaining") or game.get("seconds_remaining"),
-            "ou_line": game.get("OU Line") or game.get("ou_line"),
-            "ou_peak": ou_peak,
-            "ou_valley": ou_valley,
-            "ou_position": ou_position,
-            "sportsbook": game.get("Sportsbook") or game.get("sportsbook", ""),
-            "espn_closing_total": game.get("ESPN Closing Total") or game.get("espn_closing_total"),
-            "required_ppm": game.get("Required PPM") or game.get("required_ppm"),
-            "current_ppm": game.get("Current PPM") or game.get("current_ppm"),
-            "ppm_difference": game.get("PPM Diff") or game.get("ppm_difference"),
-            "projected_final_score": game.get("Projected Final") or game.get("projected_final_score"),
-            "total_time_remaining": game.get("Total Time Left") or game.get("total_time_remaining"),
-            "bet_type": game.get("Bet Type") or game.get("bet_type", ""),
-            "trigger_flag": game.get("Trigger") in ["YES", "True", True] or game.get("trigger_flag") in ["True", True],
-            "confidence_score": game.get("Confidence") or game.get("confidence_score", 0),
-            "unit_size": game.get("Units") or game.get("unit_size", 0),
-            "timestamp": game.get("Timestamp") or game.get("timestamp"),
-            "home_kenpom_rank": game.get("Home KenPom Rank") or game.get("home_kenpom_rank"),
-            "away_kenpom_rank": game.get("Away KenPom Rank") or game.get("away_kenpom_rank"),
-            "home_off_eff": game.get("Home Off Eff") or game.get("home_off_eff"),
-            "away_off_eff": game.get("Away Off Eff") or game.get("away_off_eff"),
-            "home_pace": game.get("Home Pace") or game.get("home_pace"),
-            "away_pace": game.get("Away Pace") or game.get("away_pace"),
-            "home_def_eff": game.get("Home Def Eff") or game.get("home_def_eff"),
-            "away_def_eff": game.get("Away Def Eff") or game.get("away_def_eff"),
-            "home_adj_em": game.get("Home AdjEM") or game.get("home_adj_em"),
-            "away_adj_em": game.get("Away AdjEM") or game.get("away_adj_em"),
-            "home_sos": game.get("Home SOS") or game.get("home_sos"),
-            "away_sos": game.get("Away SOS") or game.get("away_sos"),
-            "home_efg_pct": game.get("Home eFG%") or game.get("home_efg_pct"),
-            "away_efg_pct": game.get("Away eFG%") or game.get("away_efg_pct"),
-            "home_ts_pct": game.get("Home TS%") or game.get("home_ts_pct"),
-            "away_ts_pct": game.get("Away TS%") or game.get("away_ts_pct"),
-            "home_2p_pct": game.get("Home 2P%") or game.get("home_2p_pct"),
-            "away_2p_pct": game.get("Away 2P%") or game.get("away_2p_pct"),
-            "home_eff_margin": game.get("Home Eff Margin") or game.get("home_eff_margin"),
-            "away_eff_margin": game.get("Away Eff Margin") or game.get("away_eff_margin"),
-        }
+        # Use helper function to map CSV data to frontend format
+        mapped_game = map_game_data(game)
+
+        # Add OU peak/valley data
+        mapped_game["ou_peak"] = ou_peak
+        mapped_game["ou_valley"] = ou_valley
+        mapped_game["ou_position"] = ou_position
+
         mapped_games.append(mapped_game)
 
     return {"games": mapped_games, "count": len(mapped_games)}
@@ -756,19 +780,42 @@ async def websocket_endpoint(websocket: WebSocket):
             if game_id and game_id not in games_dict:
                 games_dict[game_id] = log
 
-        games_list = list(games_dict.values())
+        # Filter to only games updated in last 30 minutes (actively being monitored)
+        # This matches the filtering logic in /api/games/live endpoint
+        cutoff_time = datetime.now() - timedelta(minutes=30)
+        active_games = []
 
-        # Send games to the newly connected client
+        for game in games_dict.values():
+            timestamp_str = game.get("Timestamp") or game.get("timestamp", "")
+            try:
+                game_time = datetime.fromisoformat(timestamp_str)
+                if game_time > cutoff_time:
+                    # Filter out games in their last minute if configured
+                    if config.FILTER_LAST_MINUTE_GAMES:
+                        total_time_left = float(game.get("Total Time Left") or game.get("total_time_remaining", 999))
+                        if total_time_left <= config.MIN_TIME_REMAINING:
+                            logger.debug(f"WebSocket: Filtering out game in last minute")
+                            continue  # Skip this game
+
+                    active_games.append(game)
+            except:
+                # If timestamp parsing fails, skip this game
+                continue
+
+        # Map CSV data to frontend format using the same helper function
+        mapped_games = [map_game_data(game) for game in active_games]
+
+        # Send mapped games to the newly connected client
         await ws_manager.send_personal_message(
             {
                 "type": "games_update",
                 "timestamp": datetime.now().isoformat(),
-                "count": len(games_list),
-                "data": games_list
+                "count": len(mapped_games),
+                "data": mapped_games
             },
             websocket
         )
-        logger.info(f"Sent initial {len(games_list)} games to new WebSocket client")
+        logger.info(f"Sent initial {len(mapped_games)} active games to new WebSocket client (filtered by 30-min cutoff)")
     except Exception as e:
         logger.error(f"Error sending initial games: {e}")
 
@@ -823,30 +870,31 @@ async def internal_trigger_update(update: TriggerUpdate):
     - "alert": High-confidence opportunity (>= 75)
     """
     try:
-        game_data = update.game_data
-        confidence = float(game_data.get("confidence_score", 0))
+        # Map CSV column names to frontend-friendly field names
+        mapped_game_data = map_game_data(update.game_data)
+        confidence = float(mapped_game_data.get("confidence_score", 0))
 
-        # Broadcast game update to all connected clients
-        await ws_manager.broadcast_game_update(game_data)
+        # Broadcast mapped game update to all connected clients
+        await ws_manager.broadcast_game_update(mapped_game_data)
 
         # Send special alert for high confidence opportunities
         if confidence >= 75:
             await ws_manager.send_alert(
-                game_data=game_data,
+                game_data=mapped_game_data,
                 confidence=confidence,
                 alert_type="high_confidence"
             )
             logger.info(
-                f"High confidence alert sent: {game_data.get('away_team')} @ "
-                f"{game_data.get('home_team')} ({confidence:.0f}%)"
+                f"High confidence alert sent: {mapped_game_data.get('away_team')} @ "
+                f"{mapped_game_data.get('home_team')} ({confidence:.0f}%)"
             )
 
         # Send trigger alert if this is a new trigger
         if update.update_type == "trigger":
-            await ws_manager.send_trigger_alert(game_data)
+            await ws_manager.send_trigger_alert(mapped_game_data)
             logger.info(
-                f"Trigger alert sent: {game_data.get('away_team')} @ "
-                f"{game_data.get('home_team')} (PPM: {game_data.get('required_ppm')})"
+                f"Trigger alert sent: {mapped_game_data.get('away_team')} @ "
+                f"{mapped_game_data.get('home_team')} (PPM: {mapped_game_data.get('required_ppm')})"
             )
 
         return {

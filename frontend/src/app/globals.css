@@ -3,20 +3,21 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 17, 24, 39;
-  --background-end-rgb: 0, 0, 0;
+  --foreground-rgb: 241, 245, 249;
+  --background-start-rgb: 15, 23, 42;
+  --background-end-rgb: 2, 6, 23;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+      180deg,
+      rgb(var(--background-start-rgb)) 0%,
+      rgb(var(--background-end-rgb)) 100%
+    );
   min-height: 100vh;
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 @layer utilities {
@@ -25,15 +26,185 @@ body {
   }
 }
 
-/* Confidence score colors */
+/* Confidence score colors - New vibrant purple/orange palette */
 .confidence-low {
-  @apply bg-red-900/20 border-red-500 text-red-400;
+  @apply bg-deep-slate-700/40 border-deep-slate-500 text-deep-slate-300;
 }
 
 .confidence-medium {
-  @apply bg-yellow-900/20 border-yellow-500 text-yellow-400;
+  @apply bg-brand-orange-900/30 border-brand-orange-500 text-brand-orange-300;
 }
 
 .confidence-high {
-  @apply bg-green-900/20 border-green-500 text-green-400;
+  @apply bg-brand-purple-900/30 border-brand-purple-500 text-brand-purple-300;
+}
+
+.confidence-max {
+  @apply bg-gradient-purple-orange border-brand-purple-400 text-white shadow-glow-purple;
+}
+
+/* Glassmorphism card effects */
+.glass-card {
+  @apply bg-deep-slate-800/60 backdrop-blur-md border border-deep-slate-700/50;
+}
+
+.glass-card-hover {
+  @apply glass-card hover:bg-deep-slate-700/60 hover:border-brand-purple-500/30 transition-all duration-300;
+}
+
+/* Gradient backgrounds */
+.bg-gradient-header {
+  background: linear-gradient(135deg, #a855f7 0%, #7e22ce 50%, #581c87 100%);
+}
+
+.bg-gradient-over {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(234, 88, 12, 0.1) 100%);
+}
+
+.bg-gradient-under {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.15) 0%, rgba(13, 148, 136, 0.1) 100%);
+}
+
+/* Glowing borders */
+.border-glow-purple {
+  @apply border-2 border-brand-purple-500/50;
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.3);
+}
+
+.border-glow-orange {
+  @apply border-2 border-brand-orange-500/50;
+  box-shadow: 0 0 15px rgba(249, 115, 22, 0.3);
+}
+
+.border-glow-teal {
+  @apply border-2 border-brand-teal-500/50;
+  box-shadow: 0 0 15px rgba(20, 184, 166, 0.3);
+}
+
+/* Badge styles */
+.badge-gradient-purple {
+  @apply bg-gradient-to-r from-brand-purple-600 to-brand-purple-500 text-white font-bold shadow-elevation-2;
+}
+
+.badge-gradient-orange {
+  @apply bg-gradient-to-r from-brand-orange-600 to-brand-orange-500 text-white font-bold shadow-elevation-2;
+}
+
+.badge-gradient-teal {
+  @apply bg-gradient-to-r from-brand-teal-600 to-brand-teal-500 text-white font-bold shadow-elevation-2;
+}
+
+.badge-gradient-max {
+  @apply bg-gradient-purple-orange text-white font-bold shadow-glow-purple;
+}
+
+/* Button styles */
+.btn-primary {
+  @apply bg-gradient-to-r from-brand-purple-600 to-brand-purple-500 hover:from-brand-purple-700 hover:to-brand-purple-600 text-white font-semibold px-6 py-3 rounded-lg shadow-elevation-2 hover:shadow-elevation-3 transition-all duration-200;
+}
+
+.btn-secondary {
+  @apply bg-deep-slate-700 hover:bg-deep-slate-600 text-deep-slate-100 font-semibold px-6 py-3 rounded-lg border border-deep-slate-600 hover:border-brand-purple-500/50 shadow-elevation-1 hover:shadow-elevation-2 transition-all duration-200;
+}
+
+/* Progress bars */
+.progress-bar {
+  @apply h-2 bg-deep-slate-700 rounded-full overflow-hidden;
+}
+
+.progress-fill {
+  @apply h-full rounded-full transition-all duration-500 ease-out;
+}
+
+.progress-fill-purple {
+  @apply progress-fill bg-gradient-to-r from-brand-purple-600 to-brand-purple-400;
+}
+
+.progress-fill-orange {
+  @apply progress-fill bg-gradient-to-r from-brand-orange-600 to-brand-orange-400;
+}
+
+.progress-fill-teal {
+  @apply progress-fill bg-gradient-to-r from-brand-teal-600 to-brand-teal-400;
+}
+
+/* Card hover lift effect */
+.card-lift {
+  @apply transition-all duration-300 ease-out;
+}
+
+.card-lift:hover {
+  transform: translateY(-4px);
+}
+
+/* Stat cards */
+.stat-card {
+  @apply glass-card rounded-xl p-4 shadow-elevation-2 hover:shadow-elevation-3 transition-all duration-200;
+}
+
+.stat-card-highlight {
+  @apply stat-card border-brand-purple-500/50 bg-brand-purple-900/20;
+}
+
+/* Text gradients */
+.text-gradient-purple-orange {
+  @apply bg-gradient-purple-orange bg-clip-text text-transparent;
+}
+
+.text-gradient-teal-purple {
+  @apply bg-gradient-teal-purple bg-clip-text text-transparent;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-deep-slate-900;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-deep-slate-700 rounded-full hover:bg-deep-slate-600;
+}
+
+/* Loading skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(51, 65, 85, 0.2) 0%,
+    rgba(71, 85, 105, 0.3) 50%,
+    rgba(51, 65, 85, 0.2) 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+/* Input fields */
+.input-modern {
+  @apply bg-deep-slate-800 border border-deep-slate-600 rounded-lg px-4 py-2 text-deep-slate-100 placeholder-deep-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-purple-500/50 focus:border-brand-purple-500 transition-all;
+}
+
+/* Tab styles */
+.tab-modern {
+  @apply relative px-6 py-3 text-deep-slate-400 font-semibold hover:text-deep-slate-200 transition-colors duration-200;
+}
+
+.tab-modern-active {
+  @apply tab-modern text-white;
+}
+
+.tab-modern-active::after {
+  content: '';
+  @apply absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-purple-orange;
 }

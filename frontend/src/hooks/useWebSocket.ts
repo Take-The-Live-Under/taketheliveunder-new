@@ -270,6 +270,11 @@ export function useWebSocket(wsUrl: string = getWebSocketUrl()): UseWebSocketRet
             setLastUpdate(new Date());
 
             console.log(`${gamesData.length} games updated`);
+
+            // Log when all games are cleared
+            if (gamesData.length === 0) {
+              console.log('All games cleared - no live games');
+            }
           }
           break;
 
@@ -338,6 +343,12 @@ export function useWebSocket(wsUrl: string = getWebSocketUrl()): UseWebSocketRet
         setIsConnected(true);
         setError(null);
 
+        // Clear games on new connection to avoid showing stale data
+        // Backend will send fresh game data immediately after connection
+        gamesMapRef.current.clear();
+        setGames([]);
+        console.log('Cleared games on connection - waiting for fresh data');
+
         // Start ping interval (every 30 seconds)
         pingIntervalRef.current = setInterval(() => {
           if (ws.readyState === WebSocket.OPEN) {
@@ -356,6 +367,11 @@ export function useWebSocket(wsUrl: string = getWebSocketUrl()): UseWebSocketRet
       ws.onclose = (event) => {
         console.log('WebSocket closed:', event.code, event.reason);
         setIsConnected(false);
+
+        // Clear games on disconnect to avoid showing stale data
+        gamesMapRef.current.clear();
+        setGames([]);
+        console.log('Cleared games on disconnect');
 
         // Clear ping interval
         if (pingIntervalRef.current) {

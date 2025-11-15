@@ -157,6 +157,14 @@ class ESPNStatsFetcher:
             # 4. Efficiency Margin (replaces AdjEM from KenPom)
             efficiency_margin = off_eff - def_eff
 
+            # 5. Average PPM (Points Per Minute)
+            # NCAA games are 40 minutes (2 x 20 min halves)
+            total_minutes = games_played * 40
+            avg_ppm = total_points / total_minutes if total_minutes > 0 else 0
+
+            # 6. Average PPG (Points Per Game)
+            avg_ppg = total_points / games_played if games_played > 0 else 0
+
             team_groups.append({
                 'team_id': team_id,
                 'team_name': team_name,
@@ -176,10 +184,23 @@ class ESPNStatsFetcher:
                 'ts_pct': ts_pct,
                 'two_p_pct': two_p_pct,
                 'efficiency_margin': efficiency_margin,
+                'avg_ppm': avg_ppm,  # Average points per minute
+                'avg_ppg': avg_ppg,  # Average points per game
                 'data_source': 'espn'
             })
 
-        return pd.DataFrame(team_groups)
+        # Create DataFrame
+        df = pd.DataFrame(team_groups)
+
+        # Calculate rankings based on efficiency margin (best teams first)
+        # Sort by efficiency margin descending, then assign rank 1, 2, 3, etc.
+        df = df.sort_values('efficiency_margin', ascending=False)
+        df['espn_rank'] = range(1, len(df) + 1)
+
+        # Sort back by team name for easier lookups
+        df = df.sort_values('team_name')
+
+        return df
 
     def get_team_metrics(self, team_name: str) -> Optional[Dict]:
         """
@@ -229,6 +250,9 @@ class ESPNStatsFetcher:
             "ts_pct": float(team_row["ts_pct"]),
             "two_p_pct": float(team_row["two_p_pct"]),
             "efficiency_margin": float(team_row["efficiency_margin"]),
+            "avg_ppm": float(team_row["avg_ppm"]),  # Average points per minute
+            "avg_ppg": float(team_row["avg_ppg"]),  # Average points per game
+            "espn_rank": int(team_row["espn_rank"]),  # ESPN-calculated ranking
             "data_source": "espn"
         }
 

@@ -16,16 +16,16 @@ import {
 } from 'recharts';
 
 const COLORS = [
-  '#10B981', // Green
-  '#3B82F6', // Blue
-  '#F59E0B', // Orange
-  '#8B5CF6', // Purple
-  '#EC4899', // Pink
-  '#14B8A6', // Teal
-  '#F97316', // Orange-red
-  '#06B6D4', // Cyan
-  '#A855F7', // Purple-pink
-  '#84CC16', // Lime
+  '#a855f7', // Brand Purple
+  '#f97316', // Brand Orange
+  '#14b8a6', // Brand Teal
+  '#c084fc', // Light Purple
+  '#fb923c', // Light Orange
+  '#2dd4bf', // Light Teal
+  '#9333ea', // Deep Purple
+  '#ea580c', // Deep Orange
+  '#0d9488', // Deep Teal
+  '#7e22ce', // Rich Purple
 ];
 
 export default function AllGamesComparison() {

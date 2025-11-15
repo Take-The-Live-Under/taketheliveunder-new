@@ -113,24 +113,26 @@ export default function Dashboard() {
     <div className={clsx('min-h-screen bg-gray-900 transition-all duration-300', flashAlert && 'ring-4 ring-yellow-500')}>
       {/* WebSocket Connection Status Bar */}
       <div className={clsx(
-        'w-full py-2 px-4 text-center text-sm font-semibold transition-all duration-300',
+        'w-full py-2.5 px-4 text-center text-sm font-semibold transition-all duration-300 shadow-elevation-2',
+        flashAlert && 'animate-glow',
         isConnected
-          ? 'bg-green-600 text-white'
-          : 'bg-red-600 text-white'
+          ? 'bg-gradient-to-r from-brand-teal-600 to-brand-teal-500 text-white'
+          : 'bg-gradient-to-r from-brand-orange-600 to-brand-orange-500 text-white'
       )}>
         {isConnected ? (
-          <div className="flex items-center justify-center gap-2">
-            <span className="inline-block w-2 h-2 bg-white rounded-full animate-pulse"></span>
-            <span>LIVE - {connectionCount} connection{connectionCount !== 1 ? 's' : ''}</span>
-            {lastUpdate && <span className="text-xs opacity-80">• Last update: {lastUpdate.toLocaleTimeString()}</span>}
+          <div className="flex items-center justify-center gap-3">
+            <span className="inline-block w-2.5 h-2.5 bg-white rounded-full animate-pulse shadow-glow-teal"></span>
+            <span className="font-bold">LIVE</span>
+            <span className="opacity-90">• {connectionCount} connection{connectionCount !== 1 ? 's' : ''}</span>
+            {lastUpdate && <span className="text-xs opacity-75">• Updated: {lastUpdate.toLocaleTimeString()}</span>}
           </div>
         ) : (
-          <div className="flex items-center justify-center gap-2">
-            <span className="inline-block w-2 h-2 bg-white rounded-full"></span>
-            <span>DISCONNECTED</span>
+          <div className="flex items-center justify-center gap-3">
+            <span className="inline-block w-2.5 h-2.5 bg-white rounded-full"></span>
+            <span className="font-bold">DISCONNECTED</span>
             <button
               onClick={reconnect}
-              className="ml-2 px-3 py-1 bg-white text-red-600 rounded text-xs font-bold hover:bg-gray-100"
+              className="ml-3 px-4 py-1 bg-white text-brand-orange-600 rounded-lg text-xs font-bold hover:bg-deep-slate-100 shadow-elevation-1 transition-all"
             >
               Reconnect
             </button>
@@ -139,20 +141,20 @@ export default function Dashboard() {
       </div>
 
       {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className="bg-gradient-header border-b border-brand-purple-700/30 shadow-elevation-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-white">NCAA Basketball Monitor</h1>
-              <p className="text-sm text-gray-400">Real-time betting intelligence</p>
+              <h1 className="text-3xl font-bold text-white mb-1">NCAA Basketball Monitor</h1>
+              <p className="text-sm text-brand-purple-200">Real-time betting intelligence</p>
             </div>
 
-            <div className="flex gap-4 items-center">
+            <div className="flex gap-5 items-center">
               {/* Performance Stats */}
               {perfData && (
-                <div className="text-right">
-                  <div className="text-xs text-gray-400">Win Rate</div>
-                  <div className="text-lg font-bold text-green-400">
+                <div className="text-right glass-card px-4 py-2 rounded-lg">
+                  <div className="text-xs text-deep-slate-400 mb-1">Win Rate</div>
+                  <div className="text-xl font-bold text-gradient-purple-orange">
                     {(perfData.win_rate ?? 0).toFixed(1)}%
                   </div>
                 </div>
@@ -160,7 +162,7 @@ export default function Dashboard() {
 
               <a
                 href="/admin"
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded text-sm font-medium"
+                className="btn-secondary text-sm"
               >
                 Admin
               </a>
@@ -168,14 +170,11 @@ export default function Dashboard() {
           </div>
 
           {/* Main Tabs */}
-          <div className="mt-4 flex gap-2 border-b border-gray-700">
+          <div className="mt-5 flex gap-2 border-b border-brand-purple-700/30">
             <button
               onClick={() => setActiveTab('live')}
               className={clsx(
-                'px-6 py-3 font-medium text-sm border-b-2 transition-colors',
-                activeTab === 'live'
-                  ? 'border-blue-500 text-blue-500'
-                  : 'border-transparent text-gray-400 hover:text-gray-300'
+                activeTab === 'live' ? 'tab-modern-active' : 'tab-modern'
               )}
             >
               Live Games
@@ -183,10 +182,7 @@ export default function Dashboard() {
             <button
               onClick={() => setActiveTab('trends')}
               className={clsx(
-                'px-6 py-3 font-medium text-sm border-b-2 transition-colors',
-                activeTab === 'trends'
-                  ? 'border-blue-500 text-blue-500'
-                  : 'border-transparent text-gray-400 hover:text-gray-300'
+                activeTab === 'trends' ? 'tab-modern-active' : 'tab-modern'
               )}
             >
               Trends & Analysis
@@ -194,10 +190,7 @@ export default function Dashboard() {
             <button
               onClick={() => setActiveTab('analysis')}
               className={clsx(
-                'px-6 py-3 font-medium text-sm border-b-2 transition-colors',
-                activeTab === 'analysis'
-                  ? 'border-blue-500 text-blue-500'
-                  : 'border-transparent text-gray-400 hover:text-gray-300'
+                activeTab === 'analysis' ? 'tab-modern-active' : 'tab-modern'
               )}
             >
               Completed Games
@@ -205,10 +198,7 @@ export default function Dashboard() {
             <button
               onClick={() => setActiveTab('comparison')}
               className={clsx(
-                'px-6 py-3 font-medium text-sm border-b-2 transition-colors',
-                activeTab === 'comparison'
-                  ? 'border-blue-500 text-blue-500'
-                  : 'border-transparent text-gray-400 hover:text-gray-300'
+                activeTab === 'comparison' ? 'tab-modern-active' : 'tab-modern'
               )}
             >
               All Games Comparison
@@ -217,15 +207,15 @@ export default function Dashboard() {
 
           {/* Filters (only show for Live Games tab) */}
           {activeTab === 'live' && (
-            <div className="mt-4 flex gap-4">
+            <div className="mt-5 flex gap-4 flex-wrap">
               <div className="flex gap-2">
                 <button
                   onClick={() => setFilter('triggered')}
                   className={clsx(
-                    'px-4 py-2 rounded font-medium text-sm',
+                    'px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-elevation-1',
                     filter === 'triggered'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      ? 'bg-gradient-to-r from-brand-teal-600 to-brand-teal-500 text-white shadow-elevation-2'
+                      : 'glass-card text-deep-slate-300 hover:bg-deep-slate-700/70'
                   )}
                 >
                   Triggered Only
@@ -233,10 +223,10 @@ export default function Dashboard() {
                 <button
                   onClick={() => setFilter('all')}
                   className={clsx(
-                    'px-4 py-2 rounded font-medium text-sm',
+                    'px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-elevation-1',
                     filter === 'all'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      ? 'bg-gradient-to-r from-brand-teal-600 to-brand-teal-500 text-white shadow-elevation-2'
+                      : 'glass-card text-deep-slate-300 hover:bg-deep-slate-700/70'
                   )}
                 >
                   All Games
@@ -247,10 +237,10 @@ export default function Dashboard() {
                 <button
                   onClick={() => setSortBy('confidence')}
                   className={clsx(
-                    'px-4 py-2 rounded font-medium text-sm',
+                    'px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-elevation-1',
                     sortBy === 'confidence'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      ? 'bg-gradient-to-r from-brand-purple-600 to-brand-purple-500 text-white shadow-elevation-2'
+                      : 'glass-card text-deep-slate-300 hover:bg-deep-slate-700/70'
                   )}
                 >
                   Confidence
@@ -258,10 +248,10 @@ export default function Dashboard() {
                 <button
                   onClick={() => setSortBy('time')}
                   className={clsx(
-                    'px-4 py-2 rounded font-medium text-sm',
+                    'px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-elevation-1',
                     sortBy === 'time'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      ? 'bg-gradient-to-r from-brand-purple-600 to-brand-purple-500 text-white shadow-elevation-2'
+                      : 'glass-card text-deep-slate-300 hover:bg-deep-slate-700/70'
                   )}
                 >
                   Time
@@ -273,10 +263,10 @@ export default function Dashboard() {
                 <button
                   onClick={() => setSortBy('required_ppm')}
                   className={clsx(
-                    'px-4 py-2 rounded font-medium text-sm',
+                    'px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-elevation-1',
                     sortBy === 'required_ppm'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      ? 'bg-gradient-to-r from-brand-orange-600 to-brand-orange-500 text-white shadow-elevation-2'
+                      : 'glass-card text-deep-slate-300 hover:bg-deep-slate-700/70'
                   )}
                 >
                   Required PPM
@@ -284,10 +274,10 @@ export default function Dashboard() {
                 <button
                   onClick={() => setSortBy('current_ppm')}
                   className={clsx(
-                    'px-4 py-2 rounded font-medium text-sm',
+                    'px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-elevation-1',
                     sortBy === 'current_ppm'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      ? 'bg-gradient-to-r from-brand-orange-600 to-brand-orange-500 text-white shadow-elevation-2'
+                      : 'glass-card text-deep-slate-300 hover:bg-deep-slate-700/70'
                   )}
                 >
                   Current PPM
@@ -295,10 +285,10 @@ export default function Dashboard() {
                 <button
                   onClick={() => setSortBy('ppm_difference')}
                   className={clsx(
-                    'px-4 py-2 rounded font-medium text-sm',
+                    'px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-elevation-1',
                     sortBy === 'ppm_difference'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      ? 'bg-gradient-to-r from-brand-orange-600 to-brand-orange-500 text-white shadow-elevation-2'
+                      : 'glass-card text-deep-slate-300 hover:bg-deep-slate-700/70'
                   )}
                 >
                   PPM Diff
@@ -308,7 +298,7 @@ export default function Dashboard() {
               {/* Sort Direction Toggle */}
               <button
                 onClick={() => setSortDirection(sortDirection === 'desc' ? 'asc' : 'desc')}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded font-medium text-sm text-gray-300 flex items-center gap-2"
+                className="px-4 py-2 glass-card hover:bg-deep-slate-700/70 rounded-lg font-semibold text-sm text-deep-slate-300 flex items-center gap-2 transition-all shadow-elevation-1"
                 title={`Currently sorting ${sortDirection === 'desc' ? 'high to low' : 'low to high'}`}
               >
                 {sortDirection === 'desc' ? (
@@ -331,7 +321,7 @@ export default function Dashboard() {
               {/* PPM Filters */}
               <div className="flex gap-4 items-center">
                 <div className="flex gap-2 items-center">
-                  <span className="text-sm text-gray-400">Required PPM:</span>
+                  <span className="text-sm text-deep-slate-400 font-medium">Required PPM:</span>
                   <input
                     type="number"
                     value={minRequiredPpm}
@@ -339,10 +329,10 @@ export default function Dashboard() {
                     step="0.5"
                     min="0"
                     max="10"
-                    className="w-20 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white"
+                    className="input-modern w-20 text-sm"
                     placeholder="Min"
                   />
-                  <span className="text-gray-500">-</span>
+                  <span className="text-deep-slate-600">-</span>
                   <input
                     type="number"
                     value={maxRequiredPpm}
@@ -350,13 +340,13 @@ export default function Dashboard() {
                     step="0.5"
                     min="0"
                     max="10"
-                    className="w-20 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white"
+                    className="input-modern w-20 text-sm"
                     placeholder="Max"
                   />
                 </div>
 
                 <div className="flex gap-2 items-center">
-                  <span className="text-sm text-gray-400">Current PPM:</span>
+                  <span className="text-sm text-deep-slate-400 font-medium">Current PPM:</span>
                   <input
                     type="number"
                     value={minCurrentPpm}
@@ -364,7 +354,7 @@ export default function Dashboard() {
                     step="0.5"
                     min="0"
                     max="10"
-                    className="w-20 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white"
+                    className="input-modern w-20 text-sm"
                     placeholder="Min"
                   />
                   <span className="text-gray-500">-</span>

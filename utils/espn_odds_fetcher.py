@@ -20,7 +20,7 @@ class ESPNOddsFetcher:
 
     def fetch_game_odds(self, game_id: str) -> Optional[Dict]:
         """
-        Fetch betting odds for a specific game
+        Fetch betting odds and team fouls for a specific game
 
         Args:
             game_id: ESPN game ID
@@ -31,6 +31,8 @@ class ESPNOddsFetcher:
             - opening_total: Opening over/under line
             - closing_spread: Closing point spread
             - opening_spread: Opening point spread
+            - home_fouls: Home team fouls
+            - away_fouls: Away team fouls
         """
         try:
             params = {'event': game_id}
@@ -85,11 +87,39 @@ class ESPNOddsFetcher:
             if 'open' in home_spread_data:
                 opening_spread = home_spread_data['open'].get('line')
 
+            # Extract fouls from boxscore
+            home_fouls = None
+            away_fouls = None
+
+            boxscore = data.get('boxscore', {})
+            teams = boxscore.get('teams', [])
+
+            for team in teams:
+                home_away = team.get('homeAway', '')  # homeAway is at root level, not inside 'team'
+
+                stats = team.get('statistics', [])
+                fouls = None
+
+                for stat in stats:
+                    if stat.get('name') == 'fouls':
+                        try:
+                            fouls = int(stat.get('displayValue', 0))
+                        except:
+                            pass
+                        break
+
+                if home_away == 'home':
+                    home_fouls = fouls
+                elif home_away == 'away':
+                    away_fouls = fouls
+
             result = {
                 'closing_total': closing_total,
                 'opening_total': opening_total,
                 'closing_spread': closing_spread,
-                'opening_spread': opening_spread
+                'opening_spread': opening_spread,
+                'home_fouls': home_fouls,
+                'away_fouls': away_fouls
             }
 
             logger.debug(f"Fetched odds for game {game_id}: {result}")

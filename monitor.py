@@ -555,22 +555,43 @@ class NCAABettingMonitor:
                 # Use current pace projection
                 projected_final_score = total_points + (current_ppm * total_time_remaining)
 
+            # Get team metrics FIRST (needed for dynamic threshold)
+            home_metrics, away_metrics = self.stats_manager.get_matchup_metrics(home_team, away_team)
+
+            # Calculate DYNAMIC PPM threshold based on team pace
+            # Formula: Max team's avg PPM × 2
+            home_avg_ppm = home_metrics.get("avg_ppm", 0) if home_metrics else 0
+            away_avg_ppm = away_metrics.get("avg_ppm", 0) if away_metrics else 0
+            max_avg_ppm = max(home_avg_ppm, away_avg_ppm)
+
+            # Dynamic threshold = fastest team's avg PPM × 2
+            # If no team stats available, fall back to static config threshold
+            dynamic_ppm_threshold = (max_avg_ppm * 2) if max_avg_ppm > 0 else config.PPM_THRESHOLD_UNDER
+
+            # Apply TIME-WEIGHTED adjustment
+            # Games score faster near end of halves (fouling, urgency, etc.)
+            time_multiplier = self._calculate_time_weight(period, time_remaining_minutes)
+            time_weighted_threshold = dynamic_ppm_threshold * time_multiplier
+
+            logger.debug(f"Dynamic PPM threshold for {away_team} @ {home_team}: {dynamic_ppm_threshold:.2f} (home avg: {home_avg_ppm:.2f}, away avg: {away_avg_ppm:.2f})")
+            logger.debug(f"Time-weighted threshold: {time_weighted_threshold:.2f} (period {period}, {time_remaining_minutes}:{time_remaining_seconds:02d} remaining, multiplier: {time_multiplier:.2f}x)")
+
             # Determine bet type and if trigger condition is met
             bet_type = None
             trigger_flag = False
             trigger_reasons = []
 
-            # Trigger 1: Required PPM thresholds
-            if required_ppm > config.PPM_THRESHOLD_UNDER:
+            # Trigger 1: Required PPM thresholds (DYNAMIC + TIME-WEIGHTED based on team pace)
+            if required_ppm > time_weighted_threshold:
                 # High required PPM = they need to score fast to hit over = UNDER is good
                 bet_type = "under"
                 trigger_flag = True
-                trigger_reasons.append(f"required_ppm={required_ppm:.2f} > {config.PPM_THRESHOLD_UNDER}")
-            elif required_ppm < config.PPM_THRESHOLD_OVER:
-                # Low required PPM = they're scoring fast already = OVER is good
+                trigger_reasons.append(f"required_ppm={required_ppm:.2f} > time_weighted_threshold={time_weighted_threshold:.2f}")
+            elif required_ppm < 0.5:
+                # Very low/negative required PPM = scoring fast already = OVER is good
                 bet_type = "over"
                 trigger_flag = True
-                trigger_reasons.append(f"required_ppm={required_ppm:.2f} < {config.PPM_THRESHOLD_OVER}")
+                trigger_reasons.append(f"required_ppm={required_ppm:.2f} < 0.5 (scoring fast)")
 
             # Trigger 2: PPM difference (significant pace mismatch)
             abs_ppm_difference = abs(ppm_difference)
@@ -587,10 +608,21 @@ class NCAABettingMonitor:
                         # Current pace is slower than needed = likely to go UNDER
                         bet_type = "under"
 
-            # Get team metrics
-            home_metrics, away_metrics = self.stats_manager.get_matchup_metrics(home_team, away_team)
+            # Fetch ESPN closing line and fouls FIRST (needed for confidence calculation)
+            espn_closing_total = None
+            home_fouls = None
+            away_fouls = None
+            try:
+                espn_odds = self.espn_odds_fetcher.fetch_game_odds(game_id)
+                if espn_odds:
+                    espn_closing_total = espn_odds.get("closing_total")
+                    home_fouls = espn_odds.get("home_fouls")
+                    away_fouls = espn_odds.get("away_fouls")
+            except Exception as e:
+                logger.debug(f"Could not fetch ESPN closing line for {game_id}: {e}")
 
             # Calculate confidence score (even if not triggered, for logging)
+            # NOW includes foul data
             confidence_data = self.confidence_scorer.calculate_confidence(
                 home_metrics or {},
                 away_metrics or {},
@@ -598,20 +630,13 @@ class NCAABettingMonitor:
                 total_points,
                 ou_line,
                 bet_type=bet_type,
-                current_ppm=current_ppm
+                current_ppm=current_ppm,
+                home_fouls=home_fouls,
+                away_fouls=away_fouls
             )
 
             confidence_score = confidence_data["confidence"]
             unit_recommendation = confidence_data["unit_recommendation"]
-
-            # Fetch ESPN closing line
-            espn_closing_total = None
-            try:
-                espn_odds = self.espn_odds_fetcher.fetch_game_odds(game_id)
-                if espn_odds:
-                    espn_closing_total = espn_odds.get("closing_total")
-            except Exception as e:
-                logger.debug(f"Could not fetch ESPN closing line for {game_id}: {e}")
 
             # Prepare log data
             log_data = {
@@ -630,7 +655,10 @@ class NCAABettingMonitor:
                 "all_bookmaker_lines": all_bookmaker_lines,
                 "ou_open": ou_open,
                 "espn_closing_total": espn_closing_total,
+                "home_fouls": home_fouls,
+                "away_fouls": away_fouls,
                 "required_ppm": round(required_ppm, 2),
+                "time_weighted_threshold": round(time_weighted_threshold, 2),
                 "current_ppm": round(current_ppm, 2),
                 "ppm_difference": round(ppm_difference, 2),
                 "projected_final_score": round(projected_final_score, 1),
@@ -675,6 +703,35 @@ class NCAABettingMonitor:
 
         except Exception as e:
             logger.error(f"Error analyzing game: {e}")
+
+    def _calculate_time_weight(self, period: int, minutes_remaining: int) -> float:
+        """
+        Calculate time-weighted multiplier for PPM threshold
+        Games score faster near end of halves due to fouling, urgency, etc.
+
+        Args:
+            period: Current period (1 = 1st half, 2 = 2nd half, >2 = OT)
+            minutes_remaining: Minutes remaining in period
+
+        Returns:
+            Multiplier for PPM threshold (1.0 = normal, >1.0 = higher threshold)
+        """
+        # Only adjust for regulation (periods 1 and 2)
+        if period not in [1, 2]:
+            return 1.0
+
+        # Last 1 minute: 1.5x multiplier (games get very fast)
+        if minutes_remaining <= 1:
+            return 1.5
+        # Last 3 minutes: 1.3x multiplier (games speed up)
+        elif minutes_remaining <= 3:
+            return 1.3
+        # Last 5 minutes: 1.15x multiplier (slight increase)
+        elif minutes_remaining <= 5:
+            return 1.15
+        # Middle of half: normal
+        else:
+            return 1.0
 
     def _handle_new_trigger(self, game: Dict, log_data: Dict, confidence_data: Dict):
         """Handle a new PPM threshold trigger"""

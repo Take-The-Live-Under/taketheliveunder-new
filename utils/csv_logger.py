@@ -36,7 +36,10 @@ class CSVLogger:
                 "OU Line",
                 "Sportsbook",
                 "ESPN Closing Total",
+                "Home Fouls",
+                "Away Fouls",
                 "Required PPM",
+                "Time Weighted Threshold",
                 "Current PPM",
                 "PPM Diff",
                 "Projected Final",
@@ -50,7 +53,8 @@ class CSVLogger:
                 "Home Off Eff",
                 "Home Def Eff",
                 "Home AdjEM",
-                "Home SOS",
+                "Home Avg PPM",
+                "Home Avg PPG",
                 "Home KenPom Rank",
                 "Home eFG%",         # NEW
                 "Home TS%",          # NEW
@@ -60,7 +64,8 @@ class CSVLogger:
                 "Away Off Eff",
                 "Away Def Eff",
                 "Away AdjEM",
-                "Away SOS",
+                "Away Avg PPM",
+                "Away Avg PPG",
                 "Away KenPom Rank",
                 "Away eFG%",         # NEW
                 "Away TS%",          # NEW
@@ -140,7 +145,10 @@ class CSVLogger:
                 game_data.get("ou_line"),             # OU Line
                 game_data.get("sportsbook", ""),      # Sportsbook
                 game_data.get("espn_closing_total", ""),  # ESPN Closing Total
+                game_data.get("home_fouls", ""),      # Home Fouls
+                game_data.get("away_fouls", ""),      # Away Fouls
                 round(game_data.get("required_ppm", 0), 2),      # Required PPM
+                round(game_data.get("time_weighted_threshold", 0), 2),  # Time Weighted Threshold
                 round(game_data.get("current_ppm", 0), 2),       # Current PPM
                 round(game_data.get("ppm_difference", 0), 2),    # PPM Diff
                 round(game_data.get("projected_final_score", 0), 1),  # Projected Final
@@ -154,8 +162,9 @@ class CSVLogger:
                 game_data.get("home_metrics", {}).get("off_efficiency", ""),    # Home Off Eff
                 game_data.get("home_metrics", {}).get("def_efficiency", ""),    # Home Def Eff
                 game_data.get("home_metrics", {}).get("adj_em", ""),            # Home AdjEM
-                game_data.get("home_metrics", {}).get("sos", ""),               # Home SOS
-                game_data.get("home_metrics", {}).get("kenpom_rank", ""),       # Home KenPom Rank
+                game_data.get("home_metrics", {}).get("avg_ppm", ""),           # Home Avg PPM
+                game_data.get("home_metrics", {}).get("avg_ppg", ""),           # Home Avg PPG
+                game_data.get("home_metrics", {}).get("kenpom_rank") or game_data.get("home_metrics", {}).get("espn_rank", ""),  # Home Rank (KenPom or ESPN)
                 game_data.get("home_metrics", {}).get("efg_pct", ""),           # Home eFG% (NEW)
                 game_data.get("home_metrics", {}).get("ts_pct", ""),            # Home TS% (NEW)
                 game_data.get("home_metrics", {}).get("two_p_pct", ""),         # Home 2P% (NEW)
@@ -164,8 +173,9 @@ class CSVLogger:
                 game_data.get("away_metrics", {}).get("off_efficiency", ""),    # Away Off Eff
                 game_data.get("away_metrics", {}).get("def_efficiency", ""),    # Away Def Eff
                 game_data.get("away_metrics", {}).get("adj_em", ""),            # Away AdjEM
-                game_data.get("away_metrics", {}).get("sos", ""),               # Away SOS
-                game_data.get("away_metrics", {}).get("kenpom_rank", ""),       # Away KenPom Rank
+                game_data.get("away_metrics", {}).get("avg_ppm", ""),           # Away Avg PPM
+                game_data.get("away_metrics", {}).get("avg_ppg", ""),           # Away Avg PPG
+                game_data.get("away_metrics", {}).get("kenpom_rank") or game_data.get("away_metrics", {}).get("espn_rank", ""),  # Away Rank (KenPom or ESPN)
                 game_data.get("away_metrics", {}).get("efg_pct", ""),           # Away eFG% (NEW)
                 game_data.get("away_metrics", {}).get("ts_pct", ""),            # Away TS% (NEW)
                 game_data.get("away_metrics", {}).get("two_p_pct", ""),         # Away 2P% (NEW)
