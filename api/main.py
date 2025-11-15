@@ -170,11 +170,53 @@ async def get_live_games():  # Auth disabled for testing
     # Sort by confidence score (highest first)
     active_games.sort(key=lambda x: float(x.get("Confidence") or x.get("confidence_score", 0)), reverse=True)
 
+    # Calculate O/U peak/valley for each game
+    def calculate_ou_peak_valley(game_id, all_logs):
+        """Calculate peak/valley info for O/U line based on game history"""
+        game_logs = [log for log in all_logs if (log.get("Game ID") or log.get("game_id")) == game_id]
+        if not game_logs:
+            return None, None, None, None
+
+        ou_lines = []
+        for log in game_logs:
+            ou_line = log.get("OU Line") or log.get("ou_line")
+            if ou_line:
+                try:
+                    ou_lines.append(float(ou_line))
+                except (ValueError, TypeError):
+                    pass
+
+        if not ou_lines:
+            return None, None, None, None
+
+        peak = max(ou_lines)  # Highest O/U line
+        valley = min(ou_lines)  # Lowest O/U line
+        current = ou_lines[-1]  # Most recent O/U line
+
+        # Calculate distance to peak vs valley
+        dist_to_peak = abs(current - peak)
+        dist_to_valley = abs(current - valley)
+
+        # Determine position
+        if peak == valley:
+            position = "STABLE"  # Line hasn't moved
+        elif dist_to_peak < dist_to_valley:
+            position = "PEAK"  # Closer to peak (high)
+        elif dist_to_valley < dist_to_peak:
+            position = "VALLEY"  # Closer to valley (low)
+        else:
+            position = "NEUTRAL"  # Exactly in the middle
+
+        return peak, valley, position, current
+
     # Map new column names to old names for frontend compatibility
     mapped_games = []
     for game in active_games:
+        game_id = game.get("Game ID") or game.get("game_id")
+        ou_peak, ou_valley, ou_position, current_ou = calculate_ou_peak_valley(game_id, logs)
+
         mapped_game = {
-            "game_id": game.get("Game ID") or game.get("game_id"),
+            "game_id": game_id,
             "home_team": game.get("Team 2") or game.get("home_team"),
             "away_team": game.get("Team 1") or game.get("away_team"),
             "home_score": game.get("Score 2") or game.get("home_score"),
@@ -184,6 +226,10 @@ async def get_live_games():  # Auth disabled for testing
             "minutes_remaining": game.get("Mins Remaining") or game.get("minutes_remaining"),
             "seconds_remaining": game.get("Secs Remaining") or game.get("seconds_remaining"),
             "ou_line": game.get("OU Line") or game.get("ou_line"),
+            "ou_peak": ou_peak,
+            "ou_valley": ou_valley,
+            "ou_position": ou_position,
+            "sportsbook": game.get("Sportsbook") or game.get("sportsbook", ""),
             "espn_closing_total": game.get("ESPN Closing Total") or game.get("espn_closing_total"),
             "required_ppm": game.get("Required PPM") or game.get("required_ppm"),
             "current_ppm": game.get("Current PPM") or game.get("current_ppm"),
@@ -195,6 +241,26 @@ async def get_live_games():  # Auth disabled for testing
             "confidence_score": game.get("Confidence") or game.get("confidence_score", 0),
             "unit_size": game.get("Units") or game.get("unit_size", 0),
             "timestamp": game.get("Timestamp") or game.get("timestamp"),
+            "home_kenpom_rank": game.get("Home KenPom Rank") or game.get("home_kenpom_rank"),
+            "away_kenpom_rank": game.get("Away KenPom Rank") or game.get("away_kenpom_rank"),
+            "home_off_eff": game.get("Home Off Eff") or game.get("home_off_eff"),
+            "away_off_eff": game.get("Away Off Eff") or game.get("away_off_eff"),
+            "home_pace": game.get("Home Pace") or game.get("home_pace"),
+            "away_pace": game.get("Away Pace") or game.get("away_pace"),
+            "home_def_eff": game.get("Home Def Eff") or game.get("home_def_eff"),
+            "away_def_eff": game.get("Away Def Eff") or game.get("away_def_eff"),
+            "home_adj_em": game.get("Home AdjEM") or game.get("home_adj_em"),
+            "away_adj_em": game.get("Away AdjEM") or game.get("away_adj_em"),
+            "home_sos": game.get("Home SOS") or game.get("home_sos"),
+            "away_sos": game.get("Away SOS") or game.get("away_sos"),
+            "home_efg_pct": game.get("Home eFG%") or game.get("home_efg_pct"),
+            "away_efg_pct": game.get("Away eFG%") or game.get("away_efg_pct"),
+            "home_ts_pct": game.get("Home TS%") or game.get("home_ts_pct"),
+            "away_ts_pct": game.get("Away TS%") or game.get("away_ts_pct"),
+            "home_2p_pct": game.get("Home 2P%") or game.get("home_2p_pct"),
+            "away_2p_pct": game.get("Away 2P%") or game.get("away_2p_pct"),
+            "home_eff_margin": game.get("Home Eff Margin") or game.get("home_eff_margin"),
+            "away_eff_margin": game.get("Away Eff Margin") or game.get("away_eff_margin"),
         }
         mapped_games.append(mapped_game)
 
