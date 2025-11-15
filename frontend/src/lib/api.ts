@@ -88,6 +88,10 @@ export const games = {
   async getTriggered() {
     return apiRequest('/api/games/triggered');
   },
+
+  async getCompleted(limit: number = 50) {
+    return apiRequest(`/api/stats/results?limit=${limit}`);
+  },
 };
 
 /**
