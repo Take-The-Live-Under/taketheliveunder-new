@@ -36,6 +36,14 @@ class CSVLogger:
                 "OU Line",
                 "Sportsbook",
                 "ESPN Closing Total",
+                "Home Moneyline",
+                "Away Moneyline",
+                "Moneyline Book",
+                "Home Spread",
+                "Home Spread Odds",
+                "Away Spread",
+                "Away Spread Odds",
+                "Spread Book",
                 "Home Fouls",
                 "Away Fouls",
                 "Required PPM",
@@ -145,6 +153,14 @@ class CSVLogger:
                 game_data.get("ou_line"),             # OU Line
                 game_data.get("sportsbook", ""),      # Sportsbook
                 game_data.get("espn_closing_total", ""),  # ESPN Closing Total
+                game_data.get("home_moneyline", ""),  # Home Moneyline
+                game_data.get("away_moneyline", ""),  # Away Moneyline
+                game_data.get("moneyline_book", ""),  # Moneyline Book
+                game_data.get("home_spread", ""),     # Home Spread
+                game_data.get("home_spread_odds", ""),  # Home Spread Odds
+                game_data.get("away_spread", ""),     # Away Spread
+                game_data.get("away_spread_odds", ""),  # Away Spread Odds
+                game_data.get("spread_book", ""),     # Spread Book
                 game_data.get("home_fouls", ""),      # Home Fouls
                 game_data.get("away_fouls", ""),      # Away Fouls
                 round(game_data.get("required_ppm", 0), 2),      # Required PPM

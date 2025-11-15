@@ -184,6 +184,34 @@ export default function GameCard({ game, onClick }: GameCardProps) {
         </div>
       </div>
 
+      {/* Moneyline & Spread Odds */}
+      {(game.home_moneyline || game.home_spread) && (
+        <div className="mb-4 p-3 bg-deep-slate-800/40 rounded-lg border border-deep-slate-700/50">
+          {game.home_moneyline && game.away_moneyline && (
+            <div className="mb-2">
+              <div className="text-xs text-deep-slate-400 mb-1">Moneyline</div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-brand-teal-400">{game.away_team}: {game.away_moneyline > 0 ? '+' : ''}{game.away_moneyline}</span>
+                <span className="text-brand-orange-400">{game.home_team}: {game.home_moneyline > 0 ? '+' : ''}{game.home_moneyline}</span>
+              </div>
+            </div>
+          )}
+          {game.home_spread && game.away_spread && (
+            <div>
+              <div className="text-xs text-deep-slate-400 mb-1">Spread</div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-brand-teal-400">
+                  {game.away_team}: {game.away_spread > 0 ? '+' : ''}{game.away_spread} ({game.away_spread_odds > 0 ? '+' : ''}{game.away_spread_odds})
+                </span>
+                <span className="text-brand-orange-400">
+                  {game.home_team}: {game.home_spread > 0 ? '+' : ''}{game.home_spread} ({game.home_spread_odds > 0 ? '+' : ''}{game.home_spread_odds})
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Current Total & Projected Score */}
       <div className="mb-4">
         <div className="text-sm text-deep-slate-300 mb-3 flex items-center gap-2">

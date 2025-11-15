@@ -135,7 +135,7 @@ class NCAABettingMonitor:
                 odds_params = {
                     "apiKey": self.api_key,
                     "regions": "us",
-                    "markets": "totals",
+                    "markets": "h2h,spreads,totals",  # Fetch moneyline, spreads, and totals
                     "oddsFormat": "american",
                     "dateFormat": "iso"
                 }
@@ -510,6 +510,20 @@ class NCAABettingMonitor:
             # Get all available bookmaker lines for frontend display
             all_bookmaker_lines = self._get_all_bookmaker_lines(game)
 
+            # Get moneyline odds (h2h market)
+            moneyline_odds = self._get_moneyline_odds(game)
+            home_moneyline = moneyline_odds.get("home", "") if moneyline_odds else ""
+            away_moneyline = moneyline_odds.get("away", "") if moneyline_odds else ""
+            moneyline_book = moneyline_odds.get("book", "") if moneyline_odds else ""
+
+            # Get spread odds
+            spread_odds = self._get_spread_odds(game)
+            home_spread = spread_odds.get("home_spread", "") if spread_odds else ""
+            home_spread_odds = spread_odds.get("home_odds", "") if spread_odds else ""
+            away_spread = spread_odds.get("away_spread", "") if spread_odds else ""
+            away_spread_odds = spread_odds.get("away_odds", "") if spread_odds else ""
+            spread_book = spread_odds.get("book", "") if spread_odds else ""
+
             # Determine which bookmaker was actually used
             sportsbook_used = config.DEFAULT_SPORTSBOOK
             bookmakers = game.get("bookmakers", [])
@@ -655,6 +669,14 @@ class NCAABettingMonitor:
                 "all_bookmaker_lines": all_bookmaker_lines,
                 "ou_open": ou_open,
                 "espn_closing_total": espn_closing_total,
+                "home_moneyline": home_moneyline,
+                "away_moneyline": away_moneyline,
+                "moneyline_book": moneyline_book,
+                "home_spread": home_spread,
+                "home_spread_odds": home_spread_odds,
+                "away_spread": away_spread,
+                "away_spread_odds": away_spread_odds,
+                "spread_book": spread_book,
                 "home_fouls": home_fouls,
                 "away_fouls": away_fouls,
                 "required_ppm": round(required_ppm, 2),
@@ -862,6 +884,163 @@ class NCAABettingMonitor:
 
         except Exception as e:
             logger.error(f"Error extracting all bookmaker lines: {e}")
+            return {}
+
+    def _get_moneyline_odds(self, game: Dict, preferred_book: str = None) -> Dict[str, int]:
+        """
+        Extract moneyline odds from bookmakers data
+
+        Args:
+            game: Game data with bookmakers list
+            preferred_book: Preferred bookmaker key
+
+        Returns:
+            Dict with 'home' and 'away' moneyline odds (American format)
+            Example: {"home": -165, "away": +145, "book": "FanDuel"}
+        """
+        try:
+            bookmakers = game.get("bookmakers", [])
+            if not bookmakers:
+                return {}
+
+            # Use default from config if not specified
+            if preferred_book is None:
+                preferred_book = config.DEFAULT_SPORTSBOOK
+
+            # Try to find preferred bookmaker first
+            for bookmaker in bookmakers:
+                if bookmaker.get("key") == preferred_book:
+                    markets = bookmaker.get("markets", [])
+                    for market in markets:
+                        if market.get("key") == "h2h":
+                            outcomes = market.get("outcomes", [])
+                            if len(outcomes) >= 2:
+                                # Find home and away outcomes
+                                home_outcome = None
+                                away_outcome = None
+                                home_team = game.get("home_team", "")
+
+                                for outcome in outcomes:
+                                    if outcome.get("name") == home_team:
+                                        home_outcome = outcome
+                                    else:
+                                        away_outcome = outcome
+
+                                if home_outcome and away_outcome:
+                                    return {
+                                        "home": int(home_outcome.get("price", 0)),
+                                        "away": int(away_outcome.get("price", 0)),
+                                        "book": bookmaker.get("title", "Unknown")
+                                    }
+
+            # Fallback: Use first available bookmaker with h2h market
+            for bookmaker in bookmakers:
+                markets = bookmaker.get("markets", [])
+                for market in markets:
+                    if market.get("key") == "h2h":
+                        outcomes = market.get("outcomes", [])
+                        if len(outcomes) >= 2:
+                            home_team = game.get("home_team", "")
+                            home_outcome = None
+                            away_outcome = None
+
+                            for outcome in outcomes:
+                                if outcome.get("name") == home_team:
+                                    home_outcome = outcome
+                                else:
+                                    away_outcome = outcome
+
+                            if home_outcome and away_outcome:
+                                return {
+                                    "home": int(home_outcome.get("price", 0)),
+                                    "away": int(away_outcome.get("price", 0)),
+                                    "book": bookmaker.get("title", "Unknown")
+                                }
+
+            return {}
+
+        except Exception as e:
+            logger.error(f"Error extracting moneyline odds: {e}")
+            return {}
+
+    def _get_spread_odds(self, game: Dict, preferred_book: str = None) -> Dict[str, any]:
+        """
+        Extract spread/handicap odds from bookmakers data
+
+        Args:
+            game: Game data with bookmakers list
+            preferred_book: Preferred bookmaker key
+
+        Returns:
+            Dict with spread line and odds
+            Example: {"home_spread": -3.5, "home_odds": -110, "away_spread": +3.5, "away_odds": -110, "book": "FanDuel"}
+        """
+        try:
+            bookmakers = game.get("bookmakers", [])
+            if not bookmakers:
+                return {}
+
+            # Use default from config if not specified
+            if preferred_book is None:
+                preferred_book = config.DEFAULT_SPORTSBOOK
+
+            # Try to find preferred bookmaker first
+            for bookmaker in bookmakers:
+                if bookmaker.get("key") == preferred_book:
+                    markets = bookmaker.get("markets", [])
+                    for market in markets:
+                        if market.get("key") == "spreads":
+                            outcomes = market.get("outcomes", [])
+                            if len(outcomes) >= 2:
+                                home_team = game.get("home_team", "")
+                                home_outcome = None
+                                away_outcome = None
+
+                                for outcome in outcomes:
+                                    if outcome.get("name") == home_team:
+                                        home_outcome = outcome
+                                    else:
+                                        away_outcome = outcome
+
+                                if home_outcome and away_outcome:
+                                    return {
+                                        "home_spread": float(home_outcome.get("point", 0)),
+                                        "home_odds": int(home_outcome.get("price", 0)),
+                                        "away_spread": float(away_outcome.get("point", 0)),
+                                        "away_odds": int(away_outcome.get("price", 0)),
+                                        "book": bookmaker.get("title", "Unknown")
+                                    }
+
+            # Fallback: Use first available bookmaker with spreads market
+            for bookmaker in bookmakers:
+                markets = bookmaker.get("markets", [])
+                for market in markets:
+                    if market.get("key") == "spreads":
+                        outcomes = market.get("outcomes", [])
+                        if len(outcomes) >= 2:
+                            home_team = game.get("home_team", "")
+                            home_outcome = None
+                            away_outcome = None
+
+                            for outcome in outcomes:
+                                if outcome.get("name") == home_team:
+                                    home_outcome = outcome
+                                else:
+                                    away_outcome = outcome
+
+                            if home_outcome and away_outcome:
+                                return {
+                                    "home_spread": float(home_outcome.get("point", 0)),
+                                    "home_odds": int(home_outcome.get("price", 0)),
+                                    "away_spread": float(away_outcome.get("point", 0)),
+                                    "away_odds": int(away_outcome.get("price", 0)),
+                                    "book": bookmaker.get("title", "Unknown")
+                                }
+
+            return {}
+
+        except Exception as e:
+            logger.error(f"Error extracting spread odds: {e}")
             return {}
 
     def _update_game_state(self, game: Dict, log_data: Dict, confidence_data: Dict):
