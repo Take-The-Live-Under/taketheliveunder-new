@@ -11,10 +11,13 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Auto-redirect to dashboard - authentication disabled for public access
+  // Check if user is already logged in
   useEffect(() => {
-    console.log('Login page accessed - redirecting to dashboard (public access mode)');
-    router.push('/');
+    const token = localStorage.getItem('token');
+    if (token) {
+      // User already has a token, redirect to dashboard
+      router.push('/');
+    }
   }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -24,10 +27,47 @@ export default function LoginPage() {
 
     try {
       const data = await auth.login(username, password);
+      // Save token to localStorage
       localStorage.setItem('token', data.access_token);
-      window.location.href = '/';
+      // Wait a tick to ensure localStorage is written
+      await new Promise(resolve => setTimeout(resolve, 100));
+      // Use router for navigation instead of window.location
+      router.push('/');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Login failed');
+      // Handle different error formats with safe fallback
+      let errorMessage = 'Login failed';
+
+      try {
+        if (err.response?.data) {
+          const errorData = err.response.data;
+
+          // FastAPI validation error format
+          if (errorData.detail) {
+            if (typeof errorData.detail === 'string') {
+              errorMessage = errorData.detail;
+            } else if (Array.isArray(errorData.detail)) {
+              // Handle array of validation errors
+              errorMessage = errorData.detail
+                .map((e: any) => e.msg || e.message || String(e))
+                .join(', ') || 'Validation error';
+            } else {
+              // Detail is an object, stringify it
+              errorMessage = JSON.stringify(errorData.detail);
+            }
+          } else if (errorData.message) {
+            errorMessage = String(errorData.message);
+          }
+        } else if (err.message) {
+          errorMessage = String(err.message);
+        }
+      } catch (parseError) {
+        // If error parsing fails, use generic message
+        console.error('Error parsing login error:', parseError);
+        errorMessage = 'An unexpected error occurred during login';
+      }
+
+      // Ensure error is always a string
+      setError(String(errorMessage));
     } finally {
       setLoading(false);
     }
@@ -45,7 +85,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="bg-red-900/20 border border-red-500 rounded p-3 text-red-400 text-sm">
-                {error}
+                {typeof error === 'string' ? error : JSON.stringify(error)}
               </div>
             )}
 

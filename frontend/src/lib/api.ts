@@ -53,13 +53,12 @@ async function apiRequest(endpoint: string, options: RequestInit = {}) {
  */
 export const auth = {
   async login(username: string, password: string) {
-    const formData = new FormData();
-    formData.append('username', username);
-    formData.append('password', password);
-
     const response = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
-      body: formData,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ username, password }),
     });
 
     if (!response.ok) {

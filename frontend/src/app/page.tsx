@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { games, stats, auth } from '@/lib/api';
 import GameCard from '@/components/GameCard';
@@ -12,6 +13,7 @@ import { useWebSocket } from '@/hooks/useWebSocket';
 import clsx from 'clsx';
 
 export default function Dashboard() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'live' | 'trends' | 'analysis' | 'comparison'>('live');
   const [filter, setFilter] = useState<'all' | 'triggered'>('all');
   const [sortBy, setSortBy] = useState<'confidence' | 'time' | 'required_ppm' | 'current_ppm' | 'ppm_difference'>('confidence');
@@ -41,9 +43,9 @@ export default function Dashboard() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      window.location.href = '/login';
+      router.push('/login');
     }
-  }, []);
+  }, [router]);
 
   // Request notification permission on mount
   useEffect(() => {
