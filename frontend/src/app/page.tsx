@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
-import { games, stats, auth } from '@/lib/api';
+import { games, stats } from '@/lib/api';
 import GameCard from '@/components/GameCard';
 import TrendsView from '@/components/TrendsView';
 import CompletedGamesAnalysis from '@/components/CompletedGamesAnalysis';
@@ -12,12 +11,12 @@ import GameDetailModal from '@/components/GameDetailModal';
 import RangeSlider from '@/components/RangeSlider';
 import SortControl from '@/components/SortControl';
 import Tooltip from '@/components/Tooltip';
+import PregamePredictions from '@/components/PregamePredictions';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import clsx from 'clsx';
 
 export default function Dashboard() {
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'live' | 'trends' | 'analysis' | 'comparison'>('live');
+  const [activeTab, setActiveTab] = useState<'live' | 'pregame' | 'trends' | 'analysis' | 'comparison'>('live');
   const [filter, setFilter] = useState<'all' | 'triggered'>('all');
   const [sortBy, setSortBy] = useState<'confidence' | 'time' | 'required_ppm' | 'current_ppm' | 'ppm_difference'>('confidence');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -39,16 +38,8 @@ export default function Dashboard() {
   } = useWebSocket();
 
   const { data: perfData } = useSWR('performance', stats.getPerformance, {
-    refreshInterval: 60000,
+    refreshInterval: 30000, // Refresh every 30 seconds for faster stats updates
   });
-
-  // Authentication check - redirect to login if no token
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.push('/login');
-    }
-  }, [router]);
 
   // Request notification permission on mount
   useEffect(() => {
@@ -172,20 +163,6 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
-
-              <a
-                href="/admin"
-                className="btn-secondary text-sm"
-              >
-                Admin
-              </a>
-
-              <button
-                onClick={() => auth.logout()}
-                className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded text-sm font-medium"
-              >
-                Logout
-              </button>
             </div>
           </div>
 
@@ -238,6 +215,14 @@ export default function Dashboard() {
               )}
             >
               Live Games
+            </button>
+            <button
+              onClick={() => setActiveTab('pregame')}
+              className={clsx(
+                activeTab === 'pregame' ? 'tab-modern-active' : 'tab-modern'
+              )}
+            >
+              Pregame Predictions
             </button>
             <button
               onClick={() => setActiveTab('trends')}
@@ -438,6 +423,8 @@ export default function Dashboard() {
               ))}
             </div>
           </>
+        ) : activeTab === 'pregame' ? (
+          <PregamePredictions />
         ) : activeTab === 'trends' ? (
           <TrendsView liveGames={liveGames} />
         ) : activeTab === 'analysis' ? (

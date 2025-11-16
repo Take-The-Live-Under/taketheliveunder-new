@@ -1,33 +1,18 @@
 /**
  * API Client for NCAA Basketball Monitor
- * Handles all API requests with authentication
+ * Handles all API requests
  */
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 /**
- * Get authentication token from localStorage
- */
-function getAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('token');
-}
-
-/**
- * Make an authenticated API request
+ * Make an API request
  */
 async function apiRequest(endpoint: string, options: RequestInit = {}) {
-  const token = getAuthToken();
-
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
-
-  // Add authorization header if token exists
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
 
   const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
@@ -35,47 +20,11 @@ async function apiRequest(endpoint: string, options: RequestInit = {}) {
   });
 
   if (!response.ok) {
-    if (response.status === 401) {
-      // Unauthorized - redirect to login
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-      }
-    }
     throw new Error(`API Error: ${response.statusText}`);
   }
 
   return response.json();
 }
-
-/**
- * Authentication endpoints
- */
-export const auth = {
-  async login(username: string, password: string) {
-    const response = await fetch(`${API_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw { response: { data: error } };
-    }
-
-    return response.json();
-  },
-
-  logout() {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
-  },
-};
 
 /**
  * Games endpoints
@@ -91,6 +40,20 @@ export const games = {
 
   async getCompleted(limit: number = 50) {
     return apiRequest(`/api/stats/results?limit=${limit}`);
+  },
+
+  async getHistory(gameId: string) {
+    return apiRequest(`/api/games/${gameId}/history`);
+  },
+
+  async getAISummary(gameId: string) {
+    return apiRequest(`/api/games/${gameId}/ai-summary`, {
+      method: 'POST',
+    });
+  },
+
+  async getUpcoming(hoursAhead: number = 24) {
+    return apiRequest(`/api/games/upcoming?hours_ahead=${hoursAhead}`);
   },
 };
 
@@ -149,12 +112,10 @@ export const admin = {
  */
 export const exports = {
   async downloadLiveLog() {
-    const token = getAuthToken();
-    window.open(`${API_URL}/api/export/live-log?token=${token}`, '_blank');
+    window.open(`${API_URL}/api/export/live-log`, '_blank');
   },
 
   async downloadResults() {
-    const token = getAuthToken();
-    window.open(`${API_URL}/api/export/results?token=${token}`, '_blank');
+    window.open(`${API_URL}/api/export/results`, '_blank');
   },
 };

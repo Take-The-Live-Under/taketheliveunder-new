@@ -280,25 +280,25 @@ export default function GameDetailModal({ gameId, gameTitle, onClose }: GameDeta
                           <div className={`rounded p-2 ${isOverLine ? 'bg-green-500/20' : 'bg-blue-500/20'}`}>
                             <div className="text-xs text-gray-400">Status</div>
                             <div className={`text-sm font-semibold ${isOverLine ? 'text-green-400' : 'text-blue-400'}`}>
-                              {isOverLine ? 'Over' : 'Under'} by {Math.abs(totalScore - (point.ou_line || 0)).toFixed(1)}
+                              {isOverLine ? 'Over' : 'Under'} by {Math.abs(totalScore - parseFloat(String(point.ou_line || 0))).toFixed(1)}
                             </div>
                           </div>
                           {point.required_ppm && (
                             <div className="bg-gray-900/50 rounded p-2">
                               <div className="text-xs text-gray-400">Required PPM</div>
-                              <div className="text-sm font-semibold text-gray-300">{point.required_ppm.toFixed(2)}</div>
+                              <div className="text-sm font-semibold text-gray-300">{parseFloat(String(point.required_ppm)).toFixed(2)}</div>
                             </div>
                           )}
-                          {point.current_ppm && point.current_ppm > 0 && (
+                          {point.current_ppm && parseFloat(String(point.current_ppm)) > 0 && (
                             <div className="bg-gray-900/50 rounded p-2">
                               <div className="text-xs text-gray-400">Current PPM</div>
-                              <div className="text-sm font-semibold text-gray-300">{point.current_ppm.toFixed(2)}</div>
+                              <div className="text-sm font-semibold text-gray-300">{parseFloat(String(point.current_ppm)).toFixed(2)}</div>
                             </div>
                           )}
-                          {point.projected_final_score && point.projected_final_score > 0 && (
+                          {point.projected_final_score && parseFloat(String(point.projected_final_score)) > 0 && (
                             <div className="bg-gray-900/50 rounded p-2 col-span-2">
                               <div className="text-xs text-gray-400">Projected Final Score</div>
-                              <div className="text-sm font-semibold text-gray-300">{point.projected_final_score.toFixed(1)}</div>
+                              <div className="text-sm font-semibold text-gray-300">{parseFloat(String(point.projected_final_score)).toFixed(1)}</div>
                             </div>
                           )}
                         </div>

@@ -442,10 +442,10 @@ class ConfidenceScorer:
 
         if units["no_bet"][0] <= confidence <= units["no_bet"][1]:
             return 0
+        elif units["monitor"][0] <= confidence <= units["monitor"][1]:
+            return 0  # Monitor only, don't bet
         elif units["low"][0] <= confidence <= units["low"][1]:
             return 0.5
-        elif units["medium"][0] <= confidence <= units["medium"][1]:
-            return 1.0
         elif units["high"][0] <= confidence <= units["high"][1]:
             return 2.0
         elif units["max"][0] <= confidence <= units["max"][1]:

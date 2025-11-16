@@ -754,19 +754,18 @@ class NCAABettingMonitor:
             # Log to CSV
             self.csv_logger.log_live_poll(log_data)
 
-            # Send real-time update for triggered games or high confidence
-            if trigger_flag or confidence_score > 40:
-                update_type = "trigger" if trigger_flag else "game_update"
-                await self.send_realtime_update(log_data, update_type)
+            # Send real-time update for ALL live games (not just triggered)
+            update_type = "trigger" if trigger_flag else "game_update"
+            await self.send_realtime_update(log_data, update_type)
 
-                # Special alert for exceptional confidence
-                if confidence_score >= 85:
-                    logger.warning("🔥" * 40)
-                    logger.warning(f"⚠️  EXCEPTIONAL CONFIDENCE: {confidence_score:.0f}% ⚠️")
-                    logger.warning(f"Game: {away_team} @ {home_team}")
-                    logger.warning(f"Bet: {bet_type.upper() if bet_type else 'N/A'} | Units: {unit_recommendation}")
-                    logger.warning(f"Required PPM: {required_ppm:.2f} | Current PPM: {current_ppm:.2f}")
-                    logger.warning("🔥" * 40)
+            # Special alert for exceptional confidence
+            if confidence_score >= 85:
+                logger.warning("🔥" * 40)
+                logger.warning(f"⚠️  EXCEPTIONAL CONFIDENCE: {confidence_score:.0f}% ⚠️")
+                logger.warning(f"Game: {away_team} @ {home_team}")
+                logger.warning(f"Bet: {bet_type.upper() if bet_type else 'N/A'} | Units: {unit_recommendation}")
+                logger.warning(f"Required PPM: {required_ppm:.2f} | Current PPM: {current_ppm:.2f}")
+                logger.warning("🔥" * 40)
 
             # Check if this is a new trigger
             if trigger_flag and game_id not in self.triggered_games:
@@ -779,7 +778,7 @@ class NCAABettingMonitor:
             # when completed games are detected, so no need to check here
 
         except Exception as e:
-            logger.error(f"Error analyzing game: {e}")
+            logger.error(f"Error analyzing game: {e}", exc_info=True)
 
     def _calculate_time_weight(self, period: int, minutes_remaining: int) -> float:
         """

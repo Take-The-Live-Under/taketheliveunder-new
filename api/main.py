@@ -28,6 +28,8 @@ from utils.confidence_scorer import get_confidence_scorer
 from utils.csv_logger import get_csv_logger
 from utils.ppm_analyzer import get_ppm_analyzer
 from utils.ai_summary import get_ai_summary_generator
+from utils.pregame_analyzer import get_pregame_analyzer
+from utils.espn_live_fetcher import get_espn_live_fetcher
 from api.websocket_manager import manager as ws_manager
 
 # Configure logging
@@ -114,12 +116,6 @@ async def login(request: LoginRequest):
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
-
-
-@app.get("/api/auth/me", response_model=User)
-async def get_me(current_user: User = Depends(get_current_user)):
-    """Get current user info"""
-    return current_user
 
 
 # ========== GAME DATA ENDPOINTS ==========
@@ -265,13 +261,24 @@ async def get_live_games():  # Auth disabled for testing
     active_games = []
 
     for game in games_dict.values():
+        # Filter out completed games by status
+        status = game.get("Status") or game.get("status", "")
+        if status and status.lower() in ['final', 'post', 'completed']:
+            logger.debug(f"Filtering out completed game: {game.get('Team 1')} @ {game.get('Team 2')} (status: {status})")
+            continue  # Skip completed games
+
+        # Filter out games with zero time remaining
+        total_time_left = float(game.get("Total Time Left") or game.get("total_time_remaining", 999))
+        if total_time_left <= 0:
+            logger.debug(f"Filtering out game with no time remaining: {game.get('Team 1')} @ {game.get('Team 2')}")
+            continue
+
         timestamp_str = game.get("Timestamp") or game.get("timestamp", "")
         try:
             game_time = datetime.fromisoformat(timestamp_str)
             if game_time > cutoff_time:
                 # Filter out games in their last minute if configured
                 if config.FILTER_LAST_MINUTE_GAMES:
-                    total_time_left = float(game.get("Total Time Left") or game.get("total_time_remaining", 999))
                     if total_time_left <= config.MIN_TIME_REMAINING:
                         logger.debug(f"Filtering out game in last minute: {game.get('Team 1')} @ {game.get('Team 2')} ({total_time_left:.2f} min remaining)")
                         continue  # Skip this game
@@ -498,6 +505,167 @@ async def generate_ai_summary(game_id: str):  # Auth disabled for testing
         )
 
 
+@app.get("/api/games/upcoming")
+async def get_upcoming_games(hours_ahead: Optional[int] = 24):
+    """
+    Get upcoming games (not yet started) with pregame predictions for under betting
+
+    Returns games starting within the next {hours_ahead} hours with:
+    - Opening O/U lines (from ESPN)
+    - Predicted total score
+    - Confidence score for under bet
+    - Key factors favoring under/over
+    """
+    try:
+        # Fetch scheduled games with odds from ESPN (single API call!)
+        espn_fetcher = get_espn_live_fetcher()
+
+        # Calculate date range to fetch
+        now = datetime.now()
+        today = now.strftime("%Y%m%d")
+        tomorrow = (now + timedelta(days=1)).strftime("%Y%m%d")
+
+        # Fetch today's and tomorrow's games
+        all_scheduled = []
+        all_scheduled.extend(espn_fetcher.fetch_scheduled_games(date=today, include_odds=True))
+        all_scheduled.extend(espn_fetcher.fetch_scheduled_games(date=tomorrow, include_odds=True))
+
+        logger.info(f"Fetched {len(all_scheduled)} total scheduled games from ESPN")
+
+        # Filter by time (games starting within hours_ahead)
+        cutoff_time = now + timedelta(hours=hours_ahead)
+        filtered_games = []
+
+        for game in all_scheduled:
+            game_date_str = game.get('game_date')
+            if game_date_str:
+                try:
+                    game_time = datetime.fromisoformat(game_date_str.replace('Z', '+00:00'))
+                    if game_time.tzinfo:
+                        game_time = game_time.replace(tzinfo=None)
+
+                    if game_time <= cutoff_time and game_time > now:
+                        filtered_games.append(game)
+                except Exception as e:
+                    logger.debug(f"Error parsing game date: {e}")
+
+        logger.info(f"Found {len(filtered_games)} games within {hours_ahead} hours")
+
+        # Analyze each game with team stats
+        stats_manager = get_stats_manager()
+        pregame_analyzer = get_pregame_analyzer()
+        enriched_games = []
+
+        for game in filtered_games:
+            try:
+                game_id = game.get('game_id')
+                home_team = game.get('home_team')
+                away_team = game.get('away_team')
+                game_date_str = game.get('game_date')
+
+                # Skip if missing essential data
+                if not all([game_id, home_team, away_team]):
+                    continue
+
+                # Get O/U line (prefer opening, fall back to current)
+                ou_line = game.get('ou_open') or game.get('over_under')
+                if not ou_line:
+                    logger.debug(f"No O/U line for {away_team} @ {home_team}")
+                    continue
+
+                # Get team metrics
+                home_metrics, away_metrics = stats_manager.get_matchup_metrics(home_team, away_team)
+
+                # Skip if we don't have stats for both teams
+                if not home_metrics or not away_metrics:
+                    logger.debug(f"Missing team stats for {away_team} @ {home_team}")
+                    continue
+
+                # Run pregame analysis
+                analysis = pregame_analyzer.analyze_matchup(
+                    home_metrics,
+                    away_metrics,
+                    ou_line
+                )
+
+                # Calculate time until start
+                time_until_start = "Unknown"
+                if game_date_str:
+                    try:
+                        game_time = datetime.fromisoformat(game_date_str.replace('Z', '+00:00'))
+                        if game_time.tzinfo:
+                            game_time = game_time.replace(tzinfo=None)
+
+                        time_diff = game_time - now
+                        hours_until = int(time_diff.total_seconds() // 3600)
+                        minutes_until = int((time_diff.total_seconds() % 3600) // 60)
+                        time_until_start = f"{hours_until}h {minutes_until}m"
+                    except:
+                        pass
+
+                # Build enriched game object
+                enriched_game = {
+                    'game_id': game_id,
+                    'home_team': home_team,
+                    'away_team': away_team,
+                    'commence_time': game_date_str,
+                    'time_until_start': time_until_start,
+
+                    # Odds (from ESPN single API call)
+                    'ou_line': ou_line,
+                    'ou_line_opening': game.get('ou_open'),
+                    'ou_line_closing': game.get('ou_close'),
+                    'sportsbook': game.get('provider', 'ESPN'),
+
+                    # Pregame prediction
+                    'predicted_total': analysis['predicted_total'],
+                    'edge': analysis['edge'],
+                    'confidence_score': analysis['under_score'],
+                    'recommendation': analysis['recommendation'],
+                    'factors': analysis['factors'],
+
+                    # Team metrics (selected important ones)
+                    'home_metrics': {
+                        'pace': home_metrics.get('pace'),
+                        'def_eff': home_metrics.get('def_efficiency'),
+                        'off_eff': home_metrics.get('off_efficiency'),
+                        'avg_ppg': home_metrics.get('avg_ppg'),
+                        'three_point_rate': home_metrics.get('three_p_rate'),
+                    },
+                    'away_metrics': {
+                        'pace': away_metrics.get('pace'),
+                        'def_eff': away_metrics.get('def_efficiency'),
+                        'off_eff': away_metrics.get('off_efficiency'),
+                        'avg_ppg': away_metrics.get('avg_ppg'),
+                        'three_point_rate': away_metrics.get('three_p_rate'),
+                    }
+                }
+
+                enriched_games.append(enriched_game)
+
+            except Exception as e:
+                logger.error(f"Error enriching game {game.get('game_id')}: {e}")
+                continue
+
+        # Sort by confidence score (highest first)
+        enriched_games.sort(key=lambda x: x['confidence_score'], reverse=True)
+
+        logger.info(f"Returning {len(enriched_games)} upcoming games with predictions")
+
+        return {
+            'games': enriched_games,
+            'count': len(enriched_games),
+            'hours_ahead': hours_ahead
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching upcoming games: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch upcoming games: {str(e)}"
+        )
+
+
 @app.get("/api/games/completed")
 async def get_completed_games(limit: Optional[int] = 20):
     """Get games with historical data from live log"""
@@ -600,8 +768,7 @@ async def get_performance_stats():  # Auth disabled for testing
 
 @app.get("/api/stats/results")
 async def get_results(
-    limit: Optional[int] = 50,
-    current_user: User = Depends(get_current_user)
+    limit: Optional[int] = 50
 ):
     """Get game results history"""
     csv_logger = get_csv_logger()
@@ -615,8 +782,7 @@ async def get_results(
 
 @app.get("/api/stats/team/{team_name}")
 async def get_team_stats(
-    team_name: str,
-    current_user: User = Depends(get_current_user)
+    team_name: str
 ):
     """Get statistics for a specific team"""
     stats_manager = get_stats_manager()
@@ -630,8 +796,7 @@ async def get_team_stats(
 
 @app.get("/api/stats/ppm-analysis")
 async def get_ppm_analysis(
-    days: int = 30,
-    current_user: User = Depends(get_current_user)
+    days: int = 30
 ):
     """
     Get PPM threshold analysis across different trigger levels
@@ -647,8 +812,7 @@ async def get_ppm_analysis(
 
 @app.get("/api/stats/daily-summary")
 async def get_daily_summary(
-    date: Optional[str] = None,
-    current_user: User = Depends(get_current_user)
+    date: Optional[str] = None
 ):
     """
     Get daily summary report
@@ -679,10 +843,8 @@ async def get_daily_summary(
 
 
 @app.post("/api/stats/refresh")
-async def refresh_team_stats(
-    current_user: User = Depends(get_current_admin_user)
-):
-    """Refresh team statistics (admin only)"""
+async def refresh_team_stats():
+    """Refresh team statistics"""
     stats_manager = get_stats_manager()
 
     try:
@@ -695,18 +857,17 @@ async def refresh_team_stats(
 # ========== ADMIN ENDPOINTS ==========
 
 @app.get("/api/admin/users")
-async def admin_list_users(current_user: User = Depends(get_current_admin_user)):
-    """List all users (admin only)"""
+async def admin_list_users():
+    """List all users"""
     users = list_users()
     return {"users": users}
 
 
 @app.post("/api/admin/users")
 async def admin_create_user(
-    user_data: UserCreate,
-    current_user: User = Depends(get_current_admin_user)
+    user_data: UserCreate
 ):
-    """Create a new user (admin only)"""
+    """Create a new user"""
     success = create_user(
         user_data.username,
         user_data.password,
@@ -721,13 +882,9 @@ async def admin_create_user(
 
 @app.delete("/api/admin/users/{username}")
 async def admin_delete_user(
-    username: str,
-    current_user: User = Depends(get_current_admin_user)
+    username: str
 ):
-    """Delete a user (admin only)"""
-    if username == current_user.username:
-        raise HTTPException(status_code=400, detail="Cannot delete your own account")
-
+    """Delete a user"""
     success = delete_user(username)
 
     if not success:
@@ -737,8 +894,8 @@ async def admin_delete_user(
 
 
 @app.get("/api/admin/config")
-async def admin_get_config(current_user: User = Depends(get_current_admin_user)):
-    """Get current configuration (admin only)"""
+async def admin_get_config():
+    """Get current configuration"""
     return {
         "data_source": "kenpom" if config.USE_KENPOM else "espn",
         "poll_interval": config.POLL_INTERVAL,
@@ -750,10 +907,9 @@ async def admin_get_config(current_user: User = Depends(get_current_admin_user))
 
 @app.post("/api/admin/config/weights")
 async def admin_update_weights(
-    update: ConfidenceWeightsUpdate,
-    current_user: User = Depends(get_current_admin_user)
+    update: ConfidenceWeightsUpdate
 ):
-    """Update confidence scoring weights (admin only)"""
+    """Update confidence scoring weights"""
     scorer = get_confidence_scorer()
     scorer.update_weights(update.weights)
 
@@ -761,8 +917,8 @@ async def admin_update_weights(
 
 
 @app.get("/api/admin/system/status")
-async def admin_system_status(current_user: User = Depends(get_current_admin_user)):
-    """Get system status (admin only)"""
+async def admin_system_status():
+    """Get system status"""
     stats_manager = get_stats_manager()
 
     return {
@@ -777,8 +933,8 @@ async def admin_system_status(current_user: User = Depends(get_current_admin_use
 # ========== DATA EXPORT ENDPOINTS ==========
 
 @app.get("/api/export/live-log")
-async def export_live_log(current_user: User = Depends(get_current_admin_user)):
-    """Download live log CSV (admin only)"""
+async def export_live_log():
+    """Download live log CSV"""
     if not config.LIVE_LOG_FILE.exists():
         raise HTTPException(status_code=404, detail="Live log file not found")
 
@@ -790,8 +946,8 @@ async def export_live_log(current_user: User = Depends(get_current_admin_user)):
 
 
 @app.get("/api/export/results")
-async def export_results(current_user: User = Depends(get_current_admin_user)):
-    """Download results CSV (admin only)"""
+async def export_results():
+    """Download results CSV"""
     if not config.RESULTS_FILE.exists():
         raise HTTPException(status_code=404, detail="Results file not found")
 
@@ -837,13 +993,24 @@ async def websocket_endpoint(websocket: WebSocket):
         active_games = []
 
         for game in games_dict.values():
+            # Filter out completed games by status
+            status = game.get("Status") or game.get("status", "")
+            if status and status.lower() in ['final', 'post', 'completed']:
+                logger.debug(f"WebSocket: Filtering out completed game")
+                continue  # Skip completed games
+
+            # Filter out games with zero time remaining
+            total_time_left = float(game.get("Total Time Left") or game.get("total_time_remaining", 999))
+            if total_time_left <= 0:
+                logger.debug(f"WebSocket: Filtering out game with no time remaining")
+                continue
+
             timestamp_str = game.get("Timestamp") or game.get("timestamp", "")
             try:
                 game_time = datetime.fromisoformat(timestamp_str)
                 if game_time > cutoff_time:
                     # Filter out games in their last minute if configured
                     if config.FILTER_LAST_MINUTE_GAMES:
-                        total_time_left = float(game.get("Total Time Left") or game.get("total_time_remaining", 999))
                         if total_time_left <= config.MIN_TIME_REMAINING:
                             logger.debug(f"WebSocket: Filtering out game in last minute")
                             continue  # Skip this game

@@ -4,7 +4,7 @@ Fetches live scores and game time directly from ESPN's unofficial scoreboard API
 """
 import requests
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from loguru import logger
 
 
@@ -67,6 +67,205 @@ class ESPNLiveFetcher:
         except Exception as e:
             logger.error(f"Error fetching ESPN scoreboard: {e}")
             return []
+
+    def fetch_scheduled_games(self, date: str = None, include_odds: bool = True) -> List[Dict]:
+        """
+        Fetch scheduled NCAA Division 1 basketball games with betting odds
+
+        Args:
+            date: Date string in YYYYMMDD format (default: tomorrow)
+            include_odds: Whether to include betting odds data (default: True)
+
+        Returns:
+            List of game dicts with:
+            - game_id: ESPN game ID
+            - home_team: Home team name
+            - away_team: Away team name
+            - game_date: ISO datetime string when game starts
+            - commence_time: ISO datetime string (same as game_date)
+            - over_under: Current O/U line (float)
+            - ou_open: Opening O/U line (float)
+            - ou_close: Closing O/U line (float, same as over_under for scheduled)
+            - spread: Current spread (float)
+            - spread_open: Opening spread (float)
+            - spread_close: Closing spread (float)
+            - provider: Sportsbook provider name
+            - status: Game status (should be 'pre' for scheduled)
+        """
+        try:
+            # Default to tomorrow if no date provided
+            if date is None:
+                tomorrow = datetime.now() + timedelta(days=1)
+                date = tomorrow.strftime("%Y%m%d")
+
+            # Fetch all D1 games for the specified date
+            params = {
+                'dates': date,
+                'limit': 500,
+                'groups': 50  # Division 1
+            }
+
+            logger.info(f"Fetching scheduled games for date: {date}")
+            response = self.session.get(self.BASE_URL, params=params, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+            games = []
+
+            # Parse events
+            for event in data.get('events', []):
+                try:
+                    game = self._parse_scheduled_game(event, include_odds)
+                    if game:
+                        games.append(game)
+                except Exception as e:
+                    logger.warning(f"Error parsing scheduled game: {e}")
+                    continue
+
+            logger.info(f"Fetched {len(games)} scheduled games for {date}")
+            return games
+
+        except Exception as e:
+            logger.error(f"Error fetching scheduled games: {e}")
+            return []
+
+    def _parse_scheduled_game(self, event: Dict, include_odds: bool = True) -> Optional[Dict]:
+        """Parse a single scheduled game event from ESPN API with odds"""
+        try:
+            # Basic game info
+            game_id = event.get('id')
+            competitions = event.get('competitions', [])
+
+            if not competitions:
+                return None
+
+            competition = competitions[0]
+            competitors = competition.get('competitors', [])
+
+            if len(competitors) != 2:
+                return None
+
+            # Find home and away teams
+            home_team = None
+            away_team = None
+
+            for competitor in competitors:
+                team_info = competitor.get('team', {})
+
+                if competitor.get('homeAway') == 'home':
+                    home_team = team_info.get('displayName', '')
+                else:
+                    away_team = team_info.get('displayName', '')
+
+            if not home_team or not away_team:
+                return None
+
+            # Game status - only return if scheduled (pre-game)
+            status = competition.get('status', {})
+            status_type = status.get('type', {})
+            status_state = status_type.get('state', 'pre')
+
+            if status_state != 'pre':
+                logger.debug(f"Skipping game {game_id} - not scheduled (status: {status_state})")
+                return None
+
+            # Game date/time
+            game_date = event.get('date')  # ISO format datetime
+
+            # Initialize game object
+            game_obj = {
+                'game_id': game_id,
+                'home_team': home_team,
+                'away_team': away_team,
+                'game_date': game_date,
+                'commence_time': game_date,
+                'status': status_state
+            }
+
+            # Extract odds if requested and available
+            if include_odds:
+                odds_data = competition.get('odds', [])
+                if odds_data and len(odds_data) > 0:
+                    primary_odds = odds_data[0]
+
+                    # Provider
+                    provider = primary_odds.get('provider', {}).get('name', 'ESPN')
+                    game_obj['provider'] = provider
+
+                    # Over/Under
+                    over_under = primary_odds.get('overUnder')
+                    if over_under:
+                        game_obj['over_under'] = float(over_under)
+                        game_obj['ou_close'] = float(over_under)
+
+                    # Extract opening O/U from total.over.open or total.under.open
+                    total_data = primary_odds.get('total', {})
+                    over_data = total_data.get('over', {})
+                    open_data = over_data.get('open', {})
+                    close_data = over_data.get('close', {})
+
+                    # Parse opening line (format: "o142.5")
+                    if open_data and 'line' in open_data:
+                        open_line_str = open_data.get('line', '')
+                        if open_line_str and open_line_str.startswith('o'):
+                            try:
+                                game_obj['ou_open'] = float(open_line_str[1:])
+                            except:
+                                pass
+
+                    # Parse closing line (format: "o142.5")
+                    if close_data and 'line' in close_data:
+                        close_line_str = close_data.get('line', '')
+                        if close_line_str and close_line_str.startswith('o'):
+                            try:
+                                # If ou_close not set from overUnder, use this
+                                if 'ou_close' not in game_obj:
+                                    game_obj['ou_close'] = float(close_line_str[1:])
+                                # Set over_under if not set
+                                if 'over_under' not in game_obj:
+                                    game_obj['over_under'] = float(close_line_str[1:])
+                            except:
+                                pass
+
+                    # Spread
+                    spread_value = primary_odds.get('spread')
+                    if spread_value:
+                        game_obj['spread'] = float(spread_value)
+                        game_obj['spread_close'] = float(spread_value)
+
+                    # Extract opening spread from pointSpread.home.open
+                    point_spread = primary_odds.get('pointSpread', {})
+                    home_spread = point_spread.get('home', {})
+                    spread_open_data = home_spread.get('open', {})
+                    spread_close_data = home_spread.get('close', {})
+
+                    if spread_open_data and 'line' in spread_open_data:
+                        spread_open_line = spread_open_data.get('line', '')
+                        if spread_open_line:
+                            try:
+                                # Remove + sign if present
+                                spread_open_line = spread_open_line.replace('+', '')
+                                game_obj['spread_open'] = float(spread_open_line)
+                            except:
+                                pass
+
+                    if spread_close_data and 'line' in spread_close_data:
+                        spread_close_line = spread_close_data.get('line', '')
+                        if spread_close_line:
+                            try:
+                                spread_close_line = spread_close_line.replace('+', '')
+                                if 'spread_close' not in game_obj:
+                                    game_obj['spread_close'] = float(spread_close_line)
+                                if 'spread' not in game_obj:
+                                    game_obj['spread'] = float(spread_close_line)
+                            except:
+                                pass
+
+            return game_obj
+
+        except Exception as e:
+            logger.error(f"Error parsing scheduled game event: {e}")
+            return None
 
     def _parse_game(self, event: Dict) -> Optional[Dict]:
         """Parse a single game event from ESPN API"""
