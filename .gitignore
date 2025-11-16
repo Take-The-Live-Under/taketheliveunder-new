@@ -29,6 +29,9 @@ wheels/
 .env.local
 .env.production
 
+# ngrok configuration (contains auth token)
+ngrok.yml
+
 # Data files
 *.csv
 *.db

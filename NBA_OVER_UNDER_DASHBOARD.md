@@ -78,7 +78,7 @@ Game Clock    +    Betting Lines
 
 ```env
 # The Odds API
-ODDS_API_KEY=c1e957e22dfde2c23b3cac82758bef3e
+ODDS_API_KEY=your-odds-api-key-here
 
 # Sport Mode
 SPORT_MODE=nba

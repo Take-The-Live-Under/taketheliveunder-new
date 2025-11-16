@@ -1,6 +1,6 @@
 version: "3"
 agent:
-    authtoken: 2yTuay7WecfkOspXJNwpiOSkTF3_sJPV6fcCV6FHeJLTC6Eh
+    authtoken: YOUR_NGROK_AUTHTOKEN_HERE
 tunnels:
   backend:
     proto: http
