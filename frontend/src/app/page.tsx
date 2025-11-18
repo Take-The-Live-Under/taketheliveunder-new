@@ -37,13 +37,27 @@ export default function Dashboard() {
   //   reconnect
   // } = useWebSocket();
 
-  // Mock WebSocket values for HTTP polling mode
-  const wsGames: any[] = [];
-  const isConnected = true; // Always show as connected for polling mode
-  const lastUpdate: Date | null = null;
-  const connectionCount: number = 0;
-  const wsError: string | null = null;
-  const reconnect = () => {};
+  // HTTP polling for live games (replaces WebSocket)
+  const { data: liveGamesData, error: liveGamesError } = useSWR(
+    '/api/games/live',
+    async () => {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/games/live`);
+      if (!response.ok) return { games: [] };
+      return response.json();
+    },
+    {
+      refreshInterval: 10000, // Poll every 10 seconds for live updates
+      revalidateOnFocus: false,
+    }
+  );
+
+  const wsGames = liveGamesData?.games || [];
+  const isConnected = !liveGamesError; // Connected if no error
+  const lastUpdate: Date | null = liveGamesData ? new Date() : null;
+  const connectionCount: number = wsGames.length;
+  const wsError: string | null = liveGamesError?.message || null;
+  const reconnect = () => {}; // Not needed for HTTP polling
 
   const { data: perfData } = useSWR('performance', stats.getPerformance, {
     refreshInterval: 30000, // Refresh every 30 seconds for faster stats updates
@@ -64,7 +78,7 @@ export default function Dashboard() {
 
   // Flash effect when high-confidence games arrive
   useEffect(() => {
-    const hasHighConfidence = wsGames.some(game =>
+    const hasHighConfidence = wsGames.some((game: any) =>
       game.confidence_score >= 75 && game.trigger_flag
     );
 
