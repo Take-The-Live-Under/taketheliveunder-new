@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import clsx from 'clsx';
 import { games } from '@/lib/api';
 import ModelComparisonChart from '@/components/charts/ModelComparisonChart';
 import TeamStatsRadarChart from '@/components/charts/TeamStatsRadarChart';
+import LiveTrendCharts from '@/components/charts/LiveTrendCharts';
 
 interface PregameGame {
   game_id: string;
@@ -56,6 +57,8 @@ interface PregameResponse {
 }
 
 export default function PregamePredictions() {
+  const [gameHistories, setGameHistories] = useState<Record<string, any>>({});
+
   // Fetch from /api/predictions/latest instead of ESPN upcoming games
   const { data: predictionsData, error, isLoading } = useSWR(
     '/api/predictions/latest',
@@ -67,6 +70,21 @@ export default function PregamePredictions() {
     },
     {
       refreshInterval: 10000, // Refresh every 10 seconds for live updates
+      revalidateOnFocus: false,
+    }
+  );
+
+  // Fetch live games to detect when pregame games have started
+  const { data: liveGamesData } = useSWR(
+    '/api/games/live',
+    async () => {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/games/live`);
+      if (!response.ok) return { games: [] };
+      return response.json();
+    },
+    {
+      refreshInterval: 10000,
       revalidateOnFocus: false,
     }
   );
@@ -119,6 +137,38 @@ export default function PregamePredictions() {
     hours_ahead: 24
   } : null;
 
+  // Detect when pregame games go live and fetch their history
+  useEffect(() => {
+    if (!data || !liveGamesData) return;
+
+    const liveGames = liveGamesData.games || [];
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
+    // For each pregame game, check if it's now live
+    data.games.forEach(async (pregameGame: PregameGame) => {
+      // Check if this game appears in live games
+      const liveGame = liveGames.find((lg: any) =>
+        lg.home_team === pregameGame.home_team && lg.away_team === pregameGame.away_team
+      );
+
+      if (liveGame && !gameHistories[liveGame.game_id]) {
+        // Game has started! Fetch its history
+        try {
+          const response = await fetch(`${apiUrl}/api/games/${liveGame.game_id}/history`);
+          if (response.ok) {
+            const historyData = await response.json();
+            setGameHistories(prev => ({
+              ...prev,
+              [liveGame.game_id]: historyData.history || []
+            }));
+          }
+        } catch (err) {
+          console.error('Failed to fetch game history:', err);
+        }
+      }
+    });
+  }, [data, liveGamesData, gameHistories]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -168,15 +218,29 @@ export default function PregamePredictions() {
 
       {/* Game Cards */}
       <div className="grid grid-cols-1 gap-4">
-        {data.games.map((game: PregameGame) => (
-          <PregameGameCard key={game.game_id} game={game} />
-        ))}
+        {data.games.map((game: PregameGame) => {
+          // Find matching live game if it exists
+          const liveGames = liveGamesData?.games || [];
+          const liveGame = liveGames.find((lg: any) =>
+            lg.home_team === game.home_team && lg.away_team === game.away_team
+          );
+          const history = liveGame ? gameHistories[liveGame.game_id] : null;
+
+          return (
+            <PregameGameCard
+              key={game.game_id}
+              game={game}
+              liveGame={liveGame}
+              history={history}
+            />
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function PregameGameCard({ game }: { game: PregameGame }) {
+function PregameGameCard({ game, liveGame, history }: { game: PregameGame; liveGame?: any; history?: any }) {
   const getRecommendationColor = (recommendation: string) => {
     switch (recommendation) {
       case 'BET_UNDER':
@@ -281,48 +345,87 @@ function PregameGameCard({ game }: { game: PregameGame }) {
       )}
 
       {/* Charts and Key Factors Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {/* Model Comparison Chart */}
-        {game.pomeroy_prediction && game.ml_prediction && game.model_agreement !== undefined && (
-          <div className="glass-card rounded p-3 h-64">
-            <ModelComparisonChart
-              pomeroyPrediction={game.pomeroy_prediction}
-              mlPrediction={game.ml_prediction}
-              finalPrediction={game.predicted_total}
-              modelAgreement={game.model_agreement}
-            />
+      {history && history.length > 0 ? (
+        /* Game is LIVE - Show live trend charts */
+        <div className="grid grid-cols-1 gap-3">
+          <div className="bg-brand-teal-500/10 border border-brand-teal-500/30 rounded-lg px-3 py-2 text-center">
+            <span className="text-brand-teal-400 font-semibold text-sm">
+              🔴 LIVE - {liveGame?.period} {liveGame?.minutes_remaining}:{String(liveGame?.seconds_remaining || 0).padStart(2, '0')}
+            </span>
+            <span className="text-deep-slate-400 ml-3 text-sm">
+              {liveGame?.home_score} - {liveGame?.away_score}
+            </span>
           </div>
-        )}
-
-        {/* Team Stats Radar Chart */}
-        <div className="glass-card rounded p-3 h-64">
-          <TeamStatsRadarChart
+          <LiveTrendCharts
+            history={history}
+            ouLine={game.ou_line}
             homeTeam={game.home_team}
             awayTeam={game.away_team}
-            homeMetrics={game.home_metrics}
-            awayMetrics={game.away_metrics}
           />
+          {/* Key Factors - Keep visible for live games */}
+          <div className="glass-card rounded p-3 overflow-y-auto">
+            <div className="text-xs font-semibold text-deep-slate-400 mb-2 uppercase tracking-wide">
+              Key Factors
+            </div>
+            <div className="space-y-1">
+              {game.factors && game.factors.length > 0 ? (
+                game.factors.slice(0, 8).map((factor, index) => (
+                  <div key={index} className="flex items-start gap-2 text-xs">
+                    <span className="text-brand-purple-400 mt-0.5">•</span>
+                    <span className="text-deep-slate-300">{factor}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-xs text-deep-slate-500 italic">No key factors available</div>
+              )}
+            </div>
+          </div>
         </div>
+      ) : (
+        /* Game is PREGAME - Show model prediction charts */
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Model Comparison Chart */}
+          {game.pomeroy_prediction && game.ml_prediction && game.model_agreement !== undefined && (
+            <div className="glass-card rounded p-3 h-64">
+              <ModelComparisonChart
+                pomeroyPrediction={game.pomeroy_prediction}
+                mlPrediction={game.ml_prediction}
+                finalPrediction={game.predicted_total}
+                modelAgreement={game.model_agreement}
+              />
+            </div>
+          )}
 
-        {/* Key Factors */}
-        <div className="glass-card rounded p-3 h-64 overflow-y-auto">
-          <div className="text-xs font-semibold text-deep-slate-400 mb-2 uppercase tracking-wide">
-            Key Factors
+          {/* Team Stats Radar Chart */}
+          <div className="glass-card rounded p-3 h-64">
+            <TeamStatsRadarChart
+              homeTeam={game.home_team}
+              awayTeam={game.away_team}
+              homeMetrics={game.home_metrics}
+              awayMetrics={game.away_metrics}
+            />
           </div>
-          <div className="space-y-1">
-            {game.factors && game.factors.length > 0 ? (
-              game.factors.slice(0, 8).map((factor, index) => (
-                <div key={index} className="flex items-start gap-2 text-xs">
-                  <span className="text-brand-purple-400 mt-0.5">•</span>
-                  <span className="text-deep-slate-300">{factor}</span>
-                </div>
-              ))
-            ) : (
-              <div className="text-xs text-deep-slate-500 italic">No key factors available</div>
-            )}
+
+          {/* Key Factors */}
+          <div className="glass-card rounded p-3 h-64 overflow-y-auto">
+            <div className="text-xs font-semibold text-deep-slate-400 mb-2 uppercase tracking-wide">
+              Key Factors
+            </div>
+            <div className="space-y-1">
+              {game.factors && game.factors.length > 0 ? (
+                game.factors.slice(0, 8).map((factor, index) => (
+                  <div key={index} className="flex items-start gap-2 text-xs">
+                    <span className="text-brand-purple-400 mt-0.5">•</span>
+                    <span className="text-deep-slate-300">{factor}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-xs text-deep-slate-500 italic">No key factors available</div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
