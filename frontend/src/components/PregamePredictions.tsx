@@ -4,6 +4,8 @@ import React from 'react';
 import useSWR from 'swr';
 import clsx from 'clsx';
 import { games } from '@/lib/api';
+import ModelComparisonChart from '@/components/charts/ModelComparisonChart';
+import TeamStatsRadarChart from '@/components/charts/TeamStatsRadarChart';
 
 interface PregameGame {
   game_id: string;
@@ -202,29 +204,52 @@ function PregameGameCard({ game }: { game: PregameGame }) {
     return 'text-gray-400';
   };
 
-  const avgPace = (game.home_metrics.pace + game.away_metrics.pace) / 2;
-  const avgDefEff = (game.home_metrics.def_eff + game.away_metrics.def_eff) / 2;
-
   return (
-    <div className="glass-card rounded-lg p-5 border border-deep-slate-700/50 hover:border-deep-slate-600/70 transition-all">
-      {/* Header: Teams and Time */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-xl font-bold text-white">{game.away_team}</span>
+    <div className="glass-card rounded-lg p-4 border border-deep-slate-700/50 hover:border-deep-slate-600/70 transition-all mb-3">
+      {/* Header Row - Teams, Recommendation, Key Metrics */}
+      <div className="flex items-center justify-between gap-4 mb-3 pb-3 border-b border-deep-slate-700/50">
+        {/* Teams and Time */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-bold text-white">{game.away_team}</span>
             <span className="text-deep-slate-500 text-sm">@</span>
-            <span className="text-xl font-bold text-white">{game.home_team}</span>
+            <span className="text-lg font-bold text-white">{game.home_team}</span>
           </div>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-deep-slate-400">
-              Starts in <span className="text-brand-purple-400 font-semibold">{game.time_until_start}</span>
-            </span>
+          <span className="text-xs text-deep-slate-400 border-l border-deep-slate-700 pl-3">
+            Starts in <span className="text-brand-purple-400 font-semibold">{game.time_until_start}</span>
+          </span>
+        </div>
+
+        {/* Key Metrics - Compact */}
+        <div className="flex items-center gap-3">
+          <div className="text-center">
+            <div className="text-xs text-deep-slate-500">O/U Line</div>
+            <div className="text-sm font-bold text-white">{game.ou_line}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-deep-slate-500">Prediction</div>
+            <div className="text-sm font-bold text-brand-teal-400">{game.predicted_total}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-deep-slate-500">Edge</div>
+            <div className={clsx(
+              'text-sm font-bold',
+              game.edge > 0 ? 'text-green-400' : game.edge < 0 ? 'text-red-400' : 'text-gray-400'
+            )}>
+              {game.edge > 0 ? '↓' : game.edge < 0 ? '↑' : ''}{Math.abs(game.edge).toFixed(1)}
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-deep-slate-500">Confidence</div>
+            <div className={clsx('text-sm font-bold', getConfidenceColor(game.confidence_score))}>
+              {game.confidence_score.toFixed(0)}%
+            </div>
           </div>
         </div>
 
         {/* Recommendation Badge */}
         <div className={clsx(
-          'px-4 py-2 rounded-lg border font-bold text-sm whitespace-nowrap',
+          'px-3 py-1.5 rounded-lg border font-bold text-xs whitespace-nowrap',
           getRecommendationColor(game.recommendation)
         )}>
           {getRecommendationLabel(game.recommendation)}
@@ -233,132 +258,71 @@ function PregameGameCard({ game }: { game: PregameGame }) {
 
       {/* Betting Indicators */}
       {(game.in_tempo_sweet_spot || game.is_blowout_risk || (game.early_season_bonus ?? 0) > 0) && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-3">
           {game.in_tempo_sweet_spot && (
-            <div className="bg-green-500/20 border border-green-500/50 text-green-400 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+            <div className="bg-green-500/20 border border-green-500/50 text-green-400 px-2 py-1 rounded text-xs font-semibold flex items-center gap-1">
               <span>⚡</span>
-              <span>Tempo Sweet Spot (66-68) - Higher Scoring Expected</span>
+              <span>Tempo Sweet Spot</span>
             </div>
           )}
           {game.is_blowout_risk && (
-            <div className="bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+            <div className="bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 px-2 py-1 rounded text-xs font-semibold flex items-center gap-1">
               <span>⚠️</span>
-              <span>Blowout Risk (AdjEM Δ: {game.adjem_differential?.toFixed(1)}) - Lower Confidence</span>
+              <span>Blowout Risk (Δ{game.adjem_differential?.toFixed(1)})</span>
             </div>
           )}
           {(game.early_season_bonus ?? 0) > 0 && (
-            <div className="bg-purple-500/20 border border-purple-500/50 text-purple-400 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+            <div className="bg-purple-500/20 border border-purple-500/50 text-purple-400 px-2 py-1 rounded text-xs font-semibold flex items-center gap-1">
               <span>📈</span>
-              <span>Early Season Bonus: +{game.early_season_bonus?.toFixed(1)} pts</span>
+              <span>Early Season +{game.early_season_bonus?.toFixed(1)}</span>
             </div>
           )}
         </div>
       )}
 
-      {/* O/U Line and Prediction */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-        <div className="glass-card rounded p-3">
-          <div className="text-xs text-deep-slate-400 mb-1">O/U Line</div>
-          <div className="text-lg font-bold text-white">{game.ou_line}</div>
-          <div className="text-xs text-deep-slate-500">{game.sportsbook}</div>
+      {/* Charts and Key Factors Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Model Comparison Chart */}
+        {game.pomeroy_prediction && game.ml_prediction && game.model_agreement !== undefined && (
+          <div className="glass-card rounded p-3 h-64">
+            <ModelComparisonChart
+              pomeroyPrediction={game.pomeroy_prediction}
+              mlPrediction={game.ml_prediction}
+              finalPrediction={game.predicted_total}
+              modelAgreement={game.model_agreement}
+            />
+          </div>
+        )}
+
+        {/* Team Stats Radar Chart */}
+        <div className="glass-card rounded p-3 h-64">
+          <TeamStatsRadarChart
+            homeTeam={game.home_team}
+            awayTeam={game.away_team}
+            homeMetrics={game.home_metrics}
+            awayMetrics={game.away_metrics}
+          />
         </div>
 
-        <div className="glass-card rounded p-3">
-          <div className="text-xs text-deep-slate-400 mb-1">Predicted Total</div>
-          <div className="text-lg font-bold text-brand-teal-400">{game.predicted_total}</div>
-        </div>
-
-        <div className="glass-card rounded p-3">
-          <div className="text-xs text-deep-slate-400 mb-1">Edge</div>
-          <div className={clsx(
-            'text-lg font-bold',
-            game.edge > 0 ? 'text-green-400' : game.edge < 0 ? 'text-red-400' : 'text-gray-400'
-          )}>
-            {game.edge > 0 ? '↓' : game.edge < 0 ? '↑' : ''} {Math.abs(game.edge).toFixed(1)}
-          </div>
-          <div className="text-xs text-deep-slate-500">
-            {game.edge > 0 ? 'Under' : game.edge < 0 ? 'Over' : 'Push'}
-          </div>
-        </div>
-
-        <div className="glass-card rounded p-3">
-          <div className="text-xs text-deep-slate-400 mb-1">Confidence</div>
-          <div className={clsx('text-lg font-bold', getConfidenceColor(game.confidence_score))}>
-            {game.confidence_score.toFixed(0)}%
-          </div>
-          <div className="text-xs text-deep-slate-500">
-            {game.confidence_score > 50 ? 'Under' : game.confidence_score < 50 ? 'Over' : 'Neutral'}
-          </div>
-        </div>
-      </div>
-
-      {/* Key Metrics */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="glass-card rounded p-3">
-          <div className="text-xs text-deep-slate-400 mb-2">Pace</div>
-          <div className="text-sm text-deep-slate-300">
-            Avg: <span className="font-semibold text-white">{avgPace.toFixed(1)}</span> poss/game
-          </div>
-          <div className="text-xs text-deep-slate-500 mt-1">
-            {avgPace < 66 ? '🐢 Very Slow' : avgPace < 68 ? '🐢 Slow' : avgPace > 74 ? '⚡ Fast' : avgPace > 72 ? '⚡ Above Avg' : '➡️ Average'}
-          </div>
-        </div>
-
-        <div className="glass-card rounded p-3">
-          <div className="text-xs text-deep-slate-400 mb-2">Defense</div>
-          <div className="text-sm text-deep-slate-300">
-            Avg: <span className="font-semibold text-white">{avgDefEff.toFixed(1)}</span> pts/100
-          </div>
-          <div className="text-xs text-deep-slate-500 mt-1">
-            {avgDefEff < 95 ? '🛡️ Elite' : avgDefEff < 98 ? '🛡️ Strong' : avgDefEff > 105 ? '⚠️ Weak' : avgDefEff > 102 ? '⚠️ Below Avg' : '➡️ Average'}
-          </div>
-        </div>
-      </div>
-
-      {/* Model Breakdown */}
-      {(game.pomeroy_prediction || game.ml_prediction) && (
-        <div className="glass-card rounded p-3 mb-4">
-          <div className="text-xs font-semibold text-deep-slate-400 mb-2 uppercase tracking-wide">
-            Model Breakdown (60% Pomeroy + 40% ML)
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <div className="text-xs text-deep-slate-500 mb-1">Pomeroy (Formula)</div>
-              <div className="text-lg font-bold text-blue-400">{game.pomeroy_prediction?.toFixed(1)}</div>
-            </div>
-            <div>
-              <div className="text-xs text-deep-slate-500 mb-1">ML (Random Forest)</div>
-              <div className="text-lg font-bold text-purple-400">{game.ml_prediction?.toFixed(1)}</div>
-            </div>
-            <div>
-              <div className="text-xs text-deep-slate-500 mb-1">Agreement</div>
-              <div className={clsx(
-                'text-lg font-bold',
-                (game.model_agreement ?? 999) < 3 ? 'text-green-400' : (game.model_agreement ?? 999) < 5 ? 'text-yellow-400' : 'text-red-400'
-              )}>
-                ±{game.model_agreement?.toFixed(1)}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Factors */}
-      {game.factors && game.factors.length > 0 && (
-        <div className="border-t border-deep-slate-700/50 pt-4">
+        {/* Key Factors */}
+        <div className="glass-card rounded p-3 h-64 overflow-y-auto">
           <div className="text-xs font-semibold text-deep-slate-400 mb-2 uppercase tracking-wide">
             Key Factors
           </div>
           <div className="space-y-1">
-            {game.factors.slice(0, 5).map((factor, index) => (
-              <div key={index} className="flex items-start gap-2 text-sm">
-                <span className="text-brand-purple-400 mt-0.5">•</span>
-                <span className="text-deep-slate-300">{factor}</span>
-              </div>
-            ))}
+            {game.factors && game.factors.length > 0 ? (
+              game.factors.slice(0, 8).map((factor, index) => (
+                <div key={index} className="flex items-start gap-2 text-xs">
+                  <span className="text-brand-purple-400 mt-0.5">•</span>
+                  <span className="text-deep-slate-300">{factor}</span>
+                </div>
+              ))
+            ) : (
+              <div className="text-xs text-deep-slate-500 italic">No key factors available</div>
+            )}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
