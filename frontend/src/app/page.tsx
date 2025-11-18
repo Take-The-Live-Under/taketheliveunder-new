@@ -287,7 +287,7 @@ export default function Dashboard() {
                 <SortControl
                   value={sortBy}
                   direction={sortDirection}
-                  onChange={setSortBy}
+                  onChange={(value) => setSortBy(value as typeof sortBy)}
                   onDirectionChange={setSortDirection}
                   options={[
                     { value: 'confidence', label: 'Confidence' },
@@ -438,6 +438,41 @@ export default function Dashboard() {
           <div className="mt-8 bg-gray-800 rounded-lg p-6">
             <h3 className="text-lg font-bold mb-4">Performance Summary</h3>
 
+            {/* Today's Performance */}
+            {perfData.today && perfData.today.total_bets > 0 && (
+              <div className="mb-6 bg-gradient-to-r from-brand-purple-900/30 to-brand-orange-900/30 rounded-lg p-4 border border-brand-purple-500/30">
+                <h4 className="text-sm font-semibold mb-3 text-brand-purple-300">Today's Performance</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <div className="text-xs text-gray-400">Bets</div>
+                    <div className="text-xl font-bold">{perfData.today.total_bets}</div>
+                  </div>
+
+                  <div>
+                    <div className="text-xs text-gray-400">Win Rate</div>
+                    <div className="text-xl font-bold text-green-400">
+                      {(perfData.today.win_rate ?? 0).toFixed(1)}%
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-xs text-gray-400">Unit Profit</div>
+                    <div className={clsx('text-xl font-bold', (perfData.today.total_unit_profit ?? 0) >= 0 ? 'text-green-400' : 'text-red-400')}>
+                      {(perfData.today.total_unit_profit ?? 0) >= 0 ? '+' : ''}{(perfData.today.total_unit_profit ?? 0).toFixed(2)}u
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-xs text-gray-400">ROI</div>
+                    <div className={clsx('text-xl font-bold', (perfData.today.roi ?? 0) >= 0 ? 'text-green-400' : 'text-red-400')}>
+                      {(perfData.today.roi ?? 0) >= 0 ? '+' : ''}{(perfData.today.roi ?? 0).toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <h4 className="text-sm font-semibold mb-3 text-gray-400">All-Time Performance</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <div className="text-sm text-gray-400">Total Bets</div>

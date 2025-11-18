@@ -34,6 +34,17 @@ interface PregameGame {
     avg_ppg: number;
     three_point_rate: number;
   };
+  // New betting optimization fields
+  in_tempo_sweet_spot?: boolean;
+  is_blowout_risk?: boolean;
+  early_season_bonus?: number;
+  tempo_bonus?: number;
+  adjem_differential?: number;
+  home_adjem?: number;
+  away_adjem?: number;
+  pomeroy_prediction?: number;
+  ml_prediction?: number;
+  model_agreement?: number;
 }
 
 interface PregameResponse {
@@ -43,14 +54,68 @@ interface PregameResponse {
 }
 
 export default function PregamePredictions() {
-  const { data, error, isLoading } = useSWR<PregameResponse>(
-    'upcoming-games',
-    () => games.getUpcoming(24),
+  // Fetch from /api/predictions/latest instead of ESPN upcoming games
+  const { data: predictionsData, error, isLoading } = useSWR(
+    '/api/predictions/latest',
+    async () => {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/predictions/latest`);
+      if (!response.ok) throw new Error('Failed to fetch predictions');
+      return response.json();
+    },
     {
-      refreshInterval: 60000, // Refresh every 1 minute (betting lines change fast)
+      refreshInterval: 60000, // Refresh every 1 minute
       revalidateOnFocus: false,
     }
   );
+
+  // Transform predictions data to match expected format
+  const data = predictionsData ? {
+    games: (predictionsData.predictions || []).map((pred: any) => ({
+      game_id: `${pred.home_team}-${pred.away_team}`,
+      home_team: pred.home_team,
+      away_team: pred.away_team,
+      commence_time: pred.date,
+      time_until_start: pred.date || 'Soon',
+      ou_line: pred.ou_line || 0,
+      ou_line_opening: pred.ou_line,
+      ou_line_closing: null,
+      sportsbook: 'Multiple',
+      predicted_total: pred.projected_total || 0,
+      edge: pred.vs_line || 0,
+      confidence_score: pred.confidence || 50,
+      recommendation: pred.ai_recommendation || pred.suggestion || 'PASS',
+      factors: pred.ai_key_factors || [],
+      home_metrics: {
+        pace: pred.projected_tempo || 68,
+        def_eff: 105,
+        off_eff: pred.home_efficiency || 105,
+        avg_ppg: pred.home_projected_score || 75,
+        three_point_rate: 0.35
+      },
+      away_metrics: {
+        pace: pred.projected_tempo || 68,
+        def_eff: 105,
+        off_eff: pred.away_efficiency || 105,
+        avg_ppg: pred.away_projected_score || 75,
+        three_point_rate: 0.35
+      },
+      ai_summary: pred.ai_summary,
+      // New betting optimization fields
+      in_tempo_sweet_spot: pred.in_tempo_sweet_spot,
+      is_blowout_risk: pred.is_blowout_risk,
+      early_season_bonus: pred.early_season_bonus || 0,
+      tempo_bonus: pred.tempo_bonus || 0,
+      adjem_differential: pred.adjem_differential,
+      home_adjem: pred.home_adjem,
+      away_adjem: pred.away_adjem,
+      pomeroy_prediction: pred.pomeroy_prediction,
+      ml_prediction: pred.ml_prediction,
+      model_agreement: pred.model_agreement
+    })),
+    count: predictionsData.count || 0,
+    hours_ahead: 24
+  } : null;
 
   if (isLoading) {
     return (
@@ -101,7 +166,7 @@ export default function PregamePredictions() {
 
       {/* Game Cards */}
       <div className="grid grid-cols-1 gap-4">
-        {data.games.map((game) => (
+        {data.games.map((game: PregameGame) => (
           <PregameGameCard key={game.game_id} game={game} />
         ))}
       </div>
@@ -166,6 +231,30 @@ function PregameGameCard({ game }: { game: PregameGame }) {
         </div>
       </div>
 
+      {/* Betting Indicators */}
+      {(game.in_tempo_sweet_spot || game.is_blowout_risk || (game.early_season_bonus ?? 0) > 0) && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {game.in_tempo_sweet_spot && (
+            <div className="bg-green-500/20 border border-green-500/50 text-green-400 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+              <span>⚡</span>
+              <span>Tempo Sweet Spot (66-68) - Higher Scoring Expected</span>
+            </div>
+          )}
+          {game.is_blowout_risk && (
+            <div className="bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+              <span>⚠️</span>
+              <span>Blowout Risk (AdjEM Δ: {game.adjem_differential?.toFixed(1)}) - Lower Confidence</span>
+            </div>
+          )}
+          {(game.early_season_bonus ?? 0) > 0 && (
+            <div className="bg-purple-500/20 border border-purple-500/50 text-purple-400 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+              <span>📈</span>
+              <span>Early Season Bonus: +{game.early_season_bonus?.toFixed(1)} pts</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* O/U Line and Prediction */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <div className="glass-card rounded p-3">
@@ -225,6 +314,34 @@ function PregameGameCard({ game }: { game: PregameGame }) {
           </div>
         </div>
       </div>
+
+      {/* Model Breakdown */}
+      {(game.pomeroy_prediction || game.ml_prediction) && (
+        <div className="glass-card rounded p-3 mb-4">
+          <div className="text-xs font-semibold text-deep-slate-400 mb-2 uppercase tracking-wide">
+            Model Breakdown (60% Pomeroy + 40% ML)
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <div className="text-xs text-deep-slate-500 mb-1">Pomeroy (Formula)</div>
+              <div className="text-lg font-bold text-blue-400">{game.pomeroy_prediction?.toFixed(1)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-deep-slate-500 mb-1">ML (Random Forest)</div>
+              <div className="text-lg font-bold text-purple-400">{game.ml_prediction?.toFixed(1)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-deep-slate-500 mb-1">Agreement</div>
+              <div className={clsx(
+                'text-lg font-bold',
+                (game.model_agreement ?? 999) < 3 ? 'text-green-400' : (game.model_agreement ?? 999) < 5 ? 'text-yellow-400' : 'text-red-400'
+              )}>
+                ±{game.model_agreement?.toFixed(1)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Factors */}
       {game.factors && game.factors.length > 0 && (
