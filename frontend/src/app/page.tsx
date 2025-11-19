@@ -42,7 +42,11 @@ export default function Dashboard() {
     '/api/games/live',
     async () => {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/games/live`);
+      const response = await fetch(`${apiUrl}/api/games/live`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
+      });
       if (!response.ok) return { games: [] };
       return response.json();
     },

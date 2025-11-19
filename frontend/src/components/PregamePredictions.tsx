@@ -64,7 +64,11 @@ export default function PregamePredictions() {
     '/api/predictions/latest',
     async () => {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/predictions/latest`);
+      const response = await fetch(`${apiUrl}/api/predictions/latest`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
+      });
       if (!response.ok) throw new Error('Failed to fetch predictions');
       return response.json();
     },
@@ -79,7 +83,11 @@ export default function PregamePredictions() {
     '/api/games/live',
     async () => {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/games/live`);
+      const response = await fetch(`${apiUrl}/api/games/live`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
+      });
       if (!response.ok) return { games: [] };
       return response.json();
     },
@@ -154,7 +162,11 @@ export default function PregamePredictions() {
       if (liveGame && !gameHistories[liveGame.game_id]) {
         // Game has started! Fetch its history
         try {
-          const response = await fetch(`${apiUrl}/api/games/${liveGame.game_id}/history`);
+          const response = await fetch(`${apiUrl}/api/games/${liveGame.game_id}/history`, {
+            headers: {
+              'ngrok-skip-browser-warning': 'true',
+            },
+          });
           if (response.ok) {
             const historyData = await response.json();
             setGameHistories(prev => ({
