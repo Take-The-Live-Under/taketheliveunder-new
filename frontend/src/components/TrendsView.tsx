@@ -120,26 +120,28 @@ export default function TrendsView({ liveGames = [], preSelectedGameId, hideSele
             </div>
           </div>
 
-          {/* Total Score vs O/U Line - OVERLAID */}
+          {/* Over/Under Line Movement */}
           <div className="bg-gray-800 rounded-lg p-6">
-            <h3 className="text-lg font-bold mb-4">Total Score vs Over/Under Line</h3>
+            <h3 className="text-lg font-bold mb-4">Over/Under Line Movement</h3>
             <p className="text-sm text-gray-400 mb-4">
-              Shows how the actual total score compares to the O/U line throughout the game.
-              When the score crosses above the line, the game is trending OVER. When below, trending UNDER.
+              Shows how the sportsbook O/U betting line changes over elapsed game time.
+              Line movements indicate how bookmakers are adjusting based on betting action and game flow.
             </p>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={350}>
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis
-                    dataKey="time"
+                    dataKey="elapsedMinutes"
                     stroke="#9CA3AF"
                     style={{ fontSize: '12px' }}
+                    label={{ value: 'Elapsed Time (minutes)', position: 'insideBottom', offset: -5, style: { fill: '#9CA3AF' } }}
                   />
                   <YAxis
                     stroke="#9CA3AF"
                     style={{ fontSize: '12px' }}
-                    label={{ value: 'Points', angle: -90, position: 'insideLeft', style: { fill: '#9CA3AF' } }}
+                    label={{ value: 'O/U Line', angle: -90, position: 'insideLeft', style: { fill: '#9CA3AF' } }}
+                    domain={['dataMin - 2', 'dataMax + 2']}
                   />
                   <Tooltip
                     contentStyle={{
@@ -153,6 +155,7 @@ export default function TrendsView({ liveGames = [], preSelectedGameId, hideSele
                       }
                       return [value, name];
                     }}
+                    labelFormatter={(label) => `${label} min elapsed`}
                   />
                   <Legend
                     wrapperStyle={{ paddingTop: '10px' }}
@@ -173,16 +176,6 @@ export default function TrendsView({ liveGames = [], preSelectedGameId, hideSele
                     strokeWidth={3}
                     dot={{ r: 4, fill: '#A855F7', strokeWidth: 2 }}
                     name="Current O/U Line"
-                    activeDot={{ r: 6 }}
-                  />
-                  {/* Total Score - smooth progression */}
-                  <Line
-                    type="monotone"
-                    dataKey="totalPoints"
-                    stroke="#10B981"
-                    strokeWidth={3}
-                    dot={{ r: 4, fill: '#10B981', strokeWidth: 2 }}
-                    name="Total Score"
                     activeDot={{ r: 6 }}
                   />
                 </LineChart>

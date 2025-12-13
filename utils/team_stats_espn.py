@@ -38,11 +38,17 @@ class ESPNStatsFetcher:
         - ft_rate: FTA per game
         - ft_pct: Free throw percentage
         - oreb_pct: Offensive rebounding percentage
+        - dreb_pct: Defensive rebounding percentage (Phase 2)
         - to_rate: Turnovers per game
-        - efg_pct: Effective FG% (NEW)
-        - ts_pct: True Shooting % (NEW)
-        - two_p_pct: 2-Point FG% (NEW)
-        - efficiency_margin: Off Eff - Def Eff (NEW)
+        - efg_pct: Effective FG%
+        - ts_pct: True Shooting %
+        - two_p_pct: 2-Point FG%
+        - efficiency_margin: Off Eff - Def Eff
+        - assists_per_game: Assists per game (Phase 2)
+        - steals_per_game: Steals per game (Phase 2)
+        - blocks_per_game: Blocks per game (Phase 2)
+        - fouls_per_game: Fouls per game (Phase 2)
+        - ast_to_ratio: Assist-to-Turnover Ratio (Phase 2)
         """
         # Check if we have recent cached data
         if not force_refresh and self._is_cache_valid():
@@ -116,6 +122,12 @@ class ESPNStatsFetcher:
             total_reb = team_games['total_rebounds'].sum()
             total_to = team_games['turnovers'].sum()
 
+            # NEW: Assists, Steals, Blocks, Fouls
+            total_assists = pd.to_numeric(team_games['assists'], errors='coerce').fillna(0).sum()
+            total_steals = pd.to_numeric(team_games['steals'], errors='coerce').fillna(0).sum()
+            total_blocks = pd.to_numeric(team_games['blocks'], errors='coerce').fillna(0).sum()
+            total_fouls = pd.to_numeric(team_games['fouls'], errors='coerce').fillna(0).sum()
+
             # Opponent stats (for defensive metrics)
             opp_points = team_games['opponent_team_score'].sum()
 
@@ -137,10 +149,25 @@ class ESPNStatsFetcher:
             ft_pct = (total_ftm / total_fta * 100) if total_fta > 0 else 0
 
             # Rebounding (simplified - would need opponent reb for true OReb%)
+            # OReb% = Offensive Rebounds / Total Rebounds (approximation)
+            # True formula would be: OReb / (OReb + Opp DReb), requires opponent data
             oreb_pct = (total_oreb / total_reb * 100) if total_reb > 0 else 0
+
+            # DReb% = Defensive Rebounds / Total Rebounds (approximation)
+            # True formula would be: DReb / (DReb + Opp OReb), requires opponent data
+            dreb_pct = (total_dreb / total_reb * 100) if total_reb > 0 else 0
 
             # Turnover rate
             to_rate = total_to / games_played if games_played > 0 else 0
+
+            # NEW: Per-game stats for assists, steals, blocks, fouls
+            assists_per_game = total_assists / games_played if games_played > 0 else 0
+            steals_per_game = total_steals / games_played if games_played > 0 else 0
+            blocks_per_game = total_blocks / games_played if games_played > 0 else 0
+            fouls_per_game = total_fouls / games_played if games_played > 0 else 0
+
+            # NEW: Assist-to-Turnover Ratio (superior to raw turnover rate)
+            ast_to_ratio = total_assists / total_to if total_to > 0 else 0
 
             # NEW ADVANCED METRICS (Phase 1)
             # 1. Effective Field Goal % (eFG%) = (FGM + 0.5 × 3PM) / FGA
@@ -178,6 +205,7 @@ class ESPNStatsFetcher:
                 'ft_rate': ft_rate,
                 'ft_pct': ft_pct,
                 'oreb_pct': oreb_pct,
+                'dreb_pct': dreb_pct,  # Defensive rebounding % (Phase 2)
                 'to_rate': to_rate,
                 # New advanced metrics
                 'efg_pct': efg_pct,
@@ -186,6 +214,12 @@ class ESPNStatsFetcher:
                 'efficiency_margin': efficiency_margin,
                 'avg_ppm': avg_ppm,  # Average points per minute
                 'avg_ppg': avg_ppg,  # Average points per game
+                # NEW: Assists, Steals, Blocks, Fouls (Phase 2)
+                'assists_per_game': assists_per_game,
+                'steals_per_game': steals_per_game,
+                'blocks_per_game': blocks_per_game,
+                'fouls_per_game': fouls_per_game,
+                'ast_to_ratio': ast_to_ratio,  # Assist-to-Turnover Ratio
                 'data_source': 'espn'
             })
 
@@ -214,10 +248,17 @@ class ESPNStatsFetcher:
         - three_p_pct: 3P%
         - ft_rate: FTA per game
         - to_rate: TO per game
-        - efg_pct: Effective FG% (NEW)
-        - ts_pct: True Shooting % (NEW)
-        - two_p_pct: 2-Point FG% (NEW)
-        - efficiency_margin: Off Eff - Def Eff (NEW)
+        - oreb_pct: Offensive rebound %
+        - dreb_pct: Defensive rebound % (Phase 2)
+        - efg_pct: Effective FG%
+        - ts_pct: True Shooting %
+        - two_p_pct: 2-Point FG%
+        - efficiency_margin: Off Eff - Def Eff
+        - assists_per_game: Assists per game (Phase 2)
+        - steals_per_game: Steals per game (Phase 2)
+        - blocks_per_game: Blocks per game (Phase 2)
+        - fouls_per_game: Fouls per game (Phase 2)
+        - ast_to_ratio: Assist-to-Turnover Ratio (Phase 2)
         """
         if self.stats_cache is None:
             self.fetch_team_stats()
@@ -245,6 +286,7 @@ class ESPNStatsFetcher:
             "ft_rate": float(team_row["ft_rate"]),
             "to_rate": float(team_row["to_rate"]),
             "oreb_pct": float(team_row["oreb_pct"]),
+            "dreb_pct": float(team_row["dreb_pct"]),
             # New advanced metrics
             "efg_pct": float(team_row["efg_pct"]),
             "ts_pct": float(team_row["ts_pct"]),
@@ -253,6 +295,12 @@ class ESPNStatsFetcher:
             "avg_ppm": float(team_row["avg_ppm"]),  # Average points per minute
             "avg_ppg": float(team_row["avg_ppg"]),  # Average points per game
             "espn_rank": int(team_row["espn_rank"]),  # ESPN-calculated ranking
+            # NEW: Assists, Steals, Blocks, Fouls (Phase 2)
+            "assists_per_game": float(team_row["assists_per_game"]),
+            "steals_per_game": float(team_row["steals_per_game"]),
+            "blocks_per_game": float(team_row["blocks_per_game"]),
+            "fouls_per_game": float(team_row["fouls_per_game"]),
+            "ast_to_ratio": float(team_row["ast_to_ratio"]),
             "data_source": "espn"
         }
 

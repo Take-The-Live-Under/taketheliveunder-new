@@ -1,86 +1,85 @@
 #!/bin/bash
-# One-Command Deployment Script for Basketball Betting App
-# Usage: ./deploy.sh
+
+# Basketball Betting App - Seamless Deployment Script
+# Deploys backend to Railway and frontend to Vercel
 
 set -e  # Exit on error
 
-echo "🚀 Basketball Betting App - Deployment Script"
-echo "=============================================="
+echo "🏀 Basketball Betting Monitor - Deployment Script"
+echo "=================================================="
 echo ""
 
 # Colors for output
 GREEN='\033[0;32m'
+BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-# Check if Railway CLI is installed
-if ! command -v railway &> /dev/null; then
-    echo -e "${YELLOW}⚠️  Railway CLI not found${NC}"
-    echo "Installing Railway CLI..."
-    npm install -g @railway/cli
-fi
+# Step 1: Commit current changes
+echo -e "${BLUE}Step 1: Committing changes...${NC}"
+git add .
+git commit -m "Deploy: Updated with referee integration and new API key - $(date +%Y-%m-%d)" || echo "No changes to commit"
 
-# Check if Vercel CLI is installed
-if ! command -v vercel &> /dev/null; then
-    echo -e "${YELLOW}⚠️  Vercel CLI not found${NC}"
-    echo "Installing Vercel CLI..."
-    npm install -g vercel
-fi
+# Step 2: Push to GitHub
+echo -e "${BLUE}Step 2: Pushing to GitHub...${NC}"
+git push origin NEWSITE11
 
-echo ""
-echo -e "${GREEN}Step 1: Deploying Backend to Railway...${NC}"
-echo "---------------------------------------"
+# Step 3: Check if Railway is linked
+echo -e "${BLUE}Step 3: Checking Railway setup...${NC}"
+if railway status &> /dev/null; then
+    echo -e "${GREEN}✓ Railway project linked${NC}"
 
-# Deploy to Railway
-if railway up --detach; then
-    echo -e "${GREEN}✅ Backend deployed to Railway${NC}"
+    # Deploy to Railway
+    echo -e "${BLUE}Deploying backend to Railway...${NC}"
+    railway up --detach
+
+    # Get Railway URL
+    RAILWAY_URL=$(railway domain 2>/dev/null || echo "")
+    if [ -z "$RAILWAY_URL" ]; then
+        echo -e "${YELLOW}⚠ No Railway domain found. Generating one...${NC}"
+        railway domain
+        RAILWAY_URL=$(railway domain 2>/dev/null || echo "https://your-railway-app.railway.app")
+    fi
+
+    echo -e "${GREEN}✓ Backend deployed to: $RAILWAY_URL${NC}"
 else
-    echo -e "${RED}❌ Railway deployment failed${NC}"
-    echo "Make sure you've run 'railway login' and 'railway link' first"
-    exit 1
+    echo -e "${YELLOW}⚠ Railway not linked. Skipping backend deployment.${NC}"
+    echo -e "${YELLOW}Run 'railway link' to connect to your Railway project${NC}"
+    RAILWAY_URL="https://your-railway-app.railway.app"
 fi
 
-echo ""
-echo -e "${GREEN}Step 2: Building Frontend...${NC}"
-echo "----------------------------"
-
-# Build frontend
+# Step 4: Deploy frontend to Vercel
+echo -e "${BLUE}Step 4: Deploying frontend to Vercel...${NC}"
 cd frontend
-if npm run build; then
-    echo -e "${GREEN}✅ Frontend built successfully${NC}"
-else
-    echo -e "${RED}❌ Frontend build failed${NC}"
-    exit 1
-fi
 
-echo ""
-echo -e "${GREEN}Step 3: Deploying Frontend to Vercel...${NC}"
-echo "---------------------------------------"
+# Set environment variable for production API URL
+echo -e "${BLUE}Setting production API URL: $RAILWAY_URL${NC}"
 
-# Deploy to Vercel
-if vercel --prod --yes; then
-    echo -e "${GREEN}✅ Frontend deployed to Vercel${NC}"
-else
-    echo -e "${RED}❌ Vercel deployment failed${NC}"
-    echo "Make sure you've run 'vercel login' and linked your project"
-    exit 1
-fi
+# Deploy to Vercel with production flag
+vercel --prod -e NEXT_PUBLIC_API_URL="$RAILWAY_URL" --yes
+
+# Get Vercel URL
+VERCEL_URL=$(vercel inspect --wait 2>/dev/null | grep -o 'https://[^"]*' | head -1 || echo "your-app.vercel.app")
 
 cd ..
 
 echo ""
-echo -e "${GREEN}=============================================="
-echo "✅ Deployment Complete!"
-echo "===============================================${NC}"
+echo "=================================================="
+echo -e "${GREEN}🎉 Deployment Complete!${NC}"
+echo "=================================================="
 echo ""
-echo "Next steps:"
-echo "1. Visit your Railway dashboard to get the backend URL"
-echo "2. Update Vercel environment variable NEXT_PUBLIC_API_URL with Railway URL"
-echo "3. Test your production site!"
+echo -e "${GREEN}Frontend URL:${NC} $VERCEL_URL"
+echo -e "${GREEN}Backend URL:${NC} $RAILWAY_URL"
 echo ""
-echo "Useful commands:"
-echo "  railway logs      - View backend logs"
-echo "  vercel logs       - View frontend logs"
-echo "  railway status    - Check backend status"
+echo -e "${YELLOW}Next Steps:${NC}"
+echo "1. Verify the frontend loads at the Vercel URL"
+echo "2. Check that live games are flowing through"
+echo "3. Monitor Railway logs: railway logs"
+echo ""
+echo -e "${BLUE}Useful Commands:${NC}"
+echo "  railway logs         - View backend logs"
+echo "  railway status       - Check deployment status"
+echo "  vercel ls           - List Vercel deployments"
+echo "  vercel logs         - View frontend logs"
 echo ""

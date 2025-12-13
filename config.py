@@ -64,6 +64,9 @@ PPM_THRESHOLD = PPM_THRESHOLD_UNDER
 # Minimum confidence to actually place a bet (vs just monitoring)
 MIN_CONFIDENCE_TO_BET = 65  # 65+ required to bet (analysis showed 64.1% win rate overall)
 
+# Maximum confidence to bet (CRITICAL SAFEGUARD based on 45-game analysis)
+MAX_CONFIDENCE_TO_BET = 85  # NEVER bet above 85 (85-100 tier has 0% win rate, 0-9 all-time)
+
 # PPM confirmation threshold - wait for strong momentum before betting
 PPM_CONFIRMATION_THRESHOLD = 5.0  # 5.0+ PPM improves win rate from 64% to 71%
 
@@ -109,16 +112,48 @@ CONFIDENCE_WEIGHTS = {
     "both_slow_bonus": 9,           # Reduced from 15 (favors under)
     "both_strong_defense_bonus": 6, # Reduced from 10 (favors under)
     "pace_mismatch_penalty": -5,    # Unchanged (already balanced)
+
+    # ========== NEW PHASE 2 STATS (Added Nov 2025) ==========
+    # Assists factors (high assists = better offensive flow)
+    "high_assists_threshold": 15,   # Assists per game
+    "high_assists_bonus": 5,        # For OVER (good ball movement)
+    "low_assists_threshold": 12,    # Below this = poor ball movement
+    "low_assists_bonus": 4,         # For UNDER (inefficient offense)
+
+    # Assist-to-Turnover Ratio (superior to raw turnover rate)
+    "high_ast_to_threshold": 1.5,   # Good ratio (>1.5 assists per turnover)
+    "high_ast_to_bonus": 4,         # For OVER (efficient possessions)
+    "low_ast_to_threshold": 1.0,    # Poor ratio (<1.0)
+    "low_ast_to_bonus": 4,          # For UNDER (sloppy offense)
+
+    # Steals factors (more steals = more possessions)
+    "high_steals_threshold": 8,     # Steals per game
+    "high_steals_bonus": 4,         # For OVER (creates extra possessions)
+    "low_steals_threshold": 5,      # Below this = passive defense
+
+    # Blocks factors (rim protection)
+    "high_blocks_threshold": 5,     # Blocks per game
+    "high_blocks_bonus": 5,         # For UNDER (strong interior defense)
+    "low_blocks_threshold": 3,      # Below this = weak interior D
+
+    # Rebounding factors (defensive rebounding limits second chances)
+    "high_dreb_threshold": 75,      # Defensive rebound % (of team's total rebounds)
+    "high_dreb_bonus": 4,           # For UNDER (limit second-chance points)
+    "low_oreb_threshold": 25,       # Offensive rebound %
+    "low_oreb_bonus": 3,            # For UNDER (don't get offensive boards)
+
+    # Fouls factors (high fouls = slow game)
+    "high_fouls_threshold": 20,     # Fouls per game
+    "high_fouls_bonus": 3,          # For UNDER (game slows down)
 }
 
-# Unit sizing based on confidence (OPTIMIZED - removed underperforming medium tier)
-# Based on 39-game analysis: Low 84.6% WR, Medium 47.6% WR, High 80% WR
+# Unit sizing based on confidence (CRITICAL UPDATE - 45-game analysis)
+# MAX tier (85-100) has 0% WR (0-9 all-time) - BLOCKED by MAX_CONFIDENCE_TO_BET
+# Low (65-74): 53.8% WR | High (75-84): 83.3% WR ← BEST TIER
 UNIT_SIZES = {
-    "no_bet": (0, 49),      # 0-49: Don't bet (below analysis threshold)
-    "monitor": (50, 64),    # 50-64: Monitor only, don't bet (wait for confirmation)
-    "low": (65, 74),        # 65-74: 1 unit (good confidence)
-    "high": (75, 84),       # 75-84: 2 units (strong confidence)
-    "max": (85, 100),       # 85-100: 2.5-3 units (elite confidence)
+    "no_bet": (0, 64),      # 0-64: Don't bet (below proven threshold)
+    "low": (65, 74),        # 65-74: 1 unit (decent confidence, 53.8% WR)
+    "high": (75, 100),      # 75-100: 2 units MAX (85+ blocked by MAX_CONFIDENCE_TO_BET)
 }
 
 # ========== DATABASE/STORAGE CONFIGURATION ==========
@@ -162,6 +197,20 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 # Frontend URL (Vercel)
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
+# ========== REFEREE ANALYSIS CONFIGURATION ==========
+# Season start date for referee analysis
+from datetime import datetime
+REFEREE_SEASON_START = datetime(2024, 11, 1)  # Start of 2024-25 season
+
+# Minimum games for a referee to be included in analysis
+REFEREE_MIN_GAMES = 5
+
+# Point differential threshold to classify as "close game"
+CLOSE_GAME_MARGIN = 10  # Games within 10 points
+
+# Total foul threshold to classify as "high foul game"
+HIGH_FOUL_THRESHOLD = 40  # 40+ total fouls
 
 # ========== EMAIL CONFIGURATION ==========
 EMAIL_ENABLED = os.getenv("EMAIL_ENABLED", "false").lower() == "true"

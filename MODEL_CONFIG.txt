@@ -1,0 +1,355 @@
+================================================================================
+NCAA BASKETBALL TOTAL POINTS PREDICTION MODEL
+Configuration & Settings
+================================================================================
+
+Last Updated: 2025-11-17
+Model Version: 1.0
+Training Games: 44 (2025 season)
+
+================================================================================
+PREDICTION METHODOLOGY
+================================================================================
+
+This system uses Ken Pomeroy's proven methodology to predict total points:
+
+FORMULA:
+  Total Points = (Predicted Tempo) × (Team1 Efficiency + Team2 Efficiency) / 100
+
+  Where:
+    - Tempo = Average possessions per game (both teams)
+    - Efficiency = Points scored per 100 possessions
+    - Home Court Adjustment = ±1.4% efficiency boost for home team
+
+POSSESSIONS CALCULATION (Pomeroy Formula):
+  Possessions = FGA - OR + TO + (0.475 × FTA)
+
+================================================================================
+MODEL ENSEMBLE WEIGHTS
+================================================================================
+
+CURRENT WEIGHTS (must sum to 1.0):
+┌─────────────────────────────────────────────────────────────────┐
+│ Model 1: Pure Pomeroy (Formula-Based)           = 0.30 (30%)   │
+│ Model 2: Calibrated Regression                  = 0.40 (40%)   │
+│ Model 3: Machine Learning (Random Forest)       = 0.30 (30%)   │
+│                                                  ─────────────   │
+│ TOTAL:                                           = 1.00 (100%)  │
+└─────────────────────────────────────────────────────────────────┘
+
+HOW TO ADJUST:
+  1. Edit the values above (keep sum = 1.0)
+  2. Increase a weight to trust that model more
+  3. Decrease a weight to trust that model less
+
+CURRENT SETTING (for predictions):
+  - Using 100% Pure Pomeroy (most reliable with limited training data)
+  - Calibrated and ML models disabled due to overfitting on 44 games
+  - Once 100+ games accumulated, re-enable ensemble weights above
+
+RECOMMENDATIONS:
+  - With < 50 games:  Use 100% Pomeroy (current)
+  - With 50-100 games: Use 60% Pomeroy, 25% Calibrated, 15% ML
+  - With 100+ games: Use 30% Pomeroy, 40% Calibrated, 30% ML (default)
+  - With 200+ games: Test equal weights (33% each)
+
+================================================================================
+HOME COURT ADVANTAGE
+================================================================================
+
+CURRENT VALUE: 1.4 efficiency points
+┌──────────────────────────────────────────────────────────┐
+│ HOME_COURT_ADVANTAGE = 1.4                               │
+└──────────────────────────────────────────────────────────┘
+
+WHAT IT MEANS:
+  - Home team gets +1.4 points per 100 possessions
+  - Away team gets -1.4 points per 100 possessions
+  - On average, worth ~3-4 total points per game
+
+HOW TO ADJUST:
+  - NCAA average is 1.4 (Pomeroy standard)
+  - Can range from 0.0 (neutral court) to 3.0 (major advantage)
+  - Increase if you think home court matters more
+  - Decrease if you think it matters less
+
+================================================================================
+MACHINE LEARNING PARAMETERS
+================================================================================
+
+RANDOM FOREST SETTINGS:
+┌──────────────────────────────────────────────────────────┐
+│ N_ESTIMATORS     = 100    (number of trees)             │
+│ MAX_DEPTH        = 10     (tree depth, None=unlimited)  │
+│ MIN_SAMPLES_SPLIT = 5     (minimum samples to split)    │
+│ RANDOM_STATE     = 42     (for reproducibility)         │
+└──────────────────────────────────────────────────────────┘
+
+PERFORMANCE TUNING:
+  - More trees (200-500) = slower but potentially more accurate
+  - Deeper trees (20+) = risk overfitting with small dataset
+  - Lower min_samples = more complex model (can overfit)
+
+CURRENT RECOMMENDATION: Keep defaults until 100+ games
+
+CALIBRATED REGRESSION:
+┌──────────────────────────────────────────────────────────┐
+│ USE_RIDGE        = False  (use LinearRegression)        │
+│ ALPHA           = 1.0     (regularization, if Ridge)    │
+└──────────────────────────────────────────────────────────┘
+
+================================================================================
+BETTING THRESHOLDS
+================================================================================
+
+OVER/UNDER SUGGESTION RULES:
+┌──────────────────────────────────────────────────────────┐
+│ If (Prediction - Line) > +2.0  →  OVER                  │
+│ If (Prediction - Line) < -2.0  →  UNDER                 │
+│ Otherwise                      →  PASS                   │
+└──────────────────────────────────────────────────────────┘
+
+HOW TO ADJUST:
+  - Conservative: Use ±3.0 threshold (fewer picks, higher confidence)
+  - Balanced: Use ±2.0 threshold (current)
+  - Aggressive: Use ±1.5 threshold (more picks, lower confidence)
+
+CONFIDENCE SCORING:
+  - Based on team strength (AdjEM metric)
+  - Based on model agreement (ensemble only)
+  - Range: 0-100
+  - Higher confidence = more reliable prediction
+
+================================================================================
+FEATURE IMPORTANCE (What the Models Look At)
+================================================================================
+
+TOP PREDICTIVE FEATURES:
+  1. Team Adjusted Offensive Efficiency (AdjOE) - Most Important
+  2. Team Adjusted Defensive Efficiency (AdjDE)
+  3. Team Adjusted Tempo (AdjTempo)
+  4. Effective Field Goal % (eFG%)
+  5. Turnover Rate (TO%)
+  6. Offensive Rebound Rate (OR%)
+  7. Free Throw Rate (FT Rate)
+  8. 3-Point % (3P%)
+  9. Team Experience & Continuity
+  10. Average Height
+
+DERIVED FEATURES:
+  - Combined Tempo (average of both teams)
+  - Tempo Differential (home - away)
+  - Efficiency Differential
+  - Shooting % Combinations
+
+================================================================================
+DATA SOURCES
+================================================================================
+
+PRIMARY DATA:
+  - KenPom Official API (https://kenpom.com)
+  - Season ratings updated daily
+  - 365 teams tracked for 2025 season
+
+GAMES DATA:
+  - The Odds API (live game schedule)
+  - Over/Under lines from major sportsbooks
+  - Historical results logged to CSV
+
+TRAINING DATA:
+  - Location: data/training/games_2025.csv
+  - Current size: 44 games with complete data
+  - Auto-updates as more games complete
+
+================================================================================
+MODEL PERFORMANCE (Current Training Results)
+================================================================================
+
+ENSEMBLE RESULTS (on 44 training games):
+┌──────────────────────────────────────────────────────────┐
+│ Mean Absolute Error (MAE):     5.33 points               │
+│ Root Mean Square Error (RMSE): 7.10 points               │
+│ Within 5 points:                56.8%                     │
+│ Within 10 points:               88.6%                     │
+└──────────────────────────────────────────────────────────┘
+
+INDIVIDUAL MODEL PERFORMANCE:
+  - Pomeroy:    MAE = 13.04 (baseline, no training)
+  - Calibrated: MAE = 0.00  (perfect on training - OVERFITTED!)
+  - ML:         MAE = 5.62  (best generalizable)
+  - Ensemble:   MAE = 5.33  (combined)
+
+NOTE: Calibrated model is overfitted. Use Pomeroy-only until 100+ games.
+
+================================================================================
+HOW TO RETRAIN THE MODEL
+================================================================================
+
+STEP 1: Collect More Data
+  - Let games accumulate in data/ncaa_live_log.csv
+  - Results automatically logged to data/ncaa_results.csv
+  - Need 100+ games for reliable ensemble
+
+STEP 2: Reprocess Training Data
+  Command: python models/data_pipeline/historical_games_processor.py
+
+STEP 3: Retrain Models
+  Command: python train_models.py
+
+STEP 4: Review Performance
+  - Check: data/model_reports/summary_latest.txt
+  - Look at MAE, RMSE, and accuracy bands
+  - If MAE < 8 points, model is performing well
+
+STEP 5: Adjust Weights (if needed)
+  - Edit this file with new weight values
+  - Or adjust directly in models/ensemble_predictor.py
+  - Rerun training to save new configuration
+
+RECOMMENDED RETRAINING SCHEDULE:
+  - Weekly during season (as games accumulate)
+  - After major upsets or changes in team rankings
+  - When MAE increases significantly
+
+================================================================================
+ADVANCED CUSTOMIZATION
+================================================================================
+
+TO CHANGE ENSEMBLE WEIGHTS IN CODE:
+  File: models/ensemble_predictor.py
+  Line: ~45-47
+
+  Change these values:
+    pomeroy_weight=0.3,
+    calibrated_weight=0.4,
+    ml_weight=0.3
+
+TO CHANGE HOME COURT ADVANTAGE:
+  File: models/pomeroy_predictor.py
+  Line: ~21
+
+  Change: HOME_COURT_ADVANTAGE = 1.4
+
+TO CHANGE ML PARAMETERS:
+  File: models/ml_predictor.py
+  Lines: ~40-44
+
+  Adjust:
+    n_estimators=100,
+    max_depth=10,
+    min_samples_split=5
+
+TO CHANGE BETTING THRESHOLDS:
+  File: predict_totals.py
+  Lines: ~268-275
+
+  Modify the if conditions:
+    if diff > 2:  # Change 2 to your threshold
+    if diff < -2:
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+PROBLEM: Predictions way too high/low
+  → Check HOME_COURT_ADVANTAGE value (should be 0.5-2.5)
+  → Verify KenPom data is current (run kenpom_data_bot.py)
+  → Retrain models with fresh data
+
+PROBLEM: All suggestions are OVER or UNDER
+  → Adjust betting thresholds (±2.0 default)
+  → Check if O/U lines are being fetched correctly
+  → Model may be systematically biased (retrain needed)
+
+PROBLEM: Low confidence scores
+  → Normal for games between weak teams
+  → Increase confidence threshold to only bet high-confidence games
+  → Consider using only top-50 KenPom teams
+
+PROBLEM: Model overfitting (MAE = 0 or very low)
+  → Reduce model complexity (lower max_depth)
+  → Use more regularization (enable Ridge, increase alpha)
+  → Need more training data (wait for more games)
+
+================================================================================
+RECOMMENDED WORKFLOW
+================================================================================
+
+DAILY (During Season):
+  1. Run: python predict_totals.py
+  2. Review Excel file for tomorrow's games
+  3. Focus on high-confidence picks
+  4. Log actual results for model improvement
+
+WEEKLY:
+  1. Check data/ncaa_results.csv for completed games
+  2. If 10+ new games: python train_models.py
+  3. Review new model performance in data/model_reports/
+  4. Adjust weights if needed
+
+MONTHLY:
+  1. Analyze betting performance (W/L record)
+  2. Calculate ROI on predictions
+  3. Fine-tune thresholds based on results
+  4. Update this config file with learnings
+
+================================================================================
+SUPPORT & DOCUMENTATION
+================================================================================
+
+MODEL FILES:
+  - models/pomeroy_predictor.py      (Pure formula)
+  - models/calibrated_predictor.py   (Formula + ML corrections)
+  - models/ml_predictor.py           (Random Forest)
+  - models/ensemble_predictor.py     (Combines all 3)
+
+DATA FILES:
+  - data/training/games_2025.csv     (Training dataset)
+  - data/trained_models/             (Saved models)
+  - data/model_reports/              (Performance reports)
+  - data/predictions/                (Daily predictions)
+
+KEY SCRIPTS:
+  - predict_totals.py                (Generate daily predictions)
+  - train_models.py                  (Retrain all models)
+  - kenpom_data_bot.py              (Fetch latest ratings)
+
+REFERENCES:
+  - KenPom Methodology: https://kenpom.com/blog/
+  - The Odds API: https://the-odds-api.com/
+  - Training Reports: data/model_reports/summary_latest.txt
+
+================================================================================
+VERSION HISTORY
+================================================================================
+
+v1.0 (2025-11-17):
+  - Initial release
+  - Pure Pomeroy predictor implemented
+  - Calibrated regression predictor added
+  - Random Forest ML predictor added
+  - Ensemble system combining all 3 models
+  - Trained on 44 games (small sample)
+  - Currently using Pomeroy-only due to overfitting
+
+PLANNED UPDATES:
+  - v1.1: Add XGBoost as alternative to Random Forest
+  - v1.2: Implement cross-validation for better generalization
+  - v1.3: Add player injury adjustments
+  - v1.4: Incorporate betting market movement
+  - v2.0: Deep learning model (requires 500+ games)
+
+================================================================================
+END OF CONFIGURATION
+================================================================================
+
+To apply changes:
+1. Edit values above as needed
+2. Update corresponding code files (paths listed in each section)
+3. Retrain models: python train_models.py
+4. Generate new predictions: python predict_totals.py
+
+For questions or issues, review:
+  - data/model_reports/summary_latest.txt
+  - logs/ directory for error messages
+  - This config file for parameter explanations

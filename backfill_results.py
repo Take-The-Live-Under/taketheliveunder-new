@@ -168,7 +168,7 @@ def write_results(results, output_path):
 
 if __name__ == "__main__":
     # Configuration
-    csv_path = Path("data/ncaa_live_log_backup_20251114_210848.csv")
+    csv_path = Path("data/ncaa_live_log.csv")  # Use current live log
     output_path = Path("data/ncaa_results.csv")
 
     print(f"🔍 Reading games from {csv_path}")

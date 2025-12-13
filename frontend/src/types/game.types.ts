@@ -35,6 +35,10 @@ export interface EnhancedGame {
   away_pace?: number;
   away_def_eff?: number;
 
+  // Referee info
+  referees?: string[];
+  referee_crew_stats?: RefereeCrewStats;
+
   // Timestamp
   timestamp: string;
 
@@ -97,6 +101,33 @@ export interface UserPreferences {
   alertsEnabled: {
     [gameId: string]: boolean;
   };
+}
+
+// Referee stats
+export interface RefereeStats {
+  name: string;
+  total_fouls_per_game: number;
+  home_fouls_per_game: number;
+  away_fouls_per_game: number;
+  foul_differential: number;
+  total_games: number;
+  home_bias: number;
+  consistency_score: number;
+  ref_style: 'Tight' | 'Average' | 'Loose';
+  rank_most_fouls?: number;
+  profile_url: string;
+}
+
+export interface RefereeCrewStats {
+  found_refs: number;
+  total_refs: number;
+  referees?: RefereeStats[];
+  avg_fouls_per_game: number | null;
+  avg_home_fouls?: number;
+  avg_away_fouls?: number;
+  avg_home_bias: number | null;
+  crew_style: 'Tight' | 'Average' | 'Loose' | 'Unknown';
+  total_games_officiated?: number;
 }
 
 // Telemetry events

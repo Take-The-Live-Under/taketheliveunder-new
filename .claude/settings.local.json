@@ -3,7 +3,13 @@
     "allow": [
       "WebSearch",
       "WebFetch(domain:site.api.espn.com)",
-      "WebFetch(domain:barttorvik.com)"
+      "WebFetch(domain:barttorvik.com)",
+      "Bash(pip install:*)",
+      "Bash(python fetch_espn_data.py:*)",
+      "Bash(ls:*)",
+      "Bash(python fetch_refmetrics_fouls_auth.py:*)",
+      "Bash(python:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

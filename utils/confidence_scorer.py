@@ -35,7 +35,8 @@ class ConfidenceScorer:
         home_fouls: Optional[int] = None,
         away_fouls: Optional[int] = None,
         home_live_stats: Optional[Dict] = None,
-        away_live_stats: Optional[Dict] = None
+        away_live_stats: Optional[Dict] = None,
+        referee_crew_stats: Optional[Dict] = None
     ) -> Dict:
         """
         Calculate confidence score for over or under bet
@@ -126,6 +127,32 @@ class ConfidenceScorer:
         score += matchup_score * multiplier
         breakdown["matchup"] = matchup_breakdown
 
+        # === NEW PHASE 2 ANALYSIS ===
+        # Assists analysis
+        assists_score, assists_breakdown = self._evaluate_assists(home_metrics, away_metrics)
+        score += assists_score * multiplier
+        breakdown["assists"] = assists_breakdown
+
+        # Assist-to-Turnover ratio analysis
+        ast_to_score, ast_to_breakdown = self._evaluate_ast_to_ratio(home_metrics, away_metrics)
+        score += ast_to_score * multiplier
+        breakdown["ast_to_ratio"] = ast_to_breakdown
+
+        # Steals analysis
+        steals_score, steals_breakdown = self._evaluate_steals(home_metrics, away_metrics)
+        score += steals_score * multiplier
+        breakdown["steals"] = steals_breakdown
+
+        # Blocks analysis
+        blocks_score, blocks_breakdown = self._evaluate_blocks(home_metrics, away_metrics)
+        score += blocks_score * multiplier
+        breakdown["blocks"] = blocks_breakdown
+
+        # Rebounding analysis
+        rebounding_score, rebounding_breakdown = self._evaluate_rebounding(home_metrics, away_metrics)
+        score += rebounding_score * multiplier
+        breakdown["rebounding"] = rebounding_breakdown
+
         # === PPM/PACE ANALYSIS ===
         # Different logic for OVER vs UNDER
         if bet_type == "over":
@@ -167,6 +194,13 @@ class ConfidenceScorer:
             )
             score += reb_score * multiplier
             breakdown["live_rebounding"] = reb_breakdown
+
+        # === REFEREE CREW ANALYSIS (if available) ===
+        # Adjust confidence based on referee tendencies
+        if referee_crew_stats and referee_crew_stats.get("found_refs", 0) > 0:
+            ref_score, ref_breakdown = self._evaluate_referee_impact(referee_crew_stats)
+            score += ref_score * multiplier
+            breakdown["referee_impact"] = ref_breakdown
 
         # Cap score at 0-100
         final_score = max(0, min(100, score))
@@ -383,6 +417,137 @@ class ConfidenceScorer:
         details["total"] = score
         return score, details
 
+    # ========== NEW PHASE 2 EVALUATION FUNCTIONS (Added Nov 2025) ==========
+
+    def _evaluate_assists(self, home: Dict, away: Dict) -> Tuple[float, Dict]:
+        """Evaluate assists per game (ball movement and offensive flow)"""
+        score = 0
+        details = {}
+
+        home_assists = home.get("assists_per_game", 13)
+        away_assists = away.get("assists_per_game", 13)
+
+        # High assists = good ball movement = efficient offense = OVER
+        # Low assists = stagnant offense = fewer points = UNDER
+        if home_assists >= self.weights["high_assists_threshold"]:
+            score -= self.weights["high_assists_bonus"]  # Negative for UNDER (will flip for OVER)
+            details["home"] = f"High assists ({home_assists:.1f}/gm): -{self.weights['high_assists_bonus']}"
+        elif home_assists < self.weights["low_assists_threshold"]:
+            score += self.weights["low_assists_bonus"]
+            details["home"] = f"Low assists ({home_assists:.1f}/gm): +{self.weights['low_assists_bonus']}"
+
+        if away_assists >= self.weights["high_assists_threshold"]:
+            score -= self.weights["high_assists_bonus"]
+            details["away"] = f"High assists ({away_assists:.1f}/gm): -{self.weights['high_assists_bonus']}"
+        elif away_assists < self.weights["low_assists_threshold"]:
+            score += self.weights["low_assists_bonus"]
+            details["away"] = f"Low assists ({away_assists:.1f}/gm): +{self.weights['low_assists_bonus']}"
+
+        details["total"] = score
+        return score, details
+
+    def _evaluate_ast_to_ratio(self, home: Dict, away: Dict) -> Tuple[float, Dict]:
+        """Evaluate assist-to-turnover ratio (possession efficiency)"""
+        score = 0
+        details = {}
+
+        home_ratio = home.get("ast_to_ratio", 1.2)
+        away_ratio = away.get("ast_to_ratio", 1.2)
+
+        # High ratio = efficient possessions = more scoring = OVER
+        # Low ratio = sloppy play = fewer efficient possessions = UNDER
+        if home_ratio >= self.weights["high_ast_to_threshold"]:
+            score -= self.weights["high_ast_to_bonus"]  # Negative for UNDER (will flip for OVER)
+            details["home"] = f"High A/TO ({home_ratio:.2f}): -{self.weights['high_ast_to_bonus']}"
+        elif home_ratio < self.weights["low_ast_to_threshold"]:
+            score += self.weights["low_ast_to_bonus"]
+            details["home"] = f"Low A/TO ({home_ratio:.2f}): +{self.weights['low_ast_to_bonus']}"
+
+        if away_ratio >= self.weights["high_ast_to_threshold"]:
+            score -= self.weights["high_ast_to_bonus"]
+            details["away"] = f"High A/TO ({away_ratio:.2f}): -{self.weights['high_ast_to_bonus']}"
+        elif away_ratio < self.weights["low_ast_to_threshold"]:
+            score += self.weights["low_ast_to_bonus"]
+            details["away"] = f"Low A/TO ({away_ratio:.2f}): +{self.weights['low_ast_to_bonus']}"
+
+        details["total"] = score
+        return score, details
+
+    def _evaluate_steals(self, home: Dict, away: Dict) -> Tuple[float, Dict]:
+        """Evaluate steals per game (defensive pressure creates possessions)"""
+        score = 0
+        details = {}
+
+        home_steals = home.get("steals_per_game", 6.5)
+        away_steals = away.get("steals_per_game", 6.5)
+
+        # High steals = creates extra possessions = more scoring = OVER
+        # Note: Only bonus for high steals (no penalty for low)
+        if home_steals >= self.weights["high_steals_threshold"]:
+            score -= self.weights["high_steals_bonus"]  # Negative for UNDER (will flip for OVER)
+            details["home"] = f"High steals ({home_steals:.1f}/gm): -{self.weights['high_steals_bonus']}"
+
+        if away_steals >= self.weights["high_steals_threshold"]:
+            score -= self.weights["high_steals_bonus"]
+            details["away"] = f"High steals ({away_steals:.1f}/gm): -{self.weights['high_steals_bonus']}"
+
+        details["total"] = score
+        return score, details
+
+    def _evaluate_blocks(self, home: Dict, away: Dict) -> Tuple[float, Dict]:
+        """Evaluate blocks per game (rim protection/interior defense)"""
+        score = 0
+        details = {}
+
+        home_blocks = home.get("blocks_per_game", 4)
+        away_blocks = away.get("blocks_per_game", 4)
+
+        # High blocks = strong interior defense = harder to score = UNDER
+        # Note: Only bonus for high blocks (no penalty for low)
+        if home_blocks >= self.weights["high_blocks_threshold"]:
+            score += self.weights["high_blocks_bonus"]
+            details["home"] = f"High blocks ({home_blocks:.1f}/gm): +{self.weights['high_blocks_bonus']}"
+
+        if away_blocks >= self.weights["high_blocks_threshold"]:
+            score += self.weights["high_blocks_bonus"]
+            details["away"] = f"High blocks ({away_blocks:.1f}/gm): +{self.weights['high_blocks_bonus']}"
+
+        details["total"] = score
+        return score, details
+
+    def _evaluate_rebounding(self, home: Dict, away: Dict) -> Tuple[float, Dict]:
+        """Evaluate rebounding percentages (limits second-chance scoring)"""
+        score = 0
+        details = {}
+
+        home_dreb = home.get("dreb_pct", 70)
+        away_dreb = away.get("dreb_pct", 70)
+        home_oreb = home.get("oreb_pct", 30)
+        away_oreb = away.get("oreb_pct", 30)
+
+        # High defensive rebounding = limit opponent second chances = UNDER
+        if home_dreb >= self.weights["high_dreb_threshold"]:
+            score += self.weights["high_dreb_bonus"]
+            details["home_dreb"] = f"High DReb% ({home_dreb:.1f}%): +{self.weights['high_dreb_bonus']}"
+
+        if away_dreb >= self.weights["high_dreb_threshold"]:
+            score += self.weights["high_dreb_bonus"]
+            details["away_dreb"] = f"High DReb% ({away_dreb:.1f}%): +{self.weights['high_dreb_bonus']}"
+
+        # Low offensive rebounding = fewer second chances = UNDER
+        if home_oreb < self.weights["low_oreb_threshold"]:
+            score += self.weights["low_oreb_bonus"]
+            details["home_oreb"] = f"Low OReb% ({home_oreb:.1f}%): +{self.weights['low_oreb_bonus']}"
+
+        if away_oreb < self.weights["low_oreb_threshold"]:
+            score += self.weights["low_oreb_bonus"]
+            details["away_oreb"] = f"Low OReb% ({away_oreb:.1f}%): +{self.weights['low_oreb_bonus']}"
+
+        details["total"] = score
+        return score, details
+
+    # ========== END PHASE 2 FUNCTIONS ==========
+
     def _evaluate_ppm_severity(self, required_ppm: float) -> float:
         """
         Adjust confidence based on how difficult the required PPM is
@@ -437,19 +602,15 @@ class ConfidenceScorer:
         return score
 
     def _get_unit_recommendation(self, confidence: float) -> float:
-        """Convert confidence score to unit recommendation"""
+        """Convert confidence score to unit recommendation (UPDATED - Max 2 units)"""
         units = config.UNIT_SIZES
 
         if units["no_bet"][0] <= confidence <= units["no_bet"][1]:
-            return 0
-        elif units["monitor"][0] <= confidence <= units["monitor"][1]:
-            return 0  # Monitor only, don't bet
+            return 0  # 0-64: Don't bet
         elif units["low"][0] <= confidence <= units["low"][1]:
-            return 0.5
+            return 1.0  # 65-74: 1 unit (53.8% WR)
         elif units["high"][0] <= confidence <= units["high"][1]:
-            return 2.0
-        elif units["max"][0] <= confidence <= units["max"][1]:
-            return 3.0
+            return 2.0  # 75-100: 2 units MAX (85+ will be blocked by MAX_CONFIDENCE_TO_BET)
         else:
             return 0
 
@@ -644,6 +805,93 @@ class ConfidenceScorer:
             elif off_reb_pct < 20:
                 score = 2
                 breakdown["note"] = "Low offensive rebounding - limited second chances"
+
+        return score, breakdown
+
+    def _evaluate_referee_impact(self, referee_crew_stats: Dict) -> Tuple[float, Dict]:
+        """
+        Evaluate referee crew tendencies and their impact on game flow
+
+        Key Metrics:
+        - Crew Style (Tight/Average/Loose): Affects game pace and scoring
+        - Avg Fouls Per Game: More fouls = slower game = favors UNDER
+        - Home Bias: Affects which team gets favorable calls
+
+        Args:
+            referee_crew_stats: Dictionary with crew statistics
+
+        Returns:
+            Tuple of (score, breakdown_dict)
+        """
+        score = 0
+        breakdown = {}
+
+        crew_style = referee_crew_stats.get('crew_style', 'Unknown')
+        avg_fouls = referee_crew_stats.get('avg_fouls_per_game')
+        home_bias = referee_crew_stats.get('avg_home_bias')
+        found_refs = referee_crew_stats.get('found_refs', 0)
+        total_refs = referee_crew_stats.get('total_refs', 0)
+
+        breakdown['found_refs'] = found_refs
+        breakdown['total_refs'] = total_refs
+
+        if avg_fouls is None:
+            return 0, {"note": "No referee data available"}
+
+        # === CREW STYLE ANALYSIS ===
+        # Tight refs (40+ fouls/game) = slower game = UNDER
+        # Loose refs (32- fouls/game) = faster game = OVER
+        if crew_style == 'Tight':
+            score += 7
+            breakdown['crew_style'] = f"Tight crew ({avg_fouls:.1f} fouls/g): +7"
+        elif crew_style == 'Loose':
+            score -= 7  # Negative favors OVER
+            breakdown['crew_style'] = f"Loose crew ({avg_fouls:.1f} fouls/g): -7 (favors over)"
+        else:  # Average
+            if avg_fouls > 38:
+                score += 4
+                breakdown['crew_style'] = f"Above avg fouls ({avg_fouls:.1f}/g): +4"
+            elif avg_fouls < 34:
+                score -= 4
+                breakdown['crew_style'] = f"Below avg fouls ({avg_fouls:.1f}/g): -4 (favors over)"
+            else:
+                score += 0
+                breakdown['crew_style'] = f"Average crew ({avg_fouls:.1f} fouls/g): neutral"
+
+        # === FOULS PER GAME GRANULAR ANALYSIS ===
+        # Additional scoring based on exact foul rate
+        if avg_fouls >= 45:
+            score += 6
+            breakdown['foul_rate'] = f"Very high foul rate (≥45/g): +6"
+        elif avg_fouls >= 42:
+            score += 4
+            breakdown['foul_rate'] = f"High foul rate (42-45/g): +4"
+        elif avg_fouls <= 30:
+            score -= 6
+            breakdown['foul_rate'] = f"Very low foul rate (≤30/g): -6 (favors over)"
+        elif avg_fouls <= 33:
+            score -= 4
+            breakdown['foul_rate'] = f"Low foul rate (30-33/g): -4 (favors over)"
+
+        # === HOME BIAS ANALYSIS ===
+        # Significant home bias can affect game flow
+        # This is neutral for O/U but useful context
+        if home_bias is not None:
+            if abs(home_bias) > 2.0:
+                breakdown['home_bias'] = f"Strong bias: {home_bias:+.2f} (favors {'home' if home_bias > 0 else 'away'})"
+            elif abs(home_bias) > 1.0:
+                breakdown['home_bias'] = f"Moderate bias: {home_bias:+.2f}"
+            else:
+                breakdown['home_bias'] = f"Neutral: {home_bias:+.2f}"
+
+        # === DATA CONFIDENCE ADJUSTMENT ===
+        # If we only have stats for some refs, reduce impact
+        if found_refs < total_refs:
+            coverage_pct = (found_refs / total_refs) * 100
+            score = score * (coverage_pct / 100)
+            breakdown['coverage'] = f"{found_refs}/{total_refs} refs matched ({coverage_pct:.0f}% coverage)"
+
+        breakdown['total_score'] = round(score, 1)
 
         return score, breakdown
 

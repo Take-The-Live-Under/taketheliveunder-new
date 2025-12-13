@@ -99,6 +99,20 @@ export default function Dashboard() {
     .filter((game) => {
       const reqPpm = typeof game.required_ppm === 'number' ? game.required_ppm : parseFloat(game.required_ppm || '0');
       const curPpm = typeof game.current_ppm === 'number' ? game.current_ppm : parseFloat(game.current_ppm || '0');
+      const period = parseInt(game.period || '0');
+      const minutesRemaining = parseFloat(game.minutes_remaining || '0');
+
+      // Apply "Triggered Only" filter
+      if (filter === 'triggered') {
+        // Only show 2nd half games (period = 2)
+        if (period !== 2) return false;
+
+        // Only show games with 5-12 minutes remaining
+        if (minutesRemaining < 5 || minutesRemaining > 12) return false;
+
+        // Only show games needing more than 4.44 PPM to hit over
+        if (reqPpm <= 4.44) return false;
+      }
 
       // Apply Required PPM filters
       if (reqPpm < minRequiredPpm || reqPpm > maxRequiredPpm) return false;

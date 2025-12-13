@@ -1,6 +1,12 @@
 """
 FastAPI Backend for NCAA Basketball Betting Monitor
 """
+import sys
+from pathlib import Path
+
+# Add parent directory to path so we can import config and utils modules
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -9,6 +15,7 @@ from typing import List, Optional, Dict
 from datetime import datetime, timedelta
 import logging
 import asyncio
+import pandas as pd
 import config
 
 from api.auth import (
@@ -30,6 +37,7 @@ from utils.ppm_analyzer import get_ppm_analyzer
 from utils.ai_summary import get_ai_summary_generator
 from utils.pregame_analyzer import get_pregame_analyzer
 from utils.espn_live_fetcher import get_espn_live_fetcher
+from utils.referee_stats import get_referee_stats_manager
 from api.websocket_manager import manager as ws_manager
 
 # Configure logging
@@ -86,6 +94,7 @@ class PerformanceStats(BaseModel):
     total_unit_profit: float
     roi: float
     by_confidence: Dict
+    today: Optional[Dict] = None
 
 
 class ConfidenceWeightsUpdate(BaseModel):
@@ -153,6 +162,7 @@ def map_game_data(game: dict) -> dict:
         "spread_book": game.get("Spread Book") or game.get("spread_book", ""),
         "home_fouls": game.get("Home Fouls") or game.get("home_fouls"),
         "away_fouls": game.get("Away Fouls") or game.get("away_fouls"),
+        "referees": [ref.strip() for ref in (game.get("Referees") or game.get("referees", "")).split(";") if ref.strip()],
         # Live shooting stats - Home
         "home_fg_made": game.get("Home FGM") or game.get("home_fg_made"),
         "home_fg_attempted": game.get("Home FGA") or game.get("home_fg_attempted"),
@@ -229,6 +239,19 @@ def map_game_data(game: dict) -> dict:
         "away_2p_pct": game.get("Away 2P%") or game.get("away_2p_pct"),
         "home_eff_margin": game.get("Home Eff Margin") or game.get("home_eff_margin"),
         "away_eff_margin": game.get("Away Eff Margin") or game.get("away_eff_margin"),
+        # NEW PHASE 2 STATS
+        "home_assists_per_game": game.get("Home Assists/G") or game.get("home_assists_per_game"),
+        "away_assists_per_game": game.get("Away Assists/G") or game.get("away_assists_per_game"),
+        "home_steals_per_game": game.get("Home Steals/G") or game.get("home_steals_per_game"),
+        "away_steals_per_game": game.get("Away Steals/G") or game.get("away_steals_per_game"),
+        "home_blocks_per_game": game.get("Home Blocks/G") or game.get("home_blocks_per_game"),
+        "away_blocks_per_game": game.get("Away Blocks/G") or game.get("away_blocks_per_game"),
+        "home_fouls_per_game": game.get("Home Fouls/G") or game.get("home_fouls_per_game"),
+        "away_fouls_per_game": game.get("Away Fouls/G") or game.get("away_fouls_per_game"),
+        "home_ast_to_ratio": game.get("Home A/TO Ratio") or game.get("home_ast_to_ratio"),
+        "away_ast_to_ratio": game.get("Away A/TO Ratio") or game.get("away_ast_to_ratio"),
+        "home_dreb_pct": game.get("Home DReb%") or game.get("home_dreb_pct"),
+        "away_dreb_pct": game.get("Away DReb%") or game.get("away_dreb_pct"),
         "ou_peak": game.get("OU Peak") or game.get("ou_peak"),
         "ou_valley": game.get("OU Valley") or game.get("ou_valley"),
         "ou_position": game.get("OU Position") or game.get("ou_position"),
@@ -332,6 +355,8 @@ async def get_live_games():  # Auth disabled for testing
 
     # Map new column names to old names for frontend compatibility
     mapped_games = []
+    referee_manager = get_referee_stats_manager()
+
     for game in active_games:
         game_id = game.get("Game ID") or game.get("game_id")
         ou_peak, ou_valley, ou_position, current_ou = calculate_ou_peak_valley(game_id, logs)
@@ -343,6 +368,14 @@ async def get_live_games():  # Auth disabled for testing
         mapped_game["ou_peak"] = ou_peak
         mapped_game["ou_valley"] = ou_valley
         mapped_game["ou_position"] = ou_position
+
+        # Add referee crew stats
+        referees = mapped_game.get("referees", [])
+        if referees and len(referees) > 0:
+            crew_stats = referee_manager.get_crew_stats(referees)
+            mapped_game["referee_crew_stats"] = crew_stats
+        else:
+            mapped_game["referee_crew_stats"] = None
 
         mapped_games.append(mapped_game)
 
@@ -761,9 +794,20 @@ async def get_completed_games(limit: Optional[int] = 20):
 @app.get("/api/stats/performance", response_model=PerformanceStats)
 async def get_performance_stats():  # Auth disabled for testing
     """Get betting performance statistics"""
+    from datetime import datetime
     csv_logger = get_csv_logger()
-    stats = csv_logger.get_performance_stats()
-    return stats
+
+    # Get all-time stats
+    all_time_stats = csv_logger.get_performance_stats()
+
+    # Get today's stats
+    today = datetime.now().strftime("%Y-%m-%d")
+    today_stats = csv_logger.get_performance_stats(date_filter=today)
+
+    # Add today's stats to the response
+    all_time_stats["today"] = today_stats
+
+    return all_time_stats
 
 
 @app.get("/api/stats/results")
@@ -1134,6 +1178,70 @@ async def internal_trigger_update(update: TriggerUpdate):
 async def websocket_stats():
     """Get WebSocket connection statistics"""
     return ws_manager.get_stats()
+
+
+# ========== PREDICTIONS ENDPOINT ==========
+
+# In-memory storage for latest predictions
+latest_predictions = []
+
+@app.post("/api/predictions/update")
+async def update_predictions(data: dict):
+    """Receive and store predictions from prediction system"""
+    global latest_predictions
+
+    try:
+        predictions = data.get("predictions", [])
+        latest_predictions = predictions
+
+        # Persist to CSV for reliability (survives API restarts)
+        if predictions:
+            predictions_csv = config.DATA_DIR / "predictions" / "latest_predictions.csv"
+            predictions_csv.parent.mkdir(parents=True, exist_ok=True)
+            df = pd.DataFrame(predictions)
+            df.to_csv(predictions_csv, index=False)
+            logger.info(f"Persisted {len(predictions)} predictions to {predictions_csv}")
+
+        # Broadcast to WebSocket clients
+        await ws_manager.broadcast({
+            "type": "predictions_update",
+            "data": predictions,
+            "timestamp": datetime.now().isoformat()
+        })
+
+        logger.info(f"Updated {len(predictions)} predictions")
+
+        return {
+            "status": "success",
+            "predictions_count": len(predictions),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error updating predictions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/predictions/latest")
+async def get_latest_predictions():
+    """Get the latest predictions"""
+    global latest_predictions
+
+    # If in-memory storage is empty, try to load from CSV (handles API restarts)
+    if not latest_predictions:
+        predictions_csv = config.DATA_DIR / "predictions" / "latest_predictions.csv"
+        if predictions_csv.exists():
+            try:
+                df = pd.read_csv(predictions_csv)
+                latest_predictions = df.to_dict('records')
+                logger.info(f"Loaded {len(latest_predictions)} predictions from CSV")
+            except Exception as e:
+                logger.error(f"Error loading predictions from CSV: {e}")
+
+    return {
+        "predictions": latest_predictions,
+        "count": len(latest_predictions),
+        "timestamp": datetime.now().isoformat()
+    }
 
 
 # ========== HEALTH CHECK ==========

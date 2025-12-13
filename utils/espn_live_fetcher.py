@@ -12,12 +12,15 @@ class ESPNLiveFetcher:
     """Fetches live game data from ESPN scoreboard API"""
 
     BASE_URL = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard"
+    SUMMARY_URL = "https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary"
 
     def __init__(self):
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
         })
+        # Cache referee assignments per game (referees don't change during game)
+        self.referee_cache = {}
 
     def fetch_live_games(self) -> List[Dict]:
         """
@@ -336,6 +339,9 @@ class ESPNLiveFetcher:
             # Period name (1st Half, 2nd Half, OT, etc.)
             period_name = self._format_period(period_number, status_description)
 
+            # Fetch referee information from summary API (with caching)
+            referee_names = self._fetch_referees(game_id)
+
             return {
                 'game_id': game_id,
                 'home_team': home_team['name'],
@@ -353,6 +359,7 @@ class ESPNLiveFetcher:
                 'seconds_remaining': seconds_remaining,
                 'is_live': is_live,
                 'completed': completed,
+                'referees': referee_names,
                 'timestamp': datetime.now().isoformat()
             }
 
@@ -376,6 +383,44 @@ class ESPNLiveFetcher:
             return f'OT{period - 2}' if period > 3 else 'OT'
         else:
             return str(period)
+
+    def _fetch_referees(self, game_id: str) -> List[str]:
+        """
+        Fetch referee names from ESPN game summary API
+        Uses caching to avoid repeated API calls for the same game
+        """
+        # Check cache first
+        if game_id in self.referee_cache:
+            return self.referee_cache[game_id]
+
+        try:
+            response = self.session.get(
+                self.SUMMARY_URL,
+                params={'event': game_id},
+                timeout=5
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            # Extract referee names from gameInfo.officials
+            referees = []
+            if 'gameInfo' in data and 'officials' in data['gameInfo']:
+                officials = data['gameInfo']['officials']
+                referees = [
+                    official.get('displayName', '')
+                    for official in officials
+                    if official.get('displayName')
+                ]
+
+            # Cache the result
+            self.referee_cache[game_id] = referees
+            return referees
+
+        except Exception as e:
+            logger.debug(f"Could not fetch referees for game {game_id}: {e}")
+            # Cache empty list to avoid repeated failed requests
+            self.referee_cache[game_id] = []
+            return []
 
     def get_game_by_teams(self, home_team: str, away_team: str, all_games: List[Dict]) -> Optional[Dict]:
         """

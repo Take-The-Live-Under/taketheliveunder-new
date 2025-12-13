@@ -171,6 +171,14 @@ export default function GameCard({ game, onClick }: GameCardProps) {
             <span className="text-deep-slate-600">•</span>
             <span className="text-xs">{totalMinutesRemaining.toFixed(1)} min left</span>
           </div>
+          {game.referees && game.referees.length > 0 && (
+            <div className="text-xs text-deep-slate-500 mt-1.5 flex items-center gap-1.5">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span>Officials: {game.referees.join(', ')}</span>
+            </div>
+          )}
         </div>
 
         {/* Bet Type & Confidence Badges */}
@@ -292,6 +300,78 @@ export default function GameCard({ game, onClick }: GameCardProps) {
                       {game.home_team}: {game.home_spread > 0 ? '+' : ''}{game.home_spread} ({game.home_spread_odds > 0 ? '+' : ''}{game.home_spread_odds})
                     </span>
                   </div>
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
+        </div>
+      )}
+
+      {/* Referee Information */}
+      {game.referees && game.referees.length > 0 && (
+        <div className="mb-4">
+          <CollapsibleSection
+            title="Referee Crew"
+            defaultOpen={false}
+            variant="compact"
+            icon={
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            }
+          >
+            <div className="space-y-2">
+              {/* Referee Names */}
+              <div>
+                <div className="text-xs text-deep-slate-400 mb-1.5 font-medium">Officials</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {game.referees.map((ref: string, idx: number) => (
+                    <span key={idx} className="text-xs px-2 py-1 bg-deep-slate-800 text-deep-slate-300 rounded">
+                      {ref}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Crew Stats if available */}
+              {game.referee_crew_stats && game.referee_crew_stats.found_refs > 0 && (
+                <div className="pt-2 border-t border-deep-slate-700/50">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="stat-card text-center">
+                      <div className="text-xs text-deep-slate-500 mb-1">Crew Style</div>
+                      <div className={clsx(
+                        "text-sm font-semibold px-2 py-1 rounded inline-block",
+                        game.referee_crew_stats.crew_style === 'Tight' ? 'bg-red-900/30 text-red-400' :
+                        game.referee_crew_stats.crew_style === 'Loose' ? 'bg-green-900/30 text-green-400' :
+                        'bg-yellow-900/30 text-yellow-400'
+                      )}>
+                        {game.referee_crew_stats.crew_style}
+                      </div>
+                    </div>
+                    <div className="stat-card text-center">
+                      <div className="text-xs text-deep-slate-500 mb-1">Avg Fouls/Game</div>
+                      <div className="text-sm font-semibold text-brand-purple-400">
+                        {game.referee_crew_stats.avg_fouls_per_game?.toFixed(1) || 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                  {game.referee_crew_stats.avg_home_bias !== null && (
+                    <div className="mt-2 text-center">
+                      <div className="text-xs text-deep-slate-500 mb-1">Home Bias</div>
+                      <div className={clsx(
+                        "text-xs font-semibold",
+                        game.referee_crew_stats.avg_home_bias < -1 ? 'text-brand-teal-400' :
+                        game.referee_crew_stats.avg_home_bias > 1 ? 'text-brand-orange-400' :
+                        'text-deep-slate-400'
+                      )}>
+                        {game.referee_crew_stats.avg_home_bias > 0 ? '+' : ''}{game.referee_crew_stats.avg_home_bias.toFixed(2)}
+                        <span className="text-xs text-deep-slate-500 ml-1">
+                          ({game.referee_crew_stats.avg_home_bias < -1 ? 'favors away' :
+                            game.referee_crew_stats.avg_home_bias > 1 ? 'favors home' : 'neutral'})
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -492,11 +572,11 @@ export default function GameCard({ game, onClick }: GameCardProps) {
       </div>
 
       {/* Team Stats - Collapsible with Data Visualization */}
-      {triggered && (
+      {(game.home_pace || game.home_off_eff || game.home_assists_per_game) && (
         <div className="mt-2">
           <CollapsibleSection
             title="Team Matchup Analysis"
-            defaultOpen={true}
+            defaultOpen={false}
             variant="default"
             icon={
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -593,6 +673,43 @@ export default function GameCard({ game, onClick }: GameCardProps) {
               <div className="text-xs text-deep-slate-500 mb-1">Fouls</div>
               <div className="text-sm font-semibold text-brand-orange-400">{homeFouls || '-'}</div>
               <div className="text-sm font-semibold text-brand-teal-400">{awayFouls || '-'}</div>
+            </div>
+          </div>
+
+          {/* Phase 2 Team Stats - Comprehensive Statistics */}
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <div className="stat-card text-center">
+              <div className="text-xs text-deep-slate-500 mb-1">AST/G</div>
+              <div className="text-sm font-semibold text-brand-orange-400">{parseFloat(game.home_assists_per_game || 0).toFixed(1)}</div>
+              <div className="text-sm font-semibold text-brand-teal-400">{parseFloat(game.away_assists_per_game || 0).toFixed(1)}</div>
+            </div>
+            <div className="stat-card text-center">
+              <div className="text-xs text-deep-slate-500 mb-1">STL/G</div>
+              <div className="text-sm font-semibold text-brand-orange-400">{parseFloat(game.home_steals_per_game || 0).toFixed(1)}</div>
+              <div className="text-sm font-semibold text-brand-teal-400">{parseFloat(game.away_steals_per_game || 0).toFixed(1)}</div>
+            </div>
+            <div className="stat-card text-center">
+              <div className="text-xs text-deep-slate-500 mb-1">BLK/G</div>
+              <div className="text-sm font-semibold text-brand-orange-400">{parseFloat(game.home_blocks_per_game || 0).toFixed(1)}</div>
+              <div className="text-sm font-semibold text-brand-teal-400">{parseFloat(game.away_blocks_per_game || 0).toFixed(1)}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 mt-2">
+            <div className="stat-card text-center">
+              <div className="text-xs text-deep-slate-500 mb-1">Fouls/G</div>
+              <div className="text-sm font-semibold text-brand-orange-400">{parseFloat(game.home_fouls_per_game || 0).toFixed(1)}</div>
+              <div className="text-sm font-semibold text-brand-teal-400">{parseFloat(game.away_fouls_per_game || 0).toFixed(1)}</div>
+            </div>
+            <div className="stat-card text-center">
+              <div className="text-xs text-deep-slate-500 mb-1">A/TO Ratio</div>
+              <div className="text-sm font-semibold text-brand-orange-400">{parseFloat(game.home_ast_to_ratio || 0).toFixed(2)}</div>
+              <div className="text-sm font-semibold text-brand-teal-400">{parseFloat(game.away_ast_to_ratio || 0).toFixed(2)}</div>
+            </div>
+            <div className="stat-card text-center">
+              <div className="text-xs text-deep-slate-500 mb-1">DReb%</div>
+              <div className="text-sm font-semibold text-brand-orange-400">{parseFloat(game.home_dreb_pct || 0).toFixed(1)}%</div>
+              <div className="text-sm font-semibold text-brand-teal-400">{parseFloat(game.away_dreb_pct || 0).toFixed(1)}%</div>
             </div>
           </div>
 

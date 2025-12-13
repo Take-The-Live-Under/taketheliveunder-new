@@ -1,10 +1,22 @@
 """
 Pregame Analyzer for NCAA Basketball
 Analyzes upcoming games to identify under betting opportunities before games start
+
+Now enhanced with Pomeroy methodology including:
+- Early season scoring adjustments (+3 points)
+- Tempo sweet spot bonus (66-68 possessions)
+- Increased home court advantage (1.8 efficiency)
 """
 
 from typing import Dict, List, Tuple
 import logging
+import sys
+from pathlib import Path
+
+# Add parent directory to path to import models
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from models.pomeroy_predictor import PomeroyPredictor
 
 logger = logging.getLogger(__name__)
 
@@ -12,10 +24,18 @@ logger = logging.getLogger(__name__)
 class PregameAnalyzer:
     """
     Analyzes pregame matchups to predict total scores and identify under betting opportunities
+
+    Uses enhanced Pomeroy predictor with early season adjustments
     """
 
     def __init__(self):
         self.logger = logging.getLogger(__name__)
+        # Initialize enhanced Pomeroy predictor
+        self.pomeroy = PomeroyPredictor(
+            home_advantage=1.8,
+            use_early_season_adjustment=True,
+            use_tempo_sweet_spot=True
+        )
 
     def analyze_matchup(
         self,
@@ -77,46 +97,35 @@ class PregameAnalyzer:
 
     def _calculate_expected_total(self, home_metrics: Dict, away_metrics: Dict) -> float:
         """
-        Calculate expected total score based on team averages and pace
+        Calculate expected total score using enhanced Pomeroy methodology
 
-        Uses a weighted approach:
-        1. Base prediction from team PPG averages
-        2. Adjust for pace differential
-        3. Adjust for defensive efficiency matchup
+        Includes:
+        - Pomeroy tempo × efficiency formula
+        - Early season bonus (+3 points)
+        - Tempo sweet spot bonus (66-68 possessions = +2 points)
+        - Enhanced home court advantage (1.8 efficiency)
         """
-        # Get average PPG for both teams
-        home_ppg = home_metrics.get('avg_ppg', 75)
-        away_ppg = away_metrics.get('avg_ppg', 75)
+        # Extract KenPom metrics (with fallbacks)
+        home_tempo = home_metrics.get('pace', home_metrics.get('adjtempo', 68.0))
+        home_adjoe = home_metrics.get('off_efficiency', home_metrics.get('adjoe', 105.0))
+        home_adjde = home_metrics.get('def_efficiency', home_metrics.get('adjde', 105.0))
 
-        # Base prediction: average of both teams' scoring
-        base_total = home_ppg + away_ppg
+        away_tempo = away_metrics.get('pace', away_metrics.get('adjtempo', 68.0))
+        away_adjoe = away_metrics.get('off_efficiency', away_metrics.get('adjoe', 105.0))
+        away_adjde = away_metrics.get('def_efficiency', away_metrics.get('adjde', 105.0))
 
-        # Pace adjustment
-        home_pace = home_metrics.get('pace', 70)
-        away_pace = away_metrics.get('pace', 70)
-        avg_pace = (home_pace + away_pace) / 2
+        # Use enhanced Pomeroy predictor
+        prediction = self.pomeroy.predict_game(
+            team1_tempo=home_tempo,
+            team1_adjoe=home_adjoe,
+            team1_adjde=home_adjde,
+            team2_tempo=away_tempo,
+            team2_adjoe=away_adjoe,
+            team2_adjde=away_adjde,
+            team1_is_home=True
+        )
 
-        # National average pace is ~70 possessions per game
-        # Adjust total based on pace differential
-        pace_factor = (avg_pace - 70) / 70
-        pace_adjustment = base_total * pace_factor * 0.5  # 0.5 dampens the effect
-
-        # Defensive efficiency adjustment
-        # Lower def_eff = better defense = fewer points
-        home_def = home_metrics.get('def_efficiency', 100)
-        away_def = away_metrics.get('def_efficiency', 100)
-
-        # National average is ~100 points per 100 possessions
-        # Strong defenses (< 95) should reduce total
-        # Weak defenses (> 105) should increase total
-        avg_def = (home_def + away_def) / 2
-        def_factor = (avg_def - 100) / 100
-        def_adjustment = base_total * def_factor * 0.3  # 0.3 dampens the effect
-
-        # Calculate final predicted total
-        predicted_total = base_total + pace_adjustment + def_adjustment
-
-        return predicted_total
+        return prediction['total_points']
 
     def _score_under_factors(
         self,

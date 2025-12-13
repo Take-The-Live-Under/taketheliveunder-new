@@ -17,6 +17,7 @@ from utils.csv_logger import get_csv_logger
 from utils.team_name_matcher import get_team_matcher
 from utils.espn_live_fetcher import get_espn_live_fetcher
 from utils.espn_odds_fetcher import get_espn_odds_fetcher
+from utils.referee_stats import get_referee_stats_manager
 
 # Configure logging
 logger.remove()
@@ -42,6 +43,7 @@ class NCAABettingMonitor:
         self.team_matcher = get_team_matcher()  # NCAA team name matching
         self.espn_fetcher = get_espn_live_fetcher()  # ESPN live scores
         self.espn_odds_fetcher = get_espn_odds_fetcher()  # ESPN betting odds
+        self.referee_stats_manager = get_referee_stats_manager()  # Referee statistics
 
         self.api_key = config.ODDS_API_KEY
         self.api_base_url = "https://api.the-odds-api.com/v4"
@@ -117,8 +119,19 @@ class NCAABettingMonitor:
             # Step 1: Get live games with scores and time from ESPN (free!)
             espn_games = self.espn_fetcher.fetch_live_games()
 
-            # Filter to only live games
+            # Separate live and completed games
             live_games = [g for g in espn_games if g['is_live']]
+            completed_games = [g for g in espn_games if g.get('completed', False)]
+
+            # Handle newly completed games BEFORE processing live games
+            if completed_games:
+                logger.info(f"Found {len(completed_games)} completed games")
+                for game in completed_games:
+                    game_id = game.get('id')
+                    # Check if this game was previously live (tracked in game_states)
+                    if game_id in self.game_states and f"{game_id}_final" not in self.triggered_games:
+                        logger.info(f"Game completed: {game.get('away_team')} @ {game.get('home_team')}")
+                        await self._handle_game_end(game)
 
             if not live_games:
                 logger.debug("No live games found on ESPN")
@@ -204,7 +217,7 @@ class NCAABettingMonitor:
                 await self.analyze_game(game)
 
         except Exception as e:
-            logger.error(f"Error polling live games: {e}")
+            logger.error(f"Error polling live games: {e}", exc_info=True)
 
     def _get_espn_live_games(self) -> Dict[str, Dict]:
         """
@@ -481,9 +494,9 @@ class NCAABettingMonitor:
             total_points = home_score + away_score
 
             # Extract clock data from ESPN (already included!)
-            period = game.get("period", 0)
-            time_remaining_minutes = game.get("minutes_remaining", 0)
-            time_remaining_seconds = game.get("seconds_remaining", 0)
+            period = game.get("period") or 0
+            time_remaining_minutes = game.get("minutes_remaining") or 0
+            time_remaining_seconds = game.get("seconds_remaining") or 0
 
             # Calculate total time remaining
             if self.sport_mode == "nba":
@@ -649,8 +662,20 @@ class NCAABettingMonitor:
             except Exception as e:
                 logger.debug(f"Could not fetch ESPN data for {game_id}: {e}")
 
+            # Fetch referee crew stats
+            referee_crew_stats = None
+            referees = game.get('referees', [])
+            if referees and len(referees) > 0:
+                try:
+                    referee_crew_stats = self.referee_stats_manager.get_crew_stats(referees)
+                    if referee_crew_stats.get('found_refs', 0) > 0:
+                        logger.debug(f"Referee crew for {home_team} vs {away_team}: {referee_crew_stats['crew_style']} "
+                                   f"({referee_crew_stats['avg_fouls_per_game']:.1f} fouls/g)")
+                except Exception as e:
+                    logger.debug(f"Could not fetch referee stats: {e}")
+
             # Calculate confidence score (even if not triggered, for logging)
-            # NOW includes foul data and live stats
+            # NOW includes foul data, live stats, AND referee stats
             confidence_data = self.confidence_scorer.calculate_confidence(
                 home_metrics or {},
                 away_metrics or {},
@@ -662,7 +687,8 @@ class NCAABettingMonitor:
                 home_fouls=home_fouls,
                 away_fouls=away_fouls,
                 home_live_stats=home_stats,
-                away_live_stats=away_stats
+                away_live_stats=away_stats,
+                referee_crew_stats=referee_crew_stats
             )
 
             confidence_score = confidence_data["confidence"]
@@ -692,6 +718,13 @@ class NCAABettingMonitor:
                         bet_recommendation = "WAIT"
                         bet_status_reason = f"Confidence {confidence_score:.0f} < {config.MIN_CONFIDENCE_TO_BET} required"
                         unit_recommendation = 0
+
+                    # MAX CONFIDENCE CHECK: Block toxic high-confidence bets (0% WR tier)
+                    elif confidence_score > config.MAX_CONFIDENCE_TO_BET:
+                        bet_recommendation = "DANGER_ZONE"
+                        bet_status_reason = f"⚠️ TOO CONFIDENT ({confidence_score:.0f} > {config.MAX_CONFIDENCE_TO_BET}) - High-risk tier (0% historical WR)"
+                        unit_recommendation = 0
+                        logger.warning(f"BLOCKED HIGH CONFIDENCE BET: {away_team} @ {home_team} - Confidence {confidence_score:.0f} exceeds MAX {config.MAX_CONFIDENCE_TO_BET}")
 
                     # PPM CONFIRMATION CHECK: Wait for strong momentum OR very high confidence
                     elif required_ppm < config.PPM_CONFIRMATION_THRESHOLD and confidence_score < 75:
@@ -733,6 +766,7 @@ class NCAABettingMonitor:
                 "away_fouls": away_fouls,
                 "home_stats": home_stats,
                 "away_stats": away_stats,
+                "referees": game.get('referees', []),
                 "required_ppm": round(required_ppm, 2),
                 "time_weighted_threshold": round(time_weighted_threshold, 2),
                 "current_ppm": round(current_ppm, 2),
@@ -1122,7 +1156,8 @@ class NCAABettingMonitor:
 
     async def _handle_game_end(self, game: Dict):
         """Handle game completion - log final result"""
-        game_id = game.get("id")
+        # Support both ESPN format (game_id) and Odds API format (id)
+        game_id = game.get("game_id") or game.get("id")
 
         # Avoid duplicate logging
         if f"{game_id}_final" in self.triggered_games:
@@ -1131,22 +1166,33 @@ class NCAABettingMonitor:
         home_team = game.get("home_team")
         away_team = game.get("away_team")
 
-        # Parse final scores
-        scores = game.get("scores", [])
-        final_home = 0
-        final_away = 0
-        for score_data in scores:
-            team_name = score_data.get("name")
-            score = int(score_data.get("score", 0))
-            if team_name == home_team:
-                final_home = score
-            elif team_name == away_team:
-                final_away = score
+        # Parse final scores - support both ESPN format and Odds API format
+        if "home_score" in game and "away_score" in game:
+            # ESPN format
+            final_home = int(game.get("home_score", 0))
+            final_away = int(game.get("away_score", 0))
+        else:
+            # Odds API format
+            scores = game.get("scores", [])
+            final_home = 0
+            final_away = 0
+            for score_data in scores:
+                team_name = score_data.get("name")
+                score = int(score_data.get("score", 0))
+                if team_name == home_team:
+                    final_home = score
+                elif team_name == away_team:
+                    final_away = score
 
         final_total = final_home + final_away
 
         ou_line = self._get_totals_line(game)
         ou_open = ou_line
+
+        # Skip if no O/U line available (completed game, odds no longer available)
+        if ou_line is None:
+            logger.debug(f"No O/U line available for completed game {away_team} @ {home_team}")
+            return
 
         # Determine O/U result
         if final_total > ou_line:

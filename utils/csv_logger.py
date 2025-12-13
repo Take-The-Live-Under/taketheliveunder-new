@@ -46,6 +46,7 @@ class CSVLogger:
                 "Spread Book",
                 "Home Fouls",
                 "Away Fouls",
+                "Referees",
                 # Live shooting stats - Home
                 "Home FGM",
                 "Home FGA",
@@ -111,6 +112,12 @@ class CSVLogger:
                 "Home TS%",          # NEW
                 "Home 2P%",          # NEW
                 "Home Eff Margin",   # NEW
+                "Home Assists/G",    # Phase 2
+                "Home Steals/G",     # Phase 2
+                "Home Blocks/G",     # Phase 2
+                "Home Fouls/G",      # Phase 2
+                "Home A/TO Ratio",   # Phase 2
+                "Home DReb%",        # Phase 2
                 "Away Pace",
                 "Away Off Eff",
                 "Away Def Eff",
@@ -122,6 +129,12 @@ class CSVLogger:
                 "Away TS%",          # NEW
                 "Away 2P%",          # NEW
                 "Away Eff Margin",   # NEW
+                "Away Assists/G",    # Phase 2
+                "Away Steals/G",     # Phase 2
+                "Away Blocks/G",     # Phase 2
+                "Away Fouls/G",      # Phase 2
+                "Away A/TO Ratio",   # Phase 2
+                "Away DReb%",        # Phase 2
                 "Timestamp",
                 "Game ID"
             ]
@@ -206,6 +219,7 @@ class CSVLogger:
                 game_data.get("spread_book", ""),     # Spread Book
                 game_data.get("home_fouls", ""),      # Home Fouls
                 game_data.get("away_fouls", ""),      # Away Fouls
+                "; ".join(game_data.get("referees", [])),  # Referees
                 # Live shooting stats - Home
                 game_data.get("home_stats", {}).get("fg_made", ""),
                 game_data.get("home_stats", {}).get("fg_attempted", ""),
@@ -271,6 +285,12 @@ class CSVLogger:
                 game_data.get("home_metrics", {}).get("ts_pct", ""),            # Home TS% (NEW)
                 game_data.get("home_metrics", {}).get("two_p_pct", ""),         # Home 2P% (NEW)
                 game_data.get("home_metrics", {}).get("efficiency_margin", ""), # Home Eff Margin (NEW)
+                game_data.get("home_metrics", {}).get("assists_per_game", ""),  # Home Assists/G (Phase 2)
+                game_data.get("home_metrics", {}).get("steals_per_game", ""),   # Home Steals/G (Phase 2)
+                game_data.get("home_metrics", {}).get("blocks_per_game", ""),   # Home Blocks/G (Phase 2)
+                game_data.get("home_metrics", {}).get("fouls_per_game", ""),    # Home Fouls/G (Phase 2)
+                game_data.get("home_metrics", {}).get("ast_to_ratio", ""),      # Home A/TO Ratio (Phase 2)
+                game_data.get("home_metrics", {}).get("dreb_pct", ""),          # Home DReb% (Phase 2)
                 game_data.get("away_metrics", {}).get("pace_per_game", ""),     # Away Pace
                 game_data.get("away_metrics", {}).get("off_efficiency", ""),    # Away Off Eff
                 game_data.get("away_metrics", {}).get("def_efficiency", ""),    # Away Def Eff
@@ -282,6 +302,12 @@ class CSVLogger:
                 game_data.get("away_metrics", {}).get("ts_pct", ""),            # Away TS% (NEW)
                 game_data.get("away_metrics", {}).get("two_p_pct", ""),         # Away 2P% (NEW)
                 game_data.get("away_metrics", {}).get("efficiency_margin", ""), # Away Eff Margin (NEW)
+                game_data.get("away_metrics", {}).get("assists_per_game", ""),  # Away Assists/G (Phase 2)
+                game_data.get("away_metrics", {}).get("steals_per_game", ""),   # Away Steals/G (Phase 2)
+                game_data.get("away_metrics", {}).get("blocks_per_game", ""),   # Away Blocks/G (Phase 2)
+                game_data.get("away_metrics", {}).get("fouls_per_game", ""),    # Away Fouls/G (Phase 2)
+                game_data.get("away_metrics", {}).get("ast_to_ratio", ""),      # Away A/TO Ratio (Phase 2)
+                game_data.get("away_metrics", {}).get("dreb_pct", ""),          # Away DReb% (Phase 2)
                 game_data.get("timestamp", datetime.now().isoformat()),         # Timestamp
                 game_data.get("game_id")                                        # Game ID
             ]
@@ -367,14 +393,21 @@ class CSVLogger:
             logger.error(f"Error reading results: {e}")
             return []
 
-    def get_performance_stats(self) -> Dict:
+    def get_performance_stats(self, date_filter: str = None) -> Dict:
         """
         Calculate performance statistics from results
+
+        Args:
+            date_filter: Optional date string (YYYY-MM-DD) to filter results. If None, returns all-time stats.
 
         Returns:
             Dict with win rates, ROI, etc.
         """
         results = self.get_results()
+
+        # Apply date filter if provided
+        if date_filter:
+            results = [r for r in results if r.get("date", "").startswith(date_filter)]
 
         if not results:
             return {
