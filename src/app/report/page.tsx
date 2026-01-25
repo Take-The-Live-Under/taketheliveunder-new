@@ -75,6 +75,31 @@ interface GameDetail {
   timeline: TimelinePoint[];
 }
 
+interface QuarterScoring {
+  period: number;
+  periodName: string;
+  homePoints: number;
+  awayPoints: number;
+  totalPoints: number;
+  ppm: number;
+}
+
+interface LossAnalysis {
+  gameId: string;
+  wentToOT: boolean;
+  otPeriods: number;
+  quarterScoring: QuarterScoring[];
+  biggestScoringRun: {
+    points: number;
+    period: number;
+    description: string;
+  } | null;
+  finalMinutePoints: number;
+  freeThrowsInFinal2Min: number;
+  summary: string;
+  factors: string[];
+}
+
 export default function ReportPage() {
   const [report, setReport] = useState<DailyReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,6 +107,7 @@ export default function ReportPage() {
   const [selectedDate, setSelectedDate] = useState(getYesterdayDate());
   const [selectedGame, setSelectedGame] = useState<GameResult | null>(null);
   const [gameDetail, setGameDetail] = useState<GameDetail | null>(null);
+  const [lossAnalysis, setLossAnalysis] = useState<LossAnalysis | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const fetchReport = useCallback(async (date: string) => {
@@ -127,12 +153,25 @@ export default function ReportPage() {
     setSelectedGame(game);
     setLoadingDetail(true);
     setGameDetail(null);
+    setLossAnalysis(null);
 
     try {
-      const res = await fetch(`/api/game-snapshots?gameId=${game.gameId}`);
-      if (res.ok) {
-        const data = await res.json();
+      // Fetch snapshots
+      const snapshotRes = await fetch(`/api/game-snapshots?gameId=${game.gameId}`);
+      if (snapshotRes.ok) {
+        const data = await snapshotRes.json();
         setGameDetail(data);
+      }
+
+      // If it's a loss (went over), fetch analysis
+      if (game.result === 'over') {
+        const analysisRes = await fetch(
+          `/api/game-analysis?gameId=${game.gameId}&ouLine=${game.ouLine}&finalTotal=${game.finalTotal}`
+        );
+        if (analysisRes.ok) {
+          const analysisData = await analysisRes.json();
+          setLossAnalysis(analysisData);
+        }
       }
     } catch (err) {
       console.error('Failed to load game detail:', err);
@@ -144,6 +183,7 @@ export default function ReportPage() {
   const closeModal = () => {
     setSelectedGame(null);
     setGameDetail(null);
+    setLossAnalysis(null);
   };
 
   if (loading) {
@@ -600,6 +640,59 @@ export default function ReportPage() {
                         </tbody>
                       </table>
                     </div>
+
+                    {/* Loss Analysis (only for games that went over) */}
+                    {lossAnalysis && selectedGame.result === 'over' && (
+                      <div className="mt-6">
+                        <h3 className="text-lg font-semibold text-red-400 mb-3 flex items-center gap-2">
+                          <span>🔍</span> Why Did It Go Over?
+                        </h3>
+                        <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+                          {/* Summary */}
+                          <p className="text-white font-medium mb-3">{lossAnalysis.summary}</p>
+
+                          {/* Factors */}
+                          {lossAnalysis.factors.length > 0 && (
+                            <div className="mb-4">
+                              <p className="text-sm text-slate-400 mb-2">Contributing factors:</p>
+                              <ul className="space-y-1">
+                                {lossAnalysis.factors.map((factor, i) => (
+                                  <li key={i} className="text-sm text-red-300 flex items-start gap-2">
+                                    <span className="text-red-500">•</span>
+                                    {factor}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Quarter Breakdown */}
+                          {lossAnalysis.quarterScoring.length > 0 && (
+                            <div>
+                              <p className="text-sm text-slate-400 mb-2">Scoring by period:</p>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                {lossAnalysis.quarterScoring.map((q) => (
+                                  <div key={q.period} className={`bg-slate-800 rounded p-2 text-center ${q.ppm > 4.5 ? 'ring-1 ring-red-500' : ''}`}>
+                                    <div className="text-xs text-slate-500">{q.periodName}</div>
+                                    <div className="text-lg font-bold text-white">{q.totalPoints}</div>
+                                    <div className={`text-xs ${q.ppm > 4.5 ? 'text-red-400' : 'text-slate-400'}`}>
+                                      {q.ppm.toFixed(1)} PPM
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* OT Badge */}
+                          {lossAnalysis.wentToOT && (
+                            <div className="mt-3 inline-flex items-center gap-1 bg-red-500/20 text-red-400 px-2 py-1 rounded text-sm">
+                              <span>⏱️</span> Game went to {lossAnalysis.otPeriods > 1 ? `${lossAnalysis.otPeriods}x ` : ''}OT
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="text-center py-8 text-slate-400">
