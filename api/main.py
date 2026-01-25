@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 import logging
 import asyncio
 import pandas as pd
+import numpy as np
 import config
 
 from api.auth import (
@@ -1232,14 +1233,29 @@ async def get_latest_predictions():
         if predictions_csv.exists():
             try:
                 df = pd.read_csv(predictions_csv)
+                # Replace NaN and inf values with None for JSON compliance
+                df = df.replace([np.inf, -np.inf], np.nan)
+                df = df.where(pd.notnull(df), None)
                 latest_predictions = df.to_dict('records')
                 logger.info(f"Loaded {len(latest_predictions)} predictions from CSV")
             except Exception as e:
                 logger.error(f"Error loading predictions from CSV: {e}")
 
+    # Ensure no NaN/inf values in the response (handles in-memory data too)
+    import math
+    def sanitize_value(v):
+        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+            return None
+        return v
+
+    sanitized_predictions = [
+        {k: sanitize_value(v) for k, v in pred.items()}
+        for pred in latest_predictions
+    ]
+
     return {
-        "predictions": latest_predictions,
-        "count": len(latest_predictions),
+        "predictions": sanitized_predictions,
+        "count": len(sanitized_predictions),
         "timestamp": datetime.now().isoformat()
     }
 
