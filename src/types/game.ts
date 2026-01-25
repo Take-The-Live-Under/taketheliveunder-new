@@ -1,0 +1,61 @@
+export interface Game {
+  id: string;
+  startTime: string;
+  status: 'pre' | 'in' | 'post';
+  period: number;
+  clock: string;
+  minutesRemainingReg: number;
+  awayTeam: string;
+  homeTeam: string;
+  awayScore: number;
+  homeScore: number;
+  liveTotal: number;
+  ouLine: number | null;
+  currentPPM: number | null;
+  requiredPPM: number | null;
+  triggeredFlag: boolean;      // Under trigger (legacy, kept for compatibility)
+  overTriggeredFlag: boolean;  // Over trigger - pace tracking close to line
+  triggerType: 'under' | 'over' | null;  // Which trigger is active
+  isOvertime: boolean;
+  isTomorrow?: boolean;
+}
+
+export interface ESPNGame {
+  id: string;
+  date: string;
+  status: {
+    type: {
+      state: string;
+      description: string;
+    };
+    period: number;
+    displayClock: string;
+  };
+  competitions: Array<{
+    competitors: Array<{
+      homeAway: 'home' | 'away';
+      team: {
+        displayName: string;
+        abbreviation: string;
+      };
+      score: string;
+    }>;
+  }>;
+}
+
+export interface OddsGame {
+  id: string;
+  home_team: string;
+  away_team: string;
+  bookmakers: Array<{
+    key: string;
+    title: string;
+    markets: Array<{
+      key: string;
+      outcomes: Array<{
+        name: string;
+        point?: number;
+      }>;
+    }>;
+  }>;
+}

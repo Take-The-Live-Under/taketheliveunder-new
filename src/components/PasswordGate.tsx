@@ -1,107 +1,116 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 
-const SITE_PASSWORD = 'WarrenCat2026';
-const PASSWORD_KEY = 'site_access_granted';
+interface PasswordGateProps {
+  children: ReactNode;
+}
 
-export default function PasswordGate({ children }: { children: React.ReactNode }) {
-  const [isUnlocked, setIsUnlocked] = useState(false);
+export default function PasswordGate({ children }: PasswordGateProps) {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [passwordRequired, setPasswordRequired] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if password was already entered in this session
-    const accessGranted = sessionStorage.getItem(PASSWORD_KEY);
-    if (accessGranted === 'true') {
-      setIsUnlocked(true);
+    // Check if already authenticated (from sessionStorage)
+    const authenticated = sessionStorage.getItem('authenticated') === 'true';
+    if (authenticated) {
+      setIsAuthenticated(true);
+      setIsLoading(false);
+      return;
     }
-    setIsLoading(false);
+
+    // Check if password is required
+    fetch('/api/auth')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.passwordRequired) {
+          setIsAuthenticated(true);
+        } else {
+          setPasswordRequired(true);
+        }
+      })
+      .catch(() => {
+        // If check fails, assume no password required
+        setIsAuthenticated(true);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
 
-    if (password === SITE_PASSWORD) {
-      sessionStorage.setItem(PASSWORD_KEY, 'true');
-      setIsUnlocked(true);
-      setError('');
-    } else {
-      setError('Incorrect password. Please try again.');
-      setPassword('');
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        sessionStorage.setItem('authenticated', 'true');
+        setIsAuthenticated(true);
+      } else {
+        setError('Incorrect password');
+      }
+    } catch {
+      setError('Authentication failed');
     }
   };
 
-  // Show loading state briefly to check session
   if (isLoading) {
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-900">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-green-500 border-t-transparent"></div>
+      </div>
+    );
   }
 
-  // If unlocked, show the actual app
-  if (isUnlocked) {
+  if (isAuthenticated) {
     return <>{children}</>;
   }
 
-  // Show password gate
-  return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
-      <div className="max-w-md w-full">
-        <div className="bg-gray-800 rounded-lg shadow-2xl p-8 border border-gray-700">
-          <div className="text-center mb-8">
-            <div className="mb-4">
-              <svg
-                className="mx-auto h-16 w-16 text-blue-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                />
-              </svg>
-            </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Protected Access</h1>
-            <p className="text-gray-400">Enter password to continue</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="bg-red-900/20 border border-red-500 rounded p-3 text-red-400 text-sm">
-                {error}
-              </div>
-            )}
-
-            <div>
+  if (passwordRequired) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-900 px-4">
+        <div className="w-full max-w-sm">
+          <div className="rounded-lg border border-gray-700 bg-gray-800 p-8">
+            <h1 className="mb-6 text-center text-2xl font-bold text-white">
+              Take The Live Under
+            </h1>
+            <form onSubmit={handleSubmit}>
+              <label htmlFor="password" className="mb-2 block text-sm text-gray-400">
+                Password
+              </label>
               <input
+                id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter site password"
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="mb-4 w-full rounded-lg border border-gray-600 bg-gray-700 px-4 py-2 text-white focus:border-green-500 focus:outline-none"
+                placeholder="Enter password"
                 autoFocus
-                required
               />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-            >
-              Unlock Site
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-xs text-gray-500">
-              Access will remain active during this browser session
-            </p>
+              {error && <p className="mb-4 text-sm text-red-400">{error}</p>}
+              <button
+                type="submit"
+                className="w-full rounded-lg bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-500 transition-colors"
+              >
+                Enter
+              </button>
+            </form>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return <>{children}</>;
 }

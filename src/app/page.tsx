@@ -1,577 +1,409 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import useSWR from 'swr';
-import { games, stats } from '@/lib/api';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import GameCard from '@/components/GameCard';
-import TrendsView from '@/components/TrendsView';
-import CompletedGamesAnalysis from '@/components/CompletedGamesAnalysis';
-import AllGamesComparison from '@/components/AllGamesComparison';
-import GameDetailModal from '@/components/GameDetailModal';
-import RangeSlider from '@/components/RangeSlider';
-import SortControl from '@/components/SortControl';
-import Tooltip from '@/components/Tooltip';
-import PregamePredictions from '@/components/PregamePredictions';
-// import { useWebSocket } from '@/hooks/useWebSocket'; // Disabled - using HTTP polling
-import clsx from 'clsx';
+import SkeletonCard from '@/components/SkeletonCard';
+import LandingPage from '@/components/LandingPage';
+import ProjectedWinners from '@/components/ProjectedWinners';
+import HowItWorksModal from '@/components/HowItWorksModal';
+import OnboardingOverlay from '@/components/OnboardingOverlay';
+import TrustFooter from '@/components/TrustFooter';
+import { Game } from '@/types/game';
+import { usePageView, useAnalytics } from '@/hooks/useAnalytics';
 
-export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState<'live' | 'pregame' | 'trends' | 'analysis' | 'comparison'>('live');
-  const [filter, setFilter] = useState<'all' | 'triggered'>('all');
-  const [sortBy, setSortBy] = useState<'confidence' | 'time' | 'required_ppm' | 'current_ppm' | 'ppm_difference'>('confidence');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [minRequiredPpm, setMinRequiredPpm] = useState<number>(0);
-  const [maxRequiredPpm, setMaxRequiredPpm] = useState<number>(10);
-  const [minCurrentPpm, setMinCurrentPpm] = useState<number>(0);
-  const [maxCurrentPpm, setMaxCurrentPpm] = useState<number>(10);
-  const [selectedGameForModal, setSelectedGameForModal] = useState<any>(null);
-  const [flashAlert, setFlashAlert] = useState(false);
+type SubTab = 'under' | 'over' | 'live' | 'upcoming' | 'picks';
 
-  // WebSocket disabled - using HTTP polling instead (ngrok limitation)
-  // const {
-  //   games: wsGames,
-  //   isConnected,
-  //   lastUpdate,
-  //   connectionCount,
-  //   error: wsError,
-  //   reconnect
-  // } = useWebSocket();
+const ACCESS_KEY = 'ttlu_access';
 
-  // HTTP polling for live games (replaces WebSocket)
-  const { data: liveGamesData, error: liveGamesError } = useSWR(
-    '/api/games/live',
-    async () => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/games/live`, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
-        },
-      });
-      if (!response.ok) return { games: [] };
-      return response.json();
-    },
-    {
-      refreshInterval: 10000, // Poll every 10 seconds for live updates
-      revalidateOnFocus: false,
-    }
-  );
+export default function Home() {
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [games, setGames] = useState<Game[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [subTab, setSubTab] = useState<SubTab>('under');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [retrying, setRetrying] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const lastFetchRef = useRef<number>(0);
 
-  const wsGames = liveGamesData?.games || [];
-  const isConnected = !liveGamesError; // Connected if no error
-  const lastUpdate: Date | null = liveGamesData ? new Date() : null;
-  const connectionCount: number = wsGames.length;
-  const wsError: string | null = liveGamesError?.message || null;
-  const reconnect = () => {}; // Not needed for HTTP polling
+  // Analytics tracking
+  usePageView('home');
+  const { trackTabChange, trackDashboardAccess } = useAnalytics();
 
-  const { data: perfData } = useSWR('performance', stats.getPerformance, {
-    refreshInterval: 30000, // Refresh every 30 seconds for faster stats updates
-  });
-
-  // Request notification permission on mount
+  // Check access on mount
   useEffect(() => {
-    console.log('TTLU Analytics v3.0 - Real-time Data Edition');
+    const stored = localStorage.getItem(ACCESS_KEY);
+    setHasAccess(stored === 'true');
+  }, []);
 
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().then(permission => {
-        if (permission === 'granted') {
-          console.log('Browser notifications enabled');
-        }
-      });
+  // Handle access grant
+  const handleAccess = () => {
+    localStorage.setItem(ACCESS_KEY, 'true');
+    setHasAccess(true);
+    setShowOnboarding(true);
+    trackDashboardAccess();
+  };
+
+  const fetchGames = useCallback(async (isRetry = false, showRefresh = false) => {
+    const now = Date.now();
+    if (now - lastFetchRef.current < 1000) return;
+    lastFetchRef.current = now;
+
+    if (isRetry) setRetrying(true);
+    if (showRefresh) setIsRefreshing(true);
+
+    try {
+      const response = await fetch('/api/games');
+      if (!response.ok) {
+        throw new Error('Failed to fetch games');
+      }
+      const data = await response.json();
+      setGames(data.games || []);
+      setLastUpdated(data.timestamp);
+      setError(null);
+      setRetrying(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      if (!isRetry) {
+        setTimeout(() => fetchGames(true), 5000);
+      }
+    } finally {
+      setLoading(false);
+      setRetrying(false);
+      setIsRefreshing(false);
     }
   }, []);
 
-  // Flash effect when high-confidence games arrive
   useEffect(() => {
-    const hasHighConfidence = wsGames.some((game: any) =>
-      game.confidence_score >= 75 && game.trigger_flag
-    );
+    fetchGames();
+    const interval = setInterval(() => fetchGames(false, true), 15000);
+    return () => clearInterval(interval);
+  }, [fetchGames]);
 
-    if (hasHighConfidence) {
-      setFlashAlert(true);
-      setTimeout(() => setFlashAlert(false), 1000);
+  // Filter games based on tab and search
+  const filteredGames = games.filter((game) => {
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      if (
+        !game.homeTeam.toLowerCase().includes(query) &&
+        !game.awayTeam.toLowerCase().includes(query)
+      ) {
+        return false;
+      }
     }
-  }, [wsGames]);
 
-  const liveGames = wsGames || [];
+    if (subTab === 'under') {
+      return game.triggeredFlag;
+    } else if (subTab === 'over') {
+      return game.overTriggeredFlag;
+    } else if (subTab === 'live') {
+      return game.status === 'in';
+    } else if (subTab === 'upcoming') {
+      return game.status === 'pre';
+    }
 
-  // Filter and sort games
-  const sortedGames = [...liveGames]
-    .filter((game) => {
-      const reqPpm = typeof game.required_ppm === 'number' ? game.required_ppm : parseFloat(game.required_ppm || '0');
-      const curPpm = typeof game.current_ppm === 'number' ? game.current_ppm : parseFloat(game.current_ppm || '0');
-      const period = parseInt(game.period || '0');
-      const minutesRemaining = parseFloat(game.minutes_remaining || '0');
+    return true;
+  });
 
-      // Apply "Triggered Only" filter
-      if (filter === 'triggered') {
-        // Only show 2nd half games (period = 2)
-        if (period !== 2) return false;
+  // Sort games
+  const sortedGames = [...filteredGames].sort((a, b) => {
+    if (subTab === 'under') {
+      const aPPM = a.requiredPPM ?? 0;
+      const bPPM = b.requiredPPM ?? 0;
+      return bPPM - aPPM;
+    }
 
-        // Only show games with 5-12 minutes remaining
-        if (minutesRemaining < 5 || minutesRemaining > 12) return false;
+    if (subTab === 'over') {
+      const aDiff = Math.abs((a.requiredPPM ?? 0) - (a.currentPPM ?? 0));
+      const bDiff = Math.abs((b.requiredPPM ?? 0) - (b.currentPPM ?? 0));
+      return aDiff - bDiff;
+    }
 
-        // Only show games needing more than 4.44 PPM to hit over
-        if (reqPpm <= 4.44) return false;
-      }
+    if (subTab === 'live') {
+      const aPPM = a.requiredPPM ?? 0;
+      const bPPM = b.requiredPPM ?? 0;
+      return bPPM - aPPM;
+    }
 
-      // Apply Required PPM filters
-      if (reqPpm < minRequiredPpm || reqPpm > maxRequiredPpm) return false;
+    if (subTab === 'upcoming') {
+      return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
+    }
 
-      // Apply Current PPM filters (only if current_ppm exists)
-      if (curPpm > 0 && (curPpm < minCurrentPpm || curPpm > maxCurrentPpm)) return false;
+    return 0;
+  });
 
-      return true;
-    })
-    .sort((a, b) => {
-      let comparison = 0;
+  const underCount = games.filter((g) => g.triggeredFlag).length;
+  const liveCount = games.filter((g) => g.status === 'in').length;
+  const upcomingCount = games.filter((g) => g.status === 'pre').length;
 
-      switch (sortBy) {
-        case 'confidence':
-          comparison = (typeof b.confidence_score === 'number' ? b.confidence_score : parseFloat(b.confidence_score || '0')) -
-                      (typeof a.confidence_score === 'number' ? a.confidence_score : parseFloat(a.confidence_score || '0'));
-          break;
-        case 'time':
-          comparison = (b.timestamp || '').localeCompare(a.timestamp || '');
-          break;
-        case 'required_ppm':
-          comparison = (typeof b.required_ppm === 'number' ? b.required_ppm : parseFloat(b.required_ppm || '0')) -
-                      (typeof a.required_ppm === 'number' ? a.required_ppm : parseFloat(a.required_ppm || '0'));
-          break;
-        case 'current_ppm':
-          comparison = (typeof b.current_ppm === 'number' ? b.current_ppm : parseFloat(b.current_ppm || '0')) -
-                      (typeof a.current_ppm === 'number' ? a.current_ppm : parseFloat(a.current_ppm || '0'));
-          break;
-        case 'ppm_difference':
-          comparison = (typeof b.ppm_difference === 'number' ? b.ppm_difference : parseFloat(b.ppm_difference || '0')) -
-                      (typeof a.ppm_difference === 'number' ? a.ppm_difference : parseFloat(a.ppm_difference || '0'));
-          break;
-        default:
-          comparison = 0;
-      }
+  // Show loading while checking access
+  if (hasAccess === null) {
+    return <div className="min-h-screen bg-slate-900" />;
+  }
 
-      // Apply sort direction (desc is default, asc reverses)
-      return sortDirection === 'asc' ? -comparison : comparison;
-    });
+  // Show landing page if no access
+  if (!hasAccess) {
+    return <LandingPage onAccess={handleAccess} />;
+  }
 
   return (
-    <div className={clsx('min-h-screen bg-gray-900 transition-all duration-300', flashAlert && 'ring-4 ring-yellow-500')}>
-      {/* WebSocket Connection Status Bar */}
-      <div className={clsx(
-        'w-full py-2.5 px-4 text-center text-sm font-semibold transition-all duration-300 shadow-elevation-2',
-        flashAlert && 'animate-glow',
-        isConnected
-          ? 'bg-gradient-to-r from-brand-teal-600 to-brand-teal-500 text-white'
-          : 'bg-gradient-to-r from-brand-orange-600 to-brand-orange-500 text-white'
-      )}>
-        {isConnected ? (
-          <div className="flex items-center justify-center gap-3">
-            <span className="inline-block w-2.5 h-2.5 bg-white rounded-full animate-pulse shadow-glow-teal"></span>
-            <span className="font-bold">LIVE</span>
-            <span className="opacity-90">• HTTP Polling (10s refresh)</span>
+    <main className="min-h-screen bg-slate-900">
+      {/* Onboarding Overlay */}
+      {showOnboarding && (
+        <OnboardingOverlay onComplete={() => setShowOnboarding(false)} />
+      )}
+
+      {/* How It Works Modal */}
+      <HowItWorksModal
+        isOpen={showHowItWorks}
+        onClose={() => setShowHowItWorks(false)}
+      />
+
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800">
+        <div className="mx-auto max-w-2xl px-4 py-3">
+          {/* Logo Row */}
+          <div className="flex items-center justify-between mb-4">
+            <Image
+              src="/logo.png"
+              alt="TakeTheLiveUnder"
+              width={180}
+              height={72}
+              className="h-14 w-auto"
+              priority
+            />
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowHowItWorks(true)}
+                className="text-xs text-slate-400 hover:text-orange-400 transition-colors tap-target"
+              >
+                How it works
+              </button>
+              {isRefreshing && (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-orange-500 border-t-transparent"></div>
+              )}
+            </div>
           </div>
-        ) : (
-          <div className="flex items-center justify-center gap-3">
-            <span className="inline-block w-2.5 h-2.5 bg-white rounded-full"></span>
-            <span className="font-bold">DISCONNECTED</span>
+
+          {/* Tab Toggle */}
+          <div className="flex gap-1 bg-slate-800/50 rounded-xl p-1">
             <button
-              onClick={reconnect}
-              className="ml-3 px-4 py-1 bg-white text-brand-orange-600 rounded-lg text-xs font-bold hover:bg-deep-slate-100 shadow-elevation-1 transition-all"
+              onClick={() => { setSubTab('under'); trackTabChange('under'); }}
+              className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 tap-target ${
+                subTab === 'under'
+                  ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
             >
-              Reconnect
+              <span className="flex items-center justify-center gap-1.5">
+                {underCount > 0 && (
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-yellow-300 opacity-75"></span>
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-white"></span>
+                  </span>
+                )}
+                Golden {underCount > 0 && <span className="opacity-80">({underCount})</span>}
+              </span>
             </button>
+            <button
+              onClick={() => { setSubTab('live'); trackTabChange('live'); }}
+              className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 tap-target ${
+                subTab === 'live'
+                  ? 'bg-red-500 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                {liveCount > 0 && (
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-300 opacity-75"></span>
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-white"></span>
+                  </span>
+                )}
+                Live {liveCount > 0 && <span className="opacity-80">({liveCount})</span>}
+              </span>
+            </button>
+            <button
+              onClick={() => { setSubTab('upcoming'); trackTabChange('upcoming'); }}
+              className={`flex-1 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 tap-target ${
+                subTab === 'upcoming'
+                  ? 'bg-slate-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Soon {upcomingCount > 0 && `(${upcomingCount})`}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Hero Section - Only show on Golden Zone tab when no triggers */}
+      {subTab === 'under' && sortedGames.length === 0 && !loading && (
+        <div className="mx-auto max-w-2xl px-4 pt-8 pb-4">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-white mb-2">
+              Golden Zone Model
+            </h1>
+            <p className="text-slate-400 text-sm leading-relaxed max-w-md mx-auto">
+              Statistically validated Under triggers with <span className="text-yellow-400 font-semibold">69.7% win rate</span> and <span className="text-green-400 font-semibold">33.1% ROI</span>.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="mx-auto max-w-2xl px-4 py-6">
+        {/* Search */}
+        <div className="mb-6 relative">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Search teams..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full rounded-xl border border-slate-700 bg-slate-800 pl-12 pr-4 py-3.5 text-slate-100 placeholder-slate-500 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 text-base transition-all tap-target"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300 tap-target"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-500/50 bg-red-900/20 p-4 flex items-center gap-3 animate-fade-in">
+            <div className="flex-shrink-0">
+              {retrying ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-red-400 border-t-transparent"></div>
+              ) : (
+                <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-red-400">Connection issue</p>
+              <p className="text-xs text-red-400/70">Retrying automatically...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-center gap-2 text-slate-400 text-sm mb-4">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-orange-500 border-t-transparent"></div>
+              <span>Finding live NCAA games...</span>
+            </div>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        )}
+
+        {/* Empty States - Improved UX */}
+        {!loading && !error && subTab !== 'picks' && sortedGames.length === 0 && (
+          <div className="rounded-2xl border border-slate-700 bg-gradient-to-b from-slate-800/50 to-slate-800/20 p-8 text-center animate-fade-in">
+            {subTab === 'under' ? (
+              <>
+                <div className="text-4xl mb-4">🏆</div>
+                <p className="text-lg font-semibold text-slate-200 mb-2">
+                  No Golden Zone triggers right now
+                </p>
+                <p className="text-sm text-slate-500 max-w-sm mx-auto leading-relaxed">
+                  Golden Zone: Under triggers with PPM diff 1.0-1.5 and 5+ min remaining.
+                  <span className="block mt-1 text-yellow-500/80 font-medium">69.7% win rate • 33.1% ROI</span>
+                </p>
+                <button
+                  onClick={() => setSubTab('live')}
+                  className="mt-6 px-6 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm text-slate-200 font-medium transition-colors tap-target"
+                >
+                  View all live games
+                </button>
+              </>
+            ) : subTab === 'live' ? (
+              <>
+                <div className="text-4xl mb-4">🏀</div>
+                <p className="text-lg font-semibold text-slate-200 mb-2">
+                  No live games right now
+                </p>
+                <p className="text-sm text-slate-500 max-w-sm mx-auto">
+                  Check back during NCAA game times for live action and real-time edges.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="text-4xl mb-4">📅</div>
+                <p className="text-lg font-semibold text-slate-200 mb-2">
+                  No upcoming games scheduled
+                </p>
+                <p className="text-sm text-slate-500 max-w-sm mx-auto">
+                  Check back later for today&apos;s upcoming matchups.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Picks Tab */}
+        {subTab === 'picks' && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="rounded bg-purple-500/20 border border-purple-500/30 px-2 py-1 text-xs font-medium text-purple-400">
+                KenPom
+              </span>
+              <span className="text-sm text-slate-400">Today&apos;s projected winners & totals</span>
+            </div>
+            <ProjectedWinners />
+          </div>
+        )}
+
+        {/* Games List */}
+        {!loading && subTab !== 'picks' && sortedGames.length > 0 && (
+          <div className="space-y-4">
+            {subTab === 'upcoming' && sortedGames.every(g => g.isTomorrow) && (
+              <div className="flex items-center gap-2 mb-2">
+                <span className="rounded bg-purple-500/20 border border-purple-500/30 px-2 py-1 text-xs font-medium text-purple-400">
+                  Tomorrow
+                </span>
+                <span className="text-sm text-slate-500">No more games today</span>
+              </div>
+            )}
+            {sortedGames.map((game) => (
+              <GameCard key={game.id} game={game} />
+            ))}
+          </div>
+        )}
+
+        {/* Last Updated */}
+        {lastUpdated && !loading && (
+          <div className="mt-8 flex items-center justify-center gap-2 text-xs text-slate-500 timestamp-update">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Updated {new Date(lastUpdated).toLocaleTimeString()}</span>
+            <span className="text-slate-600">•</span>
+            <span>Auto-refreshes every 15s</span>
           </div>
         )}
       </div>
 
-      {/* Header */}
-      <header className="bg-gradient-header border-b border-brand-purple-700/30 shadow-elevation-3">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">Take The Live Under</h1>
-              <p className="text-base text-brand-purple-200 font-medium">Real-time NCAA basketball scoring analytics</p>
-            </div>
-
-            <div className="flex gap-5 items-center">
-              {/* Performance Stats */}
-              {perfData && (
-                <div className="text-right glass-card px-4 py-2 rounded-lg">
-                  <div className="text-xs text-deep-slate-400 mb-1">Win Rate</div>
-                  <div className="text-xl font-bold text-gradient-purple-orange">
-                    {(perfData.win_rate ?? 0).toFixed(1)}%
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Performance Metrics Summary Row */}
-          {perfData && (
-            <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="glass-card rounded-lg p-3 hover:shadow-elevation-2 transition-all">
-                <div className="text-xs text-deep-slate-400 mb-1 font-medium">Predictions</div>
-                <div className="text-2xl font-bold text-white">{perfData.total_predictions || perfData.total_bets}</div>
-              </div>
-
-              <div className="glass-card rounded-lg p-3 hover:shadow-elevation-2 transition-all">
-                <div className="text-xs text-deep-slate-400 mb-1 font-medium">Win Rate</div>
-                <div className={clsx(
-                  'text-2xl font-bold',
-                  (perfData.win_rate ?? 0) >= 55 ? 'text-green-400' : 'text-brand-orange-400'
-                )}>
-                  {(perfData.win_rate ?? 0).toFixed(1)}%
-                </div>
-              </div>
-
-              <div className="glass-card rounded-lg p-3 hover:shadow-elevation-2 transition-all">
-                <div className="text-xs text-deep-slate-400 mb-1 font-medium">Unit Profit</div>
-                <div className={clsx(
-                  'text-2xl font-bold',
-                  (perfData.total_unit_profit ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
-                )}>
-                  {(perfData.total_unit_profit ?? 0) >= 0 ? '+' : ''}{(perfData.total_unit_profit ?? 0).toFixed(1)}u
-                </div>
-              </div>
-
-              <div className="glass-card rounded-lg p-3 hover:shadow-elevation-2 transition-all">
-                <div className="text-xs text-deep-slate-400 mb-1 font-medium">ROI</div>
-                <div className={clsx(
-                  'text-2xl font-bold',
-                  (perfData.roi ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'
-                )}>
-                  {(perfData.roi ?? 0) >= 0 ? '+' : ''}{(perfData.roi ?? 0).toFixed(1)}%
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Main Tabs */}
-          <div className="mt-5 flex gap-2 border-b border-brand-purple-700/30">
-            <button
-              onClick={() => setActiveTab('live')}
-              className={clsx(
-                activeTab === 'live' ? 'tab-modern-active' : 'tab-modern'
-              )}
-            >
-              Live Games
-            </button>
-            <button
-              onClick={() => setActiveTab('pregame')}
-              className={clsx(
-                activeTab === 'pregame' ? 'tab-modern-active' : 'tab-modern'
-              )}
-            >
-              Pregame Predictions
-            </button>
-            <button
-              onClick={() => setActiveTab('trends')}
-              className={clsx(
-                activeTab === 'trends' ? 'tab-modern-active' : 'tab-modern'
-              )}
-            >
-              Trends & Analysis
-            </button>
-            <button
-              onClick={() => setActiveTab('analysis')}
-              className={clsx(
-                activeTab === 'analysis' ? 'tab-modern-active' : 'tab-modern'
-              )}
-            >
-              Completed Games
-            </button>
-            <button
-              onClick={() => setActiveTab('comparison')}
-              className={clsx(
-                activeTab === 'comparison' ? 'tab-modern-active' : 'tab-modern'
-              )}
-            >
-              All Games Comparison
-            </button>
-          </div>
-
-          {/* Filters (only show for Live Games tab) */}
-          {activeTab === 'live' && (
-            <div className="mt-5 space-y-4">
-              {/* Filter and Sort Row */}
-              <div className="flex flex-wrap gap-4 items-center">
-                {/* View Filter */}
-                <div className="flex gap-2" role="group" aria-label="View filter">
-                  <button
-                    onClick={() => setFilter('triggered')}
-                    className={clsx(
-                      'px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-elevation-1',
-                      filter === 'triggered'
-                        ? 'bg-gradient-to-r from-brand-teal-600 to-brand-teal-500 text-white shadow-elevation-2'
-                        : 'glass-card text-deep-slate-300 hover:bg-deep-slate-700/70'
-                    )}
-                    aria-pressed={filter === 'triggered'}
-                  >
-                    Triggered Only
-                  </button>
-                  <button
-                    onClick={() => setFilter('all')}
-                    className={clsx(
-                      'px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-elevation-1',
-                      filter === 'all'
-                        ? 'bg-gradient-to-r from-brand-teal-600 to-brand-teal-500 text-white shadow-elevation-2'
-                        : 'glass-card text-deep-slate-300 hover:bg-deep-slate-700/70'
-                    )}
-                    aria-pressed={filter === 'all'}
-                  >
-                    All Games
-                  </button>
-                </div>
-
-                {/* Sort Control */}
-                <SortControl
-                  value={sortBy}
-                  direction={sortDirection}
-                  onChange={(value) => setSortBy(value as typeof sortBy)}
-                  onDirectionChange={setSortDirection}
-                  options={[
-                    { value: 'confidence', label: 'Confidence' },
-                    { value: 'time', label: 'Time' },
-                    { value: 'required_ppm', label: 'Required PPM' },
-                    { value: 'current_ppm', label: 'Current PPM' },
-                    { value: 'ppm_difference', label: 'PPM Difference' },
-                  ]}
-                  className="flex-1"
-                />
-
-                <button
-                  onClick={() => {
-                    setMinRequiredPpm(0);
-                    setMaxRequiredPpm(10);
-                    setMinCurrentPpm(0);
-                    setMaxCurrentPpm(10);
-                  }}
-                  className="px-4 py-2 glass-card hover:bg-deep-slate-700/70 rounded-lg text-sm font-medium text-deep-slate-300 transition-all shadow-elevation-1"
-                  aria-label="Reset all filters"
-                >
-                  Reset Filters
-                </button>
-              </div>
-
-              {/* PPM Range Sliders */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 glass-card rounded-lg p-4">
-                <RangeSlider
-                  label="Required PPM Range"
-                  min={0}
-                  max={10}
-                  step={0.5}
-                  value={[minRequiredPpm, maxRequiredPpm]}
-                  onChange={([min, max]) => {
-                    setMinRequiredPpm(min);
-                    setMaxRequiredPpm(max);
-                  }}
-                  colorScheme="orange"
-                />
-
-                <RangeSlider
-                  label="Current PPM Range"
-                  min={0}
-                  max={10}
-                  step={0.5}
-                  value={[minCurrentPpm, maxCurrentPpm]}
-                  onChange={([min, max]) => {
-                    setMinCurrentPpm(min);
-                    setMaxCurrentPpm(max);
-                  }}
-                  colorScheme="teal"
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'live' ? (
-          <>
-            {/* Live Game Count */}
-            <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h2 className="text-2xl md:text-3xl font-bold text-white">
-                  {filter === 'triggered' ? 'Active Opportunities' : 'Live Games'} <span className="text-brand-purple-400">({sortedGames.length})</span>
-                </h2>
-                <p className="text-sm text-deep-slate-400 mt-1">
-                  Showing {sortBy === 'confidence' ? 'highest confidence first' :
-                     sortBy === 'time' ? 'most recent first' :
-                     sortBy === 'required_ppm' ? 'highest required PPM first' :
-                     sortBy === 'current_ppm' ? 'fastest current pace first' :
-                     sortBy === 'ppm_difference' ? 'largest PPM difference first' : 'sorted results'}
-                  {sortDirection === 'asc' && ' (reversed)'}
-                </p>
-              </div>
-
-              <div className="flex gap-3 items-center">
-                <span className="text-sm text-gray-400">
-                  HTTP Polling Mode
-                </span>
-                <button
-                  onClick={reconnect}
-                  disabled={isConnected}
-                  className={clsx(
-                    'px-4 py-2 rounded text-sm font-medium transition-colors',
-                    isConnected
-                      ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-500 text-white'
-                  )}
-                >
-                  {isConnected ? 'Connected' : 'Reconnect'}
-                </button>
-              </div>
-            </div>
-
-            {/* WebSocket Error */}
-            {wsError && (
-              <div className="mb-4 bg-red-900/20 border border-red-500 rounded p-4 text-red-400">
-                <p className="font-semibold">WebSocket Error</p>
-                <p className="text-sm mt-1">{wsError}</p>
-                <button
-                  onClick={reconnect}
-                  className="mt-2 px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-xs font-medium"
-                >
-                  Try Reconnecting
-                </button>
-              </div>
-            )}
-
-            {!wsError && liveGames.length === 0 && (
-              <div className="bg-gray-800 rounded-lg p-12 text-center">
-                <p className="text-gray-400 text-lg">
-                  {!isConnected
-                    ? 'Connecting to real-time updates...'
-                    : filter === 'triggered'
-                    ? 'No triggered games at the moment. Check back soon!'
-                    : 'No live games right now. Waiting for games to start...'}
-                </p>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortedGames.map((game, idx) => (
-                <GameCard
-                  key={`${game.game_id}-${idx}`}
-                  game={game}
-                  onClick={() => setSelectedGameForModal(game)}
-                />
-              ))}
-            </div>
-          </>
-        ) : activeTab === 'pregame' ? (
-          <PregamePredictions />
-        ) : activeTab === 'trends' ? (
-          <TrendsView liveGames={liveGames} />
-        ) : activeTab === 'analysis' ? (
-          <CompletedGamesAnalysis />
-        ) : (
-          <AllGamesComparison />
-        )}
-
-        {/* Performance Summary (only on Live tab) */}
-        {activeTab === 'live' && perfData && (
-          <div className="mt-8 bg-gray-800 rounded-lg p-6">
-            <h3 className="text-lg font-bold mb-4">Performance Summary</h3>
-
-            {/* Today's Performance */}
-            {perfData.today && (perfData.today.total_predictions || perfData.today.total_bets) > 0 && (
-              <div className="mb-6 bg-gradient-to-r from-brand-purple-900/30 to-brand-orange-900/30 rounded-lg p-4 border border-brand-purple-500/30">
-                <h4 className="text-sm font-semibold mb-3 text-brand-purple-300">Today's Performance</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <div className="text-xs text-gray-400">Predictions</div>
-                    <div className="text-xl font-bold">{perfData.today.total_predictions || perfData.today.total_bets}</div>
-                  </div>
-
-                  <div>
-                    <div className="text-xs text-gray-400">Win Rate</div>
-                    <div className="text-xl font-bold text-green-400">
-                      {(perfData.today.win_rate ?? 0).toFixed(1)}%
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-xs text-gray-400">Unit Profit</div>
-                    <div className={clsx('text-xl font-bold', (perfData.today.total_unit_profit ?? 0) >= 0 ? 'text-green-400' : 'text-red-400')}>
-                      {(perfData.today.total_unit_profit ?? 0) >= 0 ? '+' : ''}{(perfData.today.total_unit_profit ?? 0).toFixed(2)}u
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-xs text-gray-400">ROI</div>
-                    <div className={clsx('text-xl font-bold', (perfData.today.roi ?? 0) >= 0 ? 'text-green-400' : 'text-red-400')}>
-                      {(perfData.today.roi ?? 0) >= 0 ? '+' : ''}{(perfData.today.roi ?? 0).toFixed(1)}%
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <h4 className="text-sm font-semibold mb-3 text-gray-400">All-Time Performance</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <div className="text-sm text-gray-400">Predictions</div>
-                <div className="text-2xl font-bold">{perfData.total_predictions || perfData.total_bets}</div>
-              </div>
-
-              <div>
-                <div className="text-sm text-gray-400">Win Rate</div>
-                <div className="text-2xl font-bold text-green-400">
-                  {(perfData.win_rate ?? 0).toFixed(1)}%
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm text-gray-400">Unit Profit</div>
-                <div className={clsx('text-2xl font-bold', (perfData.total_unit_profit ?? 0) >= 0 ? 'text-green-400' : 'text-red-400')}>
-                  {(perfData.total_unit_profit ?? 0) >= 0 ? '+' : ''}{(perfData.total_unit_profit ?? 0).toFixed(2)}u
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm text-gray-400">ROI</div>
-                <div className={clsx('text-2xl font-bold', (perfData.roi ?? 0) >= 0 ? 'text-green-400' : 'text-red-400')}>
-                  {(perfData.roi ?? 0) >= 0 ? '+' : ''}{(perfData.roi ?? 0).toFixed(1)}%
-                </div>
-              </div>
-            </div>
-
-            {/* By Confidence Tier */}
-            <div className="mt-6">
-              <h4 className="text-sm font-semibold mb-3">Performance by Confidence Tier</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Object.entries(perfData.by_confidence || {}).map(([tier, data]: [string, any]) => (
-                  <div key={tier} className="bg-gray-900/50 rounded p-3">
-                    <div className="text-xs text-gray-400 mb-1">{tier}</div>
-                    <div className="text-sm">
-                      <span className="font-bold">{data.predictions || data.bets}</span> predictions
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-bold text-green-400">{data.win_rate?.toFixed(0)}%</span> win rate
-                    </div>
-                    <div className="text-sm">
-                      <span className={clsx('font-bold', (data.profit ?? 0) >= 0 ? 'text-green-400' : 'text-red-400')}>
-                        {(data.profit ?? 0) >= 0 ? '+' : ''}{(data.profit ?? 0).toFixed(1)}u
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* Game Detail Modal */}
-      {selectedGameForModal && (
-        <GameDetailModal
-          gameId={selectedGameForModal.game_id}
-          gameTitle={`${selectedGameForModal.away_team} @ ${selectedGameForModal.home_team}`}
-          onClose={() => setSelectedGameForModal(null)}
-        />
-      )}
-    </div>
+      {/* Trust Footer */}
+      <TrustFooter />
+    </main>
   );
 }
