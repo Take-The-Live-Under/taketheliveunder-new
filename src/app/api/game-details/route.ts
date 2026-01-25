@@ -81,7 +81,9 @@ async function loadRefMetrics(): Promise<Map<string, {
       if (values.length > nameIdx) {
         const name = values[nameIdx]?.trim();
         if (name) {
-          refMap.set(name.toLowerCase(), {
+          // Store with normalized key for better matching
+          const normalizedName = name.toLowerCase().replace(/\s+/g, ' ').trim();
+          refMap.set(normalizedName, {
             foulsPerGame: parseFloat(values[foulsIdx]) || 0,
             style: values[styleIdx]?.trim() || 'Average',
             homeBias: parseFloat(values[biasIdx]) || 0,
@@ -96,29 +98,59 @@ async function loadRefMetrics(): Promise<Map<string, {
   return refMap;
 }
 
+function normalizeRefName(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ') // Collapse multiple spaces
+    .replace(/[^a-z\s]/g, ''); // Remove non-alpha chars
+}
+
 function findRefMetrics(
   refName: string,
   refMap: Map<string, { foulsPerGame: number; style: string; homeBias: number }>
 ) {
-  const normalized = refName.toLowerCase().trim();
+  const normalized = normalizeRefName(refName);
 
   // Direct match
   if (refMap.has(normalized)) {
     return refMap.get(normalized);
   }
 
-  // Try partial match
+  // Try partial match with normalized keys
   const entries = Array.from(refMap.entries());
   for (let i = 0; i < entries.length; i++) {
     const [key, value] = entries[i];
-    if (normalized.includes(key) || key.includes(normalized)) {
+    const normalizedKey = normalizeRefName(key);
+
+    // Check if names match after normalization
+    if (normalized === normalizedKey) {
       return value;
     }
-    // Match last name
-    const nameParts = normalized.split(' ');
-    const lastName = nameParts[nameParts.length - 1];
-    if (key.includes(lastName)) {
+
+    // Check if one contains the other
+    if (normalized.includes(normalizedKey) || normalizedKey.includes(normalized)) {
       return value;
+    }
+
+    // Match last name only (for cases like "J. Smith" vs "John Smith")
+    const normalizedParts = normalized.split(' ').filter(p => p.length > 1);
+    const keyParts = normalizedKey.split(' ').filter(p => p.length > 1);
+
+    if (normalizedParts.length > 0 && keyParts.length > 0) {
+      const normalizedLastName = normalizedParts[normalizedParts.length - 1];
+      const keyLastName = keyParts[keyParts.length - 1];
+
+      // Match on last name + first letter of first name
+      if (normalizedLastName === keyLastName) {
+        if (normalizedParts.length === 1 || keyParts.length === 1) {
+          return value; // Just last name match
+        }
+        // Check first initial
+        if (normalizedParts[0][0] === keyParts[0][0]) {
+          return value;
+        }
+      }
     }
   }
 
