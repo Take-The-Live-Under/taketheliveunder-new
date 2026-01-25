@@ -9,8 +9,30 @@ from datetime import datetime
 from typing import List, Dict, Optional
 from loguru import logger
 import sys
+import pytz
 
 import config
+
+
+def is_quiet_hours() -> bool:
+    """Check if we're in quiet hours (no games expected)"""
+    if not getattr(config, 'QUIET_HOURS_ENABLED', False):
+        return False
+
+    # Get current time in Eastern Time
+    eastern = pytz.timezone('US/Eastern')
+    now_et = datetime.now(eastern)
+    current_hour = now_et.hour
+
+    start = getattr(config, 'QUIET_HOURS_START', 2)
+    end = getattr(config, 'QUIET_HOURS_END', 9)
+
+    # Handle overnight quiet hours (e.g., 2 AM to 9 AM)
+    if start < end:
+        return start <= current_hour < end
+    else:
+        # Handles case like 22:00 to 06:00
+        return current_hour >= start or current_hour < end
 from utils.team_stats import get_stats_manager
 from utils.confidence_scorer import get_confidence_scorer
 from utils.csv_logger import get_csv_logger
@@ -90,8 +112,20 @@ class NCAABettingMonitor:
         logger.info(f"PPM threshold: {config.PPM_THRESHOLD}")
         logger.info(f"Kill switch: Auto-shutdown after {self.no_games_timeout // 60} minutes of no live games")
 
+        # Log quiet hours config
+        if getattr(config, 'QUIET_HOURS_ENABLED', False):
+            logger.info(f"Quiet hours enabled: {config.QUIET_HOURS_START}:00 - {config.QUIET_HOURS_END}:00 ET")
+            logger.info(f"Quiet hours poll interval: {getattr(config, 'QUIET_HOURS_POLL_INTERVAL', 300)} seconds")
+
         while True:
             try:
+                # Check if we're in quiet hours
+                if is_quiet_hours():
+                    quiet_interval = getattr(config, 'QUIET_HOURS_POLL_INTERVAL', 300)
+                    logger.debug(f"🌙 Quiet hours - sleeping {quiet_interval}s (no games expected)")
+                    await asyncio.sleep(quiet_interval)
+                    continue
+
                 await self.poll_live_games()
 
                 # Check kill switch: if no live games for 5 minutes, shut down

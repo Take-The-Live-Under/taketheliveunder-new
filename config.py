@@ -77,6 +77,14 @@ MEDIUM_CONF_MIN_PPM = 4.0  # Minimum PPM for medium confidence bets
 # Team stats refresh frequency (in hours)
 STATS_REFRESH_HOURS = 24
 
+# ========== QUIET HOURS (No Games) ==========
+# Don't poll during these hours to save API tokens
+# Times are in Eastern Time (ET)
+QUIET_HOURS_ENABLED = True
+QUIET_HOURS_START = 2   # 2:00 AM ET
+QUIET_HOURS_END = 9     # 9:00 AM ET
+QUIET_HOURS_POLL_INTERVAL = 300  # Check every 5 minutes during quiet hours (just to see if games started early)
+
 # ========== CONFIDENCE SCORING WEIGHTS ==========
 # These can be adjusted via admin panel
 # BALANCED - Reduced under-favoring bonuses by ~40% for neutrality
