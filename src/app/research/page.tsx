@@ -10,6 +10,16 @@ interface Team {
   rank: number;
 }
 
+interface UpcomingGame {
+  id: string;
+  homeTeam: string;
+  awayTeam: string;
+  startTime: string;
+  status: string;
+  homeScore: number;
+  awayScore: number;
+}
+
 interface TeamStats {
   team_id: string;
   team_name: string;
@@ -101,7 +111,9 @@ function formatValue(value: number, format: MetricConfig['format']): string {
 
 export default function ResearchPage() {
   const [teams, setTeams] = useState<Team[]>([]);
+  const [upcomingGames, setUpcomingGames] = useState<UpcomingGame[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingGames, setLoadingGames] = useState(true);
   const [team1Search, setTeam1Search] = useState('');
   const [team2Search, setTeam2Search] = useState('');
   const [team1, setTeam1] = useState<Team | null>(null);
@@ -113,7 +125,7 @@ export default function ResearchPage() {
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set(CATEGORIES));
   const [comparing, setComparing] = useState(false);
 
-  // Fetch team list
+  // Fetch team list and upcoming games
   useEffect(() => {
     async function fetchTeams() {
       try {
@@ -126,7 +138,33 @@ export default function ResearchPage() {
         setLoading(false);
       }
     }
+
+    async function fetchGames() {
+      try {
+        const res = await fetch('/api/games');
+        const data = await res.json();
+        // Get games that are scheduled or in progress
+        const games: UpcomingGame[] = (data.games || [])
+          .filter((g: { status: string }) => g.status === 'pre' || g.status === 'in')
+          .map((g: { id: string; homeTeam: string; awayTeam: string; startTime: string; status: string; homeScore: number; awayScore: number }) => ({
+            id: g.id,
+            homeTeam: g.homeTeam,
+            awayTeam: g.awayTeam,
+            startTime: g.startTime,
+            status: g.status,
+            homeScore: g.homeScore,
+            awayScore: g.awayScore,
+          }));
+        setUpcomingGames(games);
+      } catch (error) {
+        console.error('Error fetching games:', error);
+      } finally {
+        setLoadingGames(false);
+      }
+    }
+
     fetchTeams();
+    fetchGames();
   }, []);
 
   // Fetch comparison stats when both teams selected
@@ -173,6 +211,26 @@ export default function ResearchPage() {
 
   const visibleMetrics = METRICS.filter(m => selectedCategories.has(m.category));
 
+  // Select a game to analyze
+  const selectGame = (game: UpcomingGame) => {
+    // Find team objects or create temporary ones
+    const homeTeamObj = teams.find(t => t.name.toLowerCase() === game.homeTeam.toLowerCase()) ||
+      { id: game.homeTeam, name: game.homeTeam, rank: 0 };
+    const awayTeamObj = teams.find(t => t.name.toLowerCase() === game.awayTeam.toLowerCase()) ||
+      { id: game.awayTeam, name: game.awayTeam, rank: 0 };
+
+    setTeam1(awayTeamObj);
+    setTeam2(homeTeamObj);
+    setTeam1Search('');
+    setTeam2Search('');
+  };
+
+  // Format game time
+  const formatGameTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
+
   return (
     <main className="min-h-screen bg-slate-900">
       {/* Header */}
@@ -203,12 +261,77 @@ export default function ResearchPage() {
 
       <div className="mx-auto max-w-4xl px-4 py-6">
         {/* Title */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <h1 className="text-2xl font-bold text-white mb-2">Team Research</h1>
           <p className="text-slate-400 text-sm">
             Compare any two NCAA teams head-to-head on KenPom & ESPN metrics
           </p>
         </div>
+
+        {/* Upcoming Games */}
+        {!loadingGames && upcomingGames.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-sm font-medium text-slate-400 mb-3">Today&apos;s Games — Click to analyze</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {upcomingGames.slice(0, 12).map((game) => (
+                <button
+                  key={game.id}
+                  onClick={() => selectGame(game)}
+                  className={`bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700 hover:border-orange-500/50 rounded-xl p-3 text-left transition-all ${
+                    team1?.name === game.awayTeam && team2?.name === game.homeTeam
+                      ? 'ring-2 ring-orange-500 border-orange-500'
+                      : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      game.status === 'in'
+                        ? 'bg-green-500/20 text-green-400'
+                        : 'bg-slate-700 text-slate-400'
+                    }`}>
+                      {game.status === 'in' ? 'LIVE' : formatGameTime(game.startTime)}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-white truncate pr-2">{game.awayTeam}</span>
+                      {game.status === 'in' && (
+                        <span className="text-sm font-medium text-slate-300">{game.awayScore}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-white truncate pr-2">{game.homeTeam}</span>
+                      {game.status === 'in' && (
+                        <span className="text-sm font-medium text-slate-300">{game.homeScore}</span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            {upcomingGames.length > 12 && (
+              <p className="text-center text-xs text-slate-500 mt-3">
+                +{upcomingGames.length - 12} more games
+              </p>
+            )}
+          </div>
+        )}
+
+        {loadingGames && (
+          <div className="flex items-center justify-center gap-2 text-slate-400 mb-8">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-orange-500 border-t-transparent"></div>
+            <span className="text-sm">Loading today&apos;s games...</span>
+          </div>
+        )}
+
+        {/* Divider */}
+        {!loadingGames && upcomingGames.length > 0 && (
+          <div className="flex items-center gap-4 mb-6">
+            <div className="flex-1 h-px bg-slate-700"></div>
+            <span className="text-xs text-slate-500 uppercase tracking-wide">Or search any team</span>
+            <div className="flex-1 h-px bg-slate-700"></div>
+          </div>
+        )}
 
         {/* Team Selection */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
