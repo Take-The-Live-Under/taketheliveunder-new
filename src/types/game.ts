@@ -1,3 +1,10 @@
+export interface BonusStatus {
+  inBonus: boolean;
+  inDoubleBonus: boolean;
+  fouls: number;          // Current half fouls (or total if can't determine)
+  isEstimated: boolean;   // True if we can't accurately determine 2nd half fouls
+}
+
 export interface Game {
   id: string;
   startTime: string;
@@ -22,6 +29,9 @@ export interface Game {
   inFoulGame: boolean;         // True if last 2 min and 1-10 point differential
   foulGameAdjustment: number | null;  // Expected extra points from foul game
   adjustedProjectedTotal: number | null;  // Projected total + foul game adjustment
+  // Bonus status - fouls against each team (opponent fouls = your free throws)
+  homeBonusStatus?: BonusStatus;  // Based on away team's fouls against home
+  awayBonusStatus?: BonusStatus;  // Based on home team's fouls against away
 }
 
 export interface ESPNGame {
