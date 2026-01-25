@@ -119,8 +119,8 @@ async function fetchTeamStats(teamId: string, teamName: string): Promise<TeamDat
 
     const statsData = await statsResponse.json();
 
-    // Extract stats from response
-    const stats = statsData.splits?.categories || [];
+    // Extract stats from response - ESPN structure is results.stats.categories
+    const stats = statsData.results?.stats?.categories || statsData.splits?.categories || [];
 
     const getStat = (category: string, name: string): number => {
       const cat = stats.find((c: { name: string }) => c.name === category);
@@ -129,45 +129,55 @@ async function fetchTeamStats(teamId: string, teamName: string): Promise<TeamDat
       return stat?.value ?? 0;
     };
 
-    // Get team record
+    // Get team record from either location
     const teamInfo = statsData.team || {};
-    const record = teamInfo.record?.items?.[0]?.summary || '';
-    const gamesPlayed = parseInt(record.split('-').reduce((a: number, b: string) => a + parseInt(b) || 0, 0)) || 0;
+    const record = teamInfo.recordSummary || teamInfo.record?.items?.[0]?.summary || '';
+    const gamesPlayed = getStat('general', 'gamesPlayed') ||
+      parseInt(record.split('-').reduce((a: number, b: string) => a + parseInt(b) || 0, 0)) || 0;
 
-    // Calculate derived stats
-    const fgm = getStat('offensive', 'fieldGoalsMade');
-    const fga = getStat('offensive', 'fieldGoalsAttempted');
-    const fg3m = getStat('offensive', 'threePointFieldGoalsMade');
-    const fg3a = getStat('offensive', 'threePointFieldGoalsAttempted');
-    const ftm = getStat('offensive', 'freeThrowsMade');
-    const fta = getStat('offensive', 'freeThrowsAttempted');
-    const pts = getStat('offensive', 'avgPoints');
-    const oreb = getStat('offensive', 'offensiveRebounds');
-    const dreb = getStat('defensive', 'defensiveRebounds');
-    const ast = getStat('offensive', 'assists');
-    const to = getStat('offensive', 'turnovers');
-    const stl = getStat('defensive', 'steals');
-    const blk = getStat('defensive', 'blocks');
-    const pf = getStat('general', 'fouls');
+    // Get stats using ESPN's actual field names
+    // Per-game averages
+    const avgPts = getStat('offensive', 'avgPoints');
+    const avgFGM = getStat('offensive', 'avgFieldGoalsMade');
+    const avgFGA = getStat('offensive', 'avgFieldGoalsAttempted');
+    const avg3PM = getStat('offensive', 'avgThreePointFieldGoalsMade');
+    const avg3PA = getStat('offensive', 'avgThreePointFieldGoalsAttempted');
+    const avgFTM = getStat('offensive', 'avgFreeThrowsMade');
+    const avgFTA = getStat('offensive', 'avgFreeThrowsAttempted');
+    const avgOReb = getStat('offensive', 'avgOffensiveRebounds');
+    const avgDReb = getStat('defensive', 'avgDefensiveRebounds');
+    const avgAst = getStat('offensive', 'avgAssists');
+    const avgTO = getStat('offensive', 'avgTurnovers');
+    const avgStl = getStat('defensive', 'avgSteals');
+    const avgBlk = getStat('defensive', 'avgBlocks');
+    const avgFouls = getStat('general', 'avgFouls');
+    const astToRatio = getStat('general', 'assistTurnoverRatio');
 
-    const fg_pct = fga > 0 ? (fgm / fga) * 100 : 0;
-    const three_p_pct = fg3a > 0 ? (fg3m / fg3a) * 100 : 0;
-    const ft_pct = fta > 0 ? (ftm / fta) * 100 : 0;
-    const three_p_rate = fga > 0 ? (fg3a / fga) * 100 : 0;
+    // Pre-calculated percentages from ESPN
+    const fg_pct = getStat('offensive', 'fieldGoalPct');
+    const three_p_pct = getStat('offensive', 'threePointFieldGoalPct');
+    const ft_pct = getStat('offensive', 'freeThrowPct');
+
+    // Calculate 3P rate (3PA / FGA)
+    const three_p_rate = avgFGA > 0 ? (avg3PA / avgFGA) * 100 : 0;
 
     // Effective FG% = (FGM + 0.5 * 3PM) / FGA
-    const efg_pct = fga > 0 ? ((fgm + 0.5 * fg3m) / fga) * 100 : 0;
+    const efg_pct = avgFGA > 0 ? ((avgFGM + 0.5 * avg3PM) / avgFGA) * 100 : 0;
 
     // True Shooting % = PTS / (2 * (FGA + 0.44 * FTA))
-    const ts_pct = (fga + 0.44 * fta) > 0 ? (pts / (2 * (fga + 0.44 * fta))) * 100 : 0;
+    const ts_pct = (avgFGA + 0.44 * avgFTA) > 0 ? (avgPts / (2 * (avgFGA + 0.44 * avgFTA))) * 100 : 0;
 
-    // Estimate pace (simplified)
-    const totalReb = oreb + dreb;
-    const pace = fga + 0.44 * fta - oreb + to;
+    // Estimate pace (possessions per game)
+    const pace = avgFGA + 0.44 * avgFTA - avgOReb + avgTO;
 
-    // Offensive/Defensive efficiency (per 100 possessions estimate)
-    const possessions = pace > 0 ? pace : 70; // Default to 70 if no data
-    const off_efficiency = possessions > 0 ? (pts / possessions) * 100 : 0;
+    // Offensive efficiency (points per 100 possessions estimate)
+    const possessions = pace > 0 ? pace : 70;
+    const off_efficiency = possessions > 0 ? (avgPts / possessions) * 100 : 0;
+
+    // Calculate rebound percentages
+    const totalReb = avgOReb + avgDReb;
+    const oreb_pct = totalReb > 0 ? (avgOReb / totalReb) * 100 : 0;
+    const dreb_pct = totalReb > 0 ? (avgDReb / totalReb) * 100 : 0;
 
     const teamData: TeamData = {
       team_id: teamId,
@@ -181,18 +191,18 @@ async function fetchTeamStats(teamId: string, teamName: string): Promise<TeamDat
       three_p_rate: Math.round(three_p_rate * 10) / 10,
       three_p_pct: Math.round(three_p_pct * 10) / 10,
       ft_pct: Math.round(ft_pct * 10) / 10,
-      oreb_pct: Math.round((oreb / (oreb + dreb || 1)) * 100 * 10) / 10,
-      dreb_pct: Math.round((dreb / (oreb + dreb || 1)) * 100 * 10) / 10,
-      to_rate: Math.round(to * 10) / 10,
+      oreb_pct: Math.round(oreb_pct * 10) / 10,
+      dreb_pct: Math.round(dreb_pct * 10) / 10,
+      to_rate: Math.round(avgTO * 10) / 10,
       efg_pct: Math.round(efg_pct * 10) / 10,
       ts_pct: Math.round(ts_pct * 10) / 10,
-      avg_ppm: Math.round((pts / 40) * 100) / 100,
-      avg_ppg: Math.round(pts * 10) / 10,
-      assists_per_game: Math.round(ast * 10) / 10,
-      steals_per_game: Math.round(stl * 10) / 10,
-      blocks_per_game: Math.round(blk * 10) / 10,
-      fouls_per_game: Math.round(pf * 10) / 10,
-      ast_to_ratio: to > 0 ? Math.round((ast / to) * 100) / 100 : 0,
+      avg_ppm: Math.round((avgPts / 40) * 100) / 100,
+      avg_ppg: Math.round(avgPts * 10) / 10,
+      assists_per_game: Math.round(avgAst * 10) / 10,
+      steals_per_game: Math.round(avgStl * 10) / 10,
+      blocks_per_game: Math.round(avgBlk * 10) / 10,
+      fouls_per_game: Math.round(avgFouls * 10) / 10,
+      ast_to_ratio: Math.round(astToRatio * 100) / 100,
       espn_rank: 999,
     };
 
