@@ -8,6 +8,8 @@ import {
   isTriggered,
   isOverTriggered,
   parseClock,
+  isInFoulGame,
+  getFoulGameAdjustment,
 } from '@/lib/calculations';
 import { logTrigger, hasBeenLoggedRecently, logGameSnapshots } from '@/lib/supabase';
 
@@ -295,6 +297,21 @@ export async function GET() {
         triggerType = 'over';
       }
 
+      // Calculate foul game adjustment
+      const pointDiff = Math.abs(homeScore - awayScore);
+      const inFoulGame = status === 'in' && isInFoulGame(period, clockMinutes, clockSeconds, pointDiff);
+      const foulGameAdjustment = inFoulGame ? getFoulGameAdjustment(pointDiff) : null;
+
+      // Calculate adjusted projected total (base projection + foul game adjustment)
+      let adjustedProjectedTotal: number | null = null;
+      if (currentPPM !== null && minutesRemainingReg > 0) {
+        const baseProjected = liveTotal + (currentPPM * minutesRemainingReg);
+        adjustedProjectedTotal = inFoulGame && foulGameAdjustment !== null
+          ? baseProjected + foulGameAdjustment
+          : baseProjected;
+        adjustedProjectedTotal = Math.round(adjustedProjectedTotal * 10) / 10;
+      }
+
       return {
         id: event.id,
         startTime: event.date,
@@ -315,6 +332,9 @@ export async function GET() {
         triggerType,
         isOvertime: isOT,
         isTomorrow: isTomorrow(event.date),
+        inFoulGame,
+        foulGameAdjustment: foulGameAdjustment !== null ? Math.round(foulGameAdjustment * 10) / 10 : null,
+        adjustedProjectedTotal,
       };
     });
 

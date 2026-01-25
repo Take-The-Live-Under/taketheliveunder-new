@@ -189,3 +189,72 @@ export function parseClock(clockStr: string): [number, number] {
     return [0, seconds];
   }
 }
+
+// =============================================================================
+// FOUL GAME DETECTION & ADJUSTMENT
+// Based on analysis of 3,649 games: foul game adds avg 5.8 extra points
+// =============================================================================
+
+const FOUL_GAME_TIME_THRESHOLD = 120; // 2 minutes remaining in seconds
+const FOUL_GAME_MIN_DEFICIT = 1;
+const FOUL_GAME_MAX_DEFICIT = 10;
+
+/**
+ * Foul game adjustment lookup by point differential
+ * Based on analysis of 1,237 games with foul game situations
+ * Deficit 1: +4.2, 2: +5.0, 3: +5.5, 4: +5.6, 5: +5.5, 6: +5.9, 7: +7.3, 8: +7.2, 9: +6.7, 10: +5.7
+ */
+const FOUL_GAME_ADJUSTMENTS: Record<number, number> = {
+  1: 4.2,
+  2: 5.0,
+  3: 5.5,
+  4: 5.6,
+  5: 5.5,
+  6: 5.9,
+  7: 7.3,
+  8: 7.2,
+  9: 6.7,
+  10: 5.7,
+};
+
+/**
+ * Check if game is in "foul game" territory
+ * Foul game = last 2 minutes of regulation, with 1-10 point differential
+ * @param period - Current period (1 = 1st half, 2 = 2nd half, 3+ = OT)
+ * @param clockMinutes - Minutes on the clock
+ * @param clockSeconds - Seconds on the clock
+ * @param pointDiff - Absolute point differential (|homeScore - awayScore|)
+ * @returns true if in foul game territory
+ */
+export function isInFoulGame(
+  period: number,
+  clockMinutes: number,
+  clockSeconds: number,
+  pointDiff: number
+): boolean {
+  // Must be in 2nd half (not 1st half or OT)
+  if (period !== 2) return false;
+
+  // Calculate seconds remaining
+  const secondsRemaining = clockMinutes * 60 + clockSeconds;
+
+  // Must be in last 2 minutes
+  if (secondsRemaining > FOUL_GAME_TIME_THRESHOLD) return false;
+
+  // Point differential must be between 1-10
+  if (pointDiff < FOUL_GAME_MIN_DEFICIT || pointDiff > FOUL_GAME_MAX_DEFICIT) return false;
+
+  return true;
+}
+
+/**
+ * Get expected extra points from foul game based on point differential
+ * @param pointDiff - Absolute point differential (1-10)
+ * @returns Expected extra points, or null if not in foul game range
+ */
+export function getFoulGameAdjustment(pointDiff: number): number | null {
+  if (pointDiff < FOUL_GAME_MIN_DEFICIT || pointDiff > FOUL_GAME_MAX_DEFICIT) {
+    return null;
+  }
+  return FOUL_GAME_ADJUSTMENTS[pointDiff] || null;
+}

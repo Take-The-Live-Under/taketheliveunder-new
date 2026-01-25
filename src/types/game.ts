@@ -18,6 +18,10 @@ export interface Game {
   triggerType: 'under' | 'over' | null;  // Which trigger is active
   isOvertime: boolean;
   isTomorrow?: boolean;
+  // Foul game adjustment fields
+  inFoulGame: boolean;         // True if last 2 min and 1-10 point differential
+  foulGameAdjustment: number | null;  // Expected extra points from foul game
+  adjustedProjectedTotal: number | null;  // Projected total + foul game adjustment
 }
 
 export interface ESPNGame {

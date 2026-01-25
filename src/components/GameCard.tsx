@@ -225,9 +225,10 @@ export default function GameCard({ game, onClick }: GameCardProps) {
         </div>
       )}
 
-      {/* Projected Final */}
+      {/* Projected Final - with foul game adjustment */}
       {isLive && projectedFinal !== null && game.ouLine !== null && (
         <div className="bg-slate-800/60 rounded-xl p-3 mb-4">
+          {/* Base projection */}
           <div className="flex items-center justify-between">
             <span className="text-sm text-slate-400">Projected Final</span>
             <span className={`text-lg font-bold tabular-nums ${
@@ -239,6 +240,30 @@ export default function GameCard({ game, onClick }: GameCardProps) {
               </span>
             </span>
           </div>
+
+          {/* Foul game adjusted projection */}
+          {game.inFoulGame && game.adjustedProjectedTotal !== null && game.foulGameAdjustment !== null && (
+            <div className="mt-3 pt-3 border-t border-slate-700">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500"></span>
+                </span>
+                <span className="text-xs font-semibold text-orange-400 uppercase tracking-wide">Foul Game Active</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Adjusted Projection</span>
+                <span className={`text-lg font-bold tabular-nums ${
+                  game.adjustedProjectedTotal < game.ouLine ? 'text-green-400' : 'text-red-400'
+                }`}>
+                  {game.adjustedProjectedTotal.toFixed(1)}
+                  <span className="text-xs text-orange-400 ml-2">
+                    (+{game.foulGameAdjustment.toFixed(1)} foul pts)
+                  </span>
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
