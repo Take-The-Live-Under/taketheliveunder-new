@@ -19,7 +19,7 @@ export default function GameCard({ game, onClick }: GameCardProps) {
   const projectedFinalScore = parseFloat(game.projected_final_score || 0);
   const totalMinutesRemaining = parseFloat(game.total_time_remaining || 0);
   const triggered = game.trigger_flag === 'True' || game.trigger_flag === true;
-  const betType = (game.bet_type || 'under').toLowerCase();
+  const signalType = (game.bet_type || 'under').toLowerCase();
   const currentTotal = parseFloat(game.total_points || 0);
   const ouLine = parseFloat(game.ou_line || 0);
   const espnClosingTotal = parseFloat(game.espn_closing_total || 0);
@@ -28,8 +28,8 @@ export default function GameCard({ game, onClick }: GameCardProps) {
   const timeWeightedThreshold = parseFloat(game.time_weighted_threshold || 0);
   const homeFouls = parseInt(game.home_fouls || '0');
   const awayFouls = parseInt(game.away_fouls || '0');
-  const betRecommendation = game.bet_recommendation || 'MONITOR';
-  const betStatusReason = game.bet_status_reason || '';
+  const recommendation = game.bet_recommendation || 'MONITOR';
+  const statusReason = game.bet_status_reason || '';
 
   // Determine if projected score is over or under the line
   const projectedOverUnder = projectedFinalScore > ouLine ? 'over' : 'under';
@@ -46,9 +46,9 @@ export default function GameCard({ game, onClick }: GameCardProps) {
 
   const { tier, colorClass } = getConfidenceTier(confidence);
 
-  // Bet type styling
-  const getBetTypeStyle = () => {
-    if (betType === 'over') {
+  // Signal type styling
+  const getSignalTypeStyle = () => {
+    if (signalType === 'over') {
       return {
         containerClass: 'border-glow-orange bg-gradient-over',
         badgeClass: 'badge-gradient-orange',
@@ -67,25 +67,25 @@ export default function GameCard({ game, onClick }: GameCardProps) {
     }
   };
 
-  const betStyle = getBetTypeStyle();
+  const signalStyle = getSignalTypeStyle();
 
   // Action recommendation styling
-  const getBetRecommendationStyle = () => {
-    if (betRecommendation === 'BET_NOW') {
+  const getRecommendationStyle = () => {
+    if (recommendation === 'BET_NOW') {
       return {
         containerClass: 'bg-gradient-to-r from-green-600 to-green-500 border-2 border-green-400',
         textClass: 'text-white font-bold',
         icon: '✓',
         label: 'STRONG SIGNAL'
       };
-    } else if (betRecommendation === 'WAIT') {
+    } else if (recommendation === 'WAIT') {
       return {
         containerClass: 'bg-gradient-to-r from-yellow-600 to-yellow-500 border-2 border-yellow-400',
         textClass: 'text-white font-bold',
         icon: '⏳',
         label: 'WAIT FOR CONFIRMATION'
       };
-    } else if (betRecommendation === 'DANGER_ZONE') {
+    } else if (recommendation === 'DANGER_ZONE') {
       return {
         containerClass: 'bg-gradient-to-r from-red-600 to-red-500 border-2 border-red-400',
         textClass: 'text-white font-bold',
@@ -102,7 +102,7 @@ export default function GameCard({ game, onClick }: GameCardProps) {
     }
   };
 
-  const betRecStyle = getBetRecommendationStyle();
+  const recStyle = getRecommendationStyle();
 
   // Calculate stat percentages for progress bars
   const getStatPercentage = (value: number, max: number = 120) => Math.min((value / max) * 100, 100);
@@ -153,7 +153,7 @@ export default function GameCard({ game, onClick }: GameCardProps) {
       onClick={onClick}
       className={clsx(
         'rounded-xl p-5 cursor-pointer card-lift shadow-elevation-3',
-        triggered ? betStyle.containerClass : 'glass-card-hover',
+        triggered ? signalStyle.containerClass : 'glass-card-hover',
         'animate-fade-in'
       )}
     >
@@ -181,11 +181,11 @@ export default function GameCard({ game, onClick }: GameCardProps) {
           )}
         </div>
 
-        {/* Bet Type & Confidence Badges */}
+        {/* Signal Type & Confidence Badges */}
         {triggered && (
           <div className="flex gap-2">
-            <div className={clsx('px-4 py-1.5 rounded-full text-xs font-bold shadow-elevation-2', betStyle.badgeClass)}>
-              {betStyle.label}
+            <div className={clsx('px-4 py-1.5 rounded-full text-xs font-bold shadow-elevation-2', signalStyle.badgeClass)}>
+              {signalStyle.label}
             </div>
             <div className={clsx('px-4 py-1.5 rounded-full text-xs', colorClass)}>
               {tier}
@@ -195,14 +195,14 @@ export default function GameCard({ game, onClick }: GameCardProps) {
       </div>
 
       {/* Action Recommendation Indicator */}
-      {triggered && betRecommendation !== 'MONITOR' && (
+      {triggered && recommendation !== 'MONITOR' && (
         <Tooltip
           content={
-            betRecommendation === 'BET_NOW'
+            recommendation === 'BET_NOW'
               ? 'All conditions met: Confidence ≥65 AND (PPM ≥5.0 OR Confidence ≥75)'
-              : betRecommendation === 'WAIT'
+              : recommendation === 'WAIT'
               ? 'Waiting for: Higher confidence (≥65) OR stronger PPM confirmation (≥5.0)'
-              : betRecommendation === 'DANGER_ZONE'
+              : recommendation === 'DANGER_ZONE'
               ? 'Avoid: Medium confidence (60-70) with weak PPM (<4.0) has only 50% accuracy'
               : 'Monitoring game for trigger conditions'
           }
@@ -210,17 +210,17 @@ export default function GameCard({ game, onClick }: GameCardProps) {
         >
           <div className={clsx(
             'mb-4 p-3 rounded-lg shadow-lg cursor-help',
-            betRecStyle.containerClass
+            recStyle.containerClass
           )}>
             <div className="flex items-center gap-2">
-              <span className="text-xl" aria-hidden="true">{betRecStyle.icon}</span>
+              <span className="text-xl" aria-hidden="true">{recStyle.icon}</span>
               <div className="flex-1">
-                <div className={clsx('text-sm font-bold', betRecStyle.textClass)}>
-                  {betRecStyle.label}
+                <div className={clsx('text-sm font-bold', recStyle.textClass)}>
+                  {recStyle.label}
                 </div>
-                {betStatusReason && (
+                {statusReason && (
                   <div className="text-xs mt-1 opacity-90 text-white">
-                    {betStatusReason}
+                    {statusReason}
                   </div>
                 )}
               </div>

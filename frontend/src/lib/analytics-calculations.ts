@@ -3,7 +3,7 @@
  * Pure functions for confidence, momentum, and trigger logic
  */
 
-import { BETTING_CONFIG } from '@/config/betting.config';
+import { ANALYTICS_CONFIG } from '@/config/analytics.config';
 
 // === Utility Functions ===
 
@@ -62,7 +62,7 @@ export interface ConfidenceResult {
  */
 export function calculateConfidence(input: ConfidenceInput): ConfidenceResult {
   const { currentPPM, requiredPPM, timeRemainingSec, projectedFinal, ouLine, isTriggered } = input;
-  const config = BETTING_CONFIG.confidence;
+  const config = ANALYTICS_CONFIG.confidence;
 
   // 1. Base confidence from PPM difference
   const ppmDiff = currentPPM - requiredPPM;
@@ -88,7 +88,7 @@ export function calculateConfidence(input: ConfidenceInput): ConfidenceResult {
   // 4. Determine side (OVER if projected > line, otherwise UNDER)
   const side: 'OVER' | 'UNDER' = projectedFinal > ouLine ? 'OVER' : 'UNDER';
 
-  // 5. Flip confidence if betting UNDER (lower PPM diff means higher confidence for UNDER)
+  // 5. Flip confidence for UNDER (lower PPM diff means higher confidence for UNDER)
   if (side === 'UNDER') {
     confidence = 1 - confidence;
   }
@@ -125,7 +125,7 @@ export interface MomentumResult {
  */
 export function calculateMomentum(input: MomentumInput): MomentumResult {
   const { recentPaceData, currentTimeSec } = input;
-  const config = BETTING_CONFIG.momentum;
+  const config = ANALYTICS_CONFIG.momentum;
 
   // Filter data within windows
   const shortWindow = recentPaceData.filter(
@@ -174,7 +174,7 @@ export interface TriggerInput {
  */
 export function checkTrigger(input: TriggerInput): boolean {
   const { requiredPPM, timeRemainingSec } = input;
-  const config = BETTING_CONFIG.trigger;
+  const config = ANALYTICS_CONFIG.trigger;
 
   return (
     requiredPPM > config.minRequiredPPM &&
@@ -213,7 +213,7 @@ export function generateCommentary(input: CommentaryInput): string {
     ouLineDiff,
   } = input;
 
-  const config = BETTING_CONFIG.commentary;
+  const config = ANALYTICS_CONFIG.commentary;
   const sentences: string[] = [];
 
   // 1. Pace change
@@ -272,7 +272,7 @@ export function getConfidenceTier(confidencePct: number): {
   label: string;
   color: string;
 } {
-  const tiers = BETTING_CONFIG.ui.confidenceTiers;
+  const tiers = ANALYTICS_CONFIG.ui.confidenceTiers;
 
   for (const [key, tier] of Object.entries(tiers)) {
     if (confidencePct >= tier.min && confidencePct <= tier.max) {

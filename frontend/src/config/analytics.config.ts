@@ -3,7 +3,7 @@
  * All tunables for confidence calculation, momentum, triggers, and UI thresholds
  */
 
-export const BETTING_CONFIG = {
+export const ANALYTICS_CONFIG = {
   // === Trigger Rules ===
   trigger: {
     minRequiredPPM: 4.5,        // Minimum Required PPM to trigger alert
@@ -84,5 +84,5 @@ export const BETTING_CONFIG = {
 } as const;
 
 // Type exports for TypeScript
-export type BettingConfig = typeof BETTING_CONFIG;
-export type ConfidenceTier = keyof typeof BETTING_CONFIG.ui.confidenceTiers;
+export type AnalyticsConfig = typeof ANALYTICS_CONFIG;
+export type ConfidenceTier = keyof typeof ANALYTICS_CONFIG.ui.confidenceTiers;
