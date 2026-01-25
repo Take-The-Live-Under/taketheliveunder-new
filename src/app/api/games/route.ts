@@ -12,6 +12,7 @@ import {
   getFoulGameAdjustment,
 } from '@/lib/calculations';
 import { logTrigger, hasBeenLoggedRecently, logGameSnapshots } from '@/lib/supabase';
+import { checkMatchupFoulGameTendencies } from '@/lib/teamFoulGameStats';
 
 const ESPN_URL =
   'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard';
@@ -419,7 +420,25 @@ export async function GET() {
       // Calculate foul game adjustment
       const pointDiff = Math.abs(homeScore - awayScore);
       const inFoulGame = status === 'in' && isInFoulGame(period, clockMinutes, clockSeconds, pointDiff);
-      const foulGameAdjustment = inFoulGame ? getFoulGameAdjustment(pointDiff) : null;
+      const baseFoulGameAdjustment = inFoulGame ? getFoulGameAdjustment(pointDiff) : null;
+
+      // Check team-specific foul game tendencies
+      const teamTendencies = checkMatchupFoulGameTendencies(homeTeam, awayTeam);
+
+      // Foul game warning: show at ~4 minutes (3-5 min) in 2nd half for close games with notable teams
+      const secondsRemaining = clockMinutes * 60 + clockSeconds;
+      const isCloseGame = pointDiff >= 1 && pointDiff <= 12; // Slightly wider range for warning
+      const isWarningWindow = status === 'in' && period === 2 && secondsRemaining > 120 && secondsRemaining <= 300; // 2-5 min
+      const hasNotableTeams = teamTendencies.hasHighImpactTeam || teamTendencies.hasEarlyFouler;
+      const foulGameWarning = isWarningWindow && isCloseGame && hasNotableTeams;
+
+      // Team-specific extra impact (on top of base adjustment)
+      const teamFoulGameImpact = teamTendencies.totalExtraImpact;
+
+      // Total foul game adjustment includes team-specific impact
+      const foulGameAdjustment = baseFoulGameAdjustment !== null
+        ? baseFoulGameAdjustment + teamFoulGameImpact
+        : null;
 
       // Calculate adjusted projected total (base projection + foul game adjustment)
       let adjustedProjectedTotal: number | null = null;
@@ -454,6 +473,9 @@ export async function GET() {
         inFoulGame,
         foulGameAdjustment: foulGameAdjustment !== null ? Math.round(foulGameAdjustment * 10) / 10 : null,
         adjustedProjectedTotal,
+        foulGameWarning,
+        foulGameWarningMessage: foulGameWarning ? teamTendencies.warningMessage : null,
+        teamFoulGameImpact: Math.round(teamFoulGameImpact * 10) / 10,
       };
     });
 

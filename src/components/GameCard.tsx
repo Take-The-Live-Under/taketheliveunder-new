@@ -193,6 +193,24 @@ export default function GameCard({ game, onClick }: GameCardProps) {
         )}
       </div>
 
+      {/* Foul Game Warning - appears around 4 min mark for notable teams */}
+      {isLive && game.foulGameWarning && game.foulGameWarningMessage && (
+        <div className="mb-4 rounded-xl bg-gradient-to-r from-amber-900/40 to-orange-900/40 border border-amber-500/30 p-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">⚠️</span>
+            <div>
+              <div className="text-xs font-bold text-amber-400 uppercase tracking-wide">Foul Game Alert</div>
+              <div className="text-sm text-amber-200/90 mt-0.5">{game.foulGameWarningMessage}</div>
+              {game.teamFoulGameImpact > 0 && (
+                <div className="text-xs text-amber-300/70 mt-1">
+                  Expect +{(5.8 + game.teamFoulGameImpact).toFixed(0)}-{(7.3 + game.teamFoulGameImpact).toFixed(0)} extra pts if foul game starts
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Metrics Grid for Live Games */}
       {isLive && (
         <div className="grid grid-cols-3 gap-2 mb-4">

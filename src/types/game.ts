@@ -29,6 +29,10 @@ export interface Game {
   inFoulGame: boolean;         // True if last 2 min and 1-10 point differential
   foulGameAdjustment: number | null;  // Expected extra points from foul game
   adjustedProjectedTotal: number | null;  // Projected total + foul game adjustment
+  // Foul game warning fields (shown around 4 min mark)
+  foulGameWarning: boolean;    // True if close game around 4 min with notable teams
+  foulGameWarningMessage: string | null;  // Warning message to display
+  teamFoulGameImpact: number;  // Extra adjustment based on specific team tendencies
   // Bonus status - fouls against each team (opponent fouls = your free throws)
   homeBonusStatus?: BonusStatus;  // Based on away team's fouls against home
   awayBonusStatus?: BonusStatus;  // Based on home team's fouls against away
