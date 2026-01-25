@@ -414,29 +414,49 @@ export default function ReportPage() {
                     </div>
 
                     {/* Line Movement Chart */}
-                    <h3 className="text-lg font-semibold text-white mb-3">Score vs O/U Line</h3>
+                    <h3 className="text-lg font-semibold text-white mb-3">Score Progression vs O/U Line</h3>
                     <div className="bg-slate-900 rounded-lg p-4 mb-4">
                       {/* Legend */}
-                      <div className="flex items-center gap-4 mb-3 text-xs">
+                      <div className="flex flex-wrap items-center gap-4 mb-3 text-xs">
                         <span className="flex items-center gap-1">
-                          <span className="w-3 h-0.5 bg-green-500"></span> Live Total
+                          <span className="w-4 h-0.5 bg-green-500"></span> Live Total
                         </span>
                         <span className="flex items-center gap-1">
-                          <span className="w-3 h-0.5 bg-yellow-500"></span> O/U Line
+                          <span className="w-4 h-0.5 bg-yellow-500 border-dashed"></span> O/U Line
                         </span>
                         <span className="flex items-center gap-1">
-                          <span className="w-3 h-3 rounded-full bg-cyan-500 border-2 border-white"></span> Entry Point
+                          <span className="w-3 h-3 rounded-full bg-cyan-500"></span> Entry Point
                         </span>
                       </div>
 
                       <div className="relative h-56">
                         {(() => {
+                          // Get unique score values to check if we have progression data
+                          const uniqueTotals = Array.from(new Set(gameDetail.timeline.map(t => t.liveTotal)));
+                          const hasProgression = uniqueTotals.length > 3;
+
                           // Calculate chart bounds
                           const allTotals = gameDetail.timeline.map(t => t.liveTotal).filter(t => t > 0);
                           const allLines = gameDetail.timeline.map(t => t.ouLine).filter(l => l !== null) as number[];
                           const minVal = Math.min(...allTotals, ...allLines, 0);
                           const maxVal = Math.max(...allTotals, ...allLines, selectedGame.ouLine) + 10;
-                          const range = maxVal - minVal;
+                          const range = maxVal - minVal || 1;
+
+                          // If no real progression data, show simplified view
+                          if (!hasProgression) {
+                            return (
+                              <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                                <div className="text-6xl mb-4">📊</div>
+                                <p className="text-center">Limited snapshot data for this game</p>
+                                <p className="text-sm text-slate-500 mt-2">
+                                  Final: {selectedGame.finalTotal} | O/U: {selectedGame.ouLine} |
+                                  <span className={selectedGame.margin > 0 ? ' text-green-400' : ' text-red-400'}>
+                                    {' '}{selectedGame.margin > 0 ? '+' : ''}{selectedGame.margin.toFixed(1)} margin
+                                  </span>
+                                </p>
+                              </div>
+                            );
+                          }
 
                           // Find entry point (first trigger)
                           const entryIdx = gameDetail.timeline.findIndex(t => t.isUnderTriggered);
