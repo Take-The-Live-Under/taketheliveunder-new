@@ -50,7 +50,7 @@ async function fetchTeamsList(): Promise<TeamListItem[]> {
     // Fetch teams list
     const teamsResponse = await fetch(
       'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams?limit=500',
-      { next: { revalidate: 3600 }, cache: 'no-store' }
+      { next: { revalidate: 3600 } }
     );
 
     if (!teamsResponse.ok) {
@@ -64,7 +64,7 @@ async function fetchTeamsList(): Promise<TeamListItem[]> {
     try {
       const rankingsResponse = await fetch(
         'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/rankings',
-        { next: { revalidate: 3600 }, cache: 'no-store' }
+        { next: { revalidate: 3600 } }
       );
       if (rankingsResponse.ok) {
         const rankingsData = await rankingsResponse.json();
@@ -110,7 +110,7 @@ async function fetchTeamStats(teamId: string, teamName: string): Promise<TeamDat
     // Fetch team statistics
     const statsResponse = await fetch(
       `https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams/${teamId}/statistics`,
-      { next: { revalidate: 0 }, cache: 'no-store' }
+      { cache: 'no-store' }
     );
 
     if (!statsResponse.ok) {

@@ -414,68 +414,149 @@ export default function ReportPage() {
                     </div>
 
                     {/* Line Movement Chart */}
-                    <h3 className="text-lg font-semibold text-white mb-3">Line Movement</h3>
+                    <h3 className="text-lg font-semibold text-white mb-3">Score vs O/U Line</h3>
                     <div className="bg-slate-900 rounded-lg p-4 mb-4">
-                      <div className="relative h-48">
-                        {/* Y-axis labels */}
-                        <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-xs text-slate-500">
-                          <span>{Math.max(...gameDetail.timeline.map(t => t.liveTotal), selectedGame.ouLine)}</span>
-                          <span>{selectedGame.ouLine}</span>
-                          <span>{Math.min(...gameDetail.timeline.filter(t => t.liveTotal > 0).map(t => t.liveTotal), 0)}</span>
-                        </div>
-
-                        {/* Chart area */}
-                        <div className="ml-12 h-full relative">
-                          {/* O/U Line */}
-                          <div
-                            className="absolute w-full border-t-2 border-dashed border-yellow-500/50"
-                            style={{
-                              top: `${100 - ((selectedGame.ouLine - Math.min(...gameDetail.timeline.filter(t => t.liveTotal > 0).map(t => t.liveTotal), 0)) / (Math.max(...gameDetail.timeline.map(t => t.liveTotal), selectedGame.ouLine) - Math.min(...gameDetail.timeline.filter(t => t.liveTotal > 0).map(t => t.liveTotal), 0))) * 100}%`
-                            }}
-                          >
-                            <span className="absolute right-0 -top-3 text-xs text-yellow-500">O/U {selectedGame.ouLine}</span>
-                          </div>
-
-                          {/* Score line as SVG */}
-                          <svg className="w-full h-full" preserveAspectRatio="none">
-                            <polyline
-                              fill="none"
-                              stroke="#22c55e"
-                              strokeWidth="2"
-                              points={gameDetail.timeline.map((point, i) => {
-                                const x = (i / (gameDetail.timeline.length - 1)) * 100;
-                                const minScore = Math.min(...gameDetail.timeline.filter(t => t.liveTotal > 0).map(t => t.liveTotal), 0);
-                                const maxScore = Math.max(...gameDetail.timeline.map(t => t.liveTotal), selectedGame.ouLine);
-                                const y = 100 - ((point.liveTotal - minScore) / (maxScore - minScore)) * 100;
-                                return `${x}%,${y}%`;
-                              }).join(' ')}
-                            />
-                            {/* Trigger points */}
-                            {gameDetail.timeline.filter(t => t.isUnderTriggered).map((point, i) => {
-                              const idx = gameDetail.timeline.indexOf(point);
-                              const x = (idx / (gameDetail.timeline.length - 1)) * 100;
-                              const minScore = Math.min(...gameDetail.timeline.filter(t => t.liveTotal > 0).map(t => t.liveTotal), 0);
-                              const maxScore = Math.max(...gameDetail.timeline.map(t => t.liveTotal), selectedGame.ouLine);
-                              const y = 100 - ((point.liveTotal - minScore) / (maxScore - minScore)) * 100;
-                              return (
-                                <circle
-                                  key={i}
-                                  cx={`${x}%`}
-                                  cy={`${y}%`}
-                                  r="4"
-                                  fill="#eab308"
-                                  stroke="#000"
-                                  strokeWidth="1"
-                                />
-                              );
-                            })}
-                          </svg>
-                        </div>
+                      {/* Legend */}
+                      <div className="flex items-center gap-4 mb-3 text-xs">
+                        <span className="flex items-center gap-1">
+                          <span className="w-3 h-0.5 bg-green-500"></span> Live Total
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-3 h-0.5 bg-yellow-500"></span> O/U Line
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-3 h-3 rounded-full bg-cyan-500 border-2 border-white"></span> Entry Point
+                        </span>
                       </div>
-                      <div className="flex justify-between text-xs text-slate-500 mt-2 ml-12">
+
+                      <div className="relative h-56">
+                        {(() => {
+                          // Calculate chart bounds
+                          const allTotals = gameDetail.timeline.map(t => t.liveTotal).filter(t => t > 0);
+                          const allLines = gameDetail.timeline.map(t => t.ouLine).filter(l => l !== null) as number[];
+                          const minVal = Math.min(...allTotals, ...allLines, 0);
+                          const maxVal = Math.max(...allTotals, ...allLines, selectedGame.ouLine) + 10;
+                          const range = maxVal - minVal;
+
+                          // Find entry point (first trigger)
+                          const entryIdx = gameDetail.timeline.findIndex(t => t.isUnderTriggered);
+                          const entryPoint = entryIdx >= 0 ? gameDetail.timeline[entryIdx] : null;
+
+                          const getY = (val: number) => 100 - ((val - minVal) / range) * 100;
+                          const getX = (idx: number) => (idx / Math.max(gameDetail.timeline.length - 1, 1)) * 100;
+
+                          return (
+                            <>
+                              {/* Y-axis labels */}
+                              <div className="absolute left-0 top-0 bottom-0 w-10 flex flex-col justify-between text-xs text-slate-500 pr-1">
+                                <span className="text-right">{maxVal.toFixed(0)}</span>
+                                <span className="text-right text-yellow-500">{selectedGame.ouLine}</span>
+                                <span className="text-right">{minVal.toFixed(0)}</span>
+                              </div>
+
+                              {/* Chart area */}
+                              <div className="ml-10 h-full relative border-l border-b border-slate-700">
+                                <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                                  {/* O/U Line (yellow) */}
+                                  <polyline
+                                    fill="none"
+                                    stroke="#eab308"
+                                    strokeWidth="0.5"
+                                    strokeDasharray="2,2"
+                                    vectorEffect="non-scaling-stroke"
+                                    points={gameDetail.timeline.map((point, i) => {
+                                      const x = getX(i);
+                                      const y = getY(point.ouLine || selectedGame.ouLine);
+                                      return `${x},${y}`;
+                                    }).join(' ')}
+                                  />
+
+                                  {/* Live Total Score (green) */}
+                                  <polyline
+                                    fill="none"
+                                    stroke="#22c55e"
+                                    strokeWidth="0.8"
+                                    vectorEffect="non-scaling-stroke"
+                                    points={gameDetail.timeline.map((point, i) => {
+                                      const x = getX(i);
+                                      const y = getY(point.liveTotal);
+                                      return `${x},${y}`;
+                                    }).join(' ')}
+                                  />
+
+                                  {/* Entry point marker (cyan, larger) */}
+                                  {entryPoint && (
+                                    <>
+                                      {/* Vertical line at entry */}
+                                      <line
+                                        x1={getX(entryIdx)}
+                                        y1="0"
+                                        x2={getX(entryIdx)}
+                                        y2="100"
+                                        stroke="#06b6d4"
+                                        strokeWidth="0.3"
+                                        strokeDasharray="1,1"
+                                        vectorEffect="non-scaling-stroke"
+                                      />
+                                      {/* Circle at entry point on score line */}
+                                      <circle
+                                        cx={getX(entryIdx)}
+                                        cy={getY(entryPoint.liveTotal)}
+                                        r="2"
+                                        fill="#06b6d4"
+                                        stroke="#fff"
+                                        strokeWidth="0.5"
+                                        vectorEffect="non-scaling-stroke"
+                                      />
+                                    </>
+                                  )}
+
+                                  {/* Final score marker */}
+                                  <circle
+                                    cx="100"
+                                    cy={getY(selectedGame.finalTotal)}
+                                    r="1.5"
+                                    fill="#22c55e"
+                                    stroke="#fff"
+                                    strokeWidth="0.3"
+                                    vectorEffect="non-scaling-stroke"
+                                  />
+                                </svg>
+
+                                {/* Entry point label */}
+                                {entryPoint && (
+                                  <div
+                                    className="absolute text-xs bg-cyan-500 text-black px-1 rounded font-bold"
+                                    style={{
+                                      left: `${getX(entryIdx)}%`,
+                                      top: '-20px',
+                                      transform: 'translateX(-50%)'
+                                    }}
+                                  >
+                                    IN @ {entryPoint.liveTotal}
+                                  </div>
+                                )}
+
+                                {/* Final score label */}
+                                <div
+                                  className="absolute text-xs text-green-400 font-bold"
+                                  style={{
+                                    right: '-5px',
+                                    top: `${getY(selectedGame.finalTotal)}%`,
+                                    transform: 'translateY(-50%) translateX(100%)'
+                                  }}
+                                >
+                                  {selectedGame.finalTotal}
+                                </div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                      <div className="flex justify-between text-xs text-slate-500 mt-2 ml-10">
                         <span>Start</span>
                         <span>Halftime</span>
-                        <span>End</span>
+                        <span>Final</span>
                       </div>
                     </div>
 
