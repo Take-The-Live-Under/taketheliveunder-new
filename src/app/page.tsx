@@ -9,6 +9,7 @@ import ProjectedWinners from '@/components/ProjectedWinners';
 import HowItWorksModal from '@/components/HowItWorksModal';
 import OnboardingOverlay from '@/components/OnboardingOverlay';
 import TrustFooter from '@/components/TrustFooter';
+import GameDetailModal from '@/components/GameDetailModal';
 import { Game } from '@/types/game';
 import { usePageView, useAnalytics } from '@/hooks/useAnalytics';
 
@@ -28,6 +29,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [retrying, setRetrying] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const lastFetchRef = useRef<number>(0);
 
   // Analytics tracking
@@ -384,7 +386,11 @@ export default function Home() {
               </div>
             )}
             {sortedGames.map((game) => (
-              <GameCard key={game.id} game={game} />
+              <GameCard
+                key={game.id}
+                game={game}
+                onClick={() => setSelectedGame(game)}
+              />
             ))}
           </div>
         )}
@@ -404,6 +410,15 @@ export default function Home() {
 
       {/* Trust Footer */}
       <TrustFooter />
+
+      {/* Game Detail Modal */}
+      {selectedGame && (
+        <GameDetailModal
+          game={selectedGame}
+          isOpen={!!selectedGame}
+          onClose={() => setSelectedGame(null)}
+        />
+      )}
     </main>
   );
 }

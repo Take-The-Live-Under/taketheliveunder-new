@@ -4,6 +4,7 @@ import { Game } from '@/types/game';
 
 interface GameCardProps {
   game: Game;
+  onClick?: () => void;
 }
 
 function formatPPM(ppm: number | null): string {
@@ -46,7 +47,7 @@ function getUnderTriggerStrength(requiredPPM: number | null): number {
   return Math.round(strength);
 }
 
-export default function GameCard({ game }: GameCardProps) {
+export default function GameCard({ game, onClick }: GameCardProps) {
   const isLive = game.status === 'in';
   const isUnderTriggered = game.triggeredFlag;
   const isOverTriggered = game.overTriggeredFlag;
@@ -84,7 +85,10 @@ export default function GameCard({ game }: GameCardProps) {
   };
 
   return (
-    <div className={`rounded-2xl border-2 p-5 transition-all duration-300 card-enter ${getCardStyle()}`}>
+    <div
+      onClick={onClick}
+      className={`rounded-2xl border-2 p-5 transition-all duration-300 card-enter ${getCardStyle()} ${onClick ? 'cursor-pointer active:scale-[0.98]' : ''}`}
+    >
       {/* Trigger Badge */}
       {(isUnderTriggered || isOverTriggered) && (
         <div className="mb-4">
@@ -273,6 +277,17 @@ export default function GameCard({ game }: GameCardProps) {
           <div className="text-xl font-bold text-white">
             OVER {game.ouLine.toFixed(1)}
           </div>
+        </div>
+      )}
+
+      {/* Tap indicator */}
+      {onClick && (
+        <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-slate-500">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+          <span>Tap for details</span>
         </div>
       )}
     </div>
