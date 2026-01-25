@@ -35,6 +35,7 @@ interface ESPNEvent {
     competitors: Array<{
       homeAway: 'home' | 'away';
       team: {
+        id: string;
         displayName: string;
         abbreviation: string;
       };
@@ -376,6 +377,8 @@ export async function GET() {
 
       const homeTeam = homeComp?.team?.displayName || 'Unknown';
       const awayTeam = awayComp?.team?.displayName || 'Unknown';
+      const homeTeamId = homeComp?.team?.id || '';
+      const awayTeamId = awayComp?.team?.id || '';
       const homeScore = parseInt(homeComp?.score || '0', 10);
       const awayScore = parseInt(awayComp?.score || '0', 10);
       const liveTotal = homeScore + awayScore;
@@ -459,6 +462,8 @@ export async function GET() {
         minutesRemainingReg: Math.round(minutesRemainingReg * 100) / 100,
         awayTeam,
         homeTeam,
+        awayTeamId,
+        homeTeamId,
         awayScore,
         homeScore,
         liveTotal,

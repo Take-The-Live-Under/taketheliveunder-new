@@ -235,17 +235,17 @@ async function fetchTeamStats(teamId: string, teamName: string): Promise<TeamDat
   }
 }
 
-// Fuzzy match team names (handles variations like "North Carolina" vs "North Carolina Tar Heels")
-function findTeamByName(teams: TeamListItem[], searchName: string): TeamListItem | undefined {
-  const searchLower = searchName.toLowerCase().trim();
+// Find team by ID or name (ID is the reliable key from ESPN)
+function findTeam(teams: TeamListItem[], searchTerm: string): TeamListItem | undefined {
+  // ID match first (most reliable - ESPN team IDs are consistent)
+  const byId = teams.find(t => t.id === searchTerm);
+  if (byId) return byId;
 
-  // Exact match first
+  const searchLower = searchTerm.toLowerCase().trim();
+
+  // Exact name match
   const exact = teams.find(t => t.name.toLowerCase() === searchLower);
   if (exact) return exact;
-
-  // ID match
-  const byId = teams.find(t => t.id === searchName);
-  if (byId) return byId;
 
   // Contains match (search is contained in team name)
   const contains = teams.find(t => t.name.toLowerCase().includes(searchLower));
@@ -277,8 +277,8 @@ export async function GET(request: Request) {
 
     // If requesting specific teams for comparison
     if (team1 && team2) {
-      const teamAInfo = findTeamByName(allTeams, team1);
-      const teamBInfo = findTeamByName(allTeams, team2);
+      const teamAInfo = findTeam(allTeams, team1);
+      const teamBInfo = findTeam(allTeams, team2);
 
       if (!teamAInfo || !teamBInfo) {
         const notFound = [];

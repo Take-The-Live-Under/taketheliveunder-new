@@ -14,6 +14,8 @@ interface UpcomingGame {
   id: string;
   homeTeam: string;
   awayTeam: string;
+  homeTeamId: string;
+  awayTeamId: string;
   startTime: string;
   status: string;
   homeScore: number;
@@ -146,10 +148,12 @@ export default function ResearchPage() {
         // Get games that are scheduled or in progress
         const games: UpcomingGame[] = (data.games || [])
           .filter((g: { status: string }) => g.status === 'pre' || g.status === 'in')
-          .map((g: { id: string; homeTeam: string; awayTeam: string; startTime: string; status: string; homeScore: number; awayScore: number }) => ({
+          .map((g: { id: string; homeTeam: string; awayTeam: string; homeTeamId: string; awayTeamId: string; startTime: string; status: string; homeScore: number; awayScore: number }) => ({
             id: g.id,
             homeTeam: g.homeTeam,
             awayTeam: g.awayTeam,
+            homeTeamId: g.homeTeamId,
+            awayTeamId: g.awayTeamId,
             startTime: g.startTime,
             status: g.status,
             homeScore: g.homeScore,
@@ -173,7 +177,10 @@ export default function ResearchPage() {
 
     setComparing(true);
     try {
-      const res = await fetch(`/api/teams?team1=${encodeURIComponent(team1.name)}&team2=${encodeURIComponent(team2.name)}`);
+      // Use team IDs if available, otherwise fall back to names
+      const team1Param = team1.id && team1.id !== team1.name ? team1.id : team1.name;
+      const team2Param = team2.id && team2.id !== team2.name ? team2.id : team2.name;
+      const res = await fetch(`/api/teams?team1=${encodeURIComponent(team1Param)}&team2=${encodeURIComponent(team2Param)}`);
       const data = await res.json();
       if (data.team1 && data.team2) {
         setTeam1Stats(data.team1);
@@ -213,11 +220,9 @@ export default function ResearchPage() {
 
   // Select a game to analyze
   const selectGame = (game: UpcomingGame) => {
-    // Find team objects or create temporary ones
-    const homeTeamObj = teams.find(t => t.name.toLowerCase() === game.homeTeam.toLowerCase()) ||
-      { id: game.homeTeam, name: game.homeTeam, rank: 0 };
-    const awayTeamObj = teams.find(t => t.name.toLowerCase() === game.awayTeam.toLowerCase()) ||
-      { id: game.awayTeam, name: game.awayTeam, rank: 0 };
+    // Use ESPN team IDs directly - these are the reliable keys
+    const awayTeamObj = { id: game.awayTeamId, name: game.awayTeam, rank: 0 };
+    const homeTeamObj = { id: game.homeTeamId, name: game.homeTeam, rank: 0 };
 
     setTeam1(awayTeamObj);
     setTeam2(homeTeamObj);

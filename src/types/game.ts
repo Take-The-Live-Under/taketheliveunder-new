@@ -14,6 +14,8 @@ export interface Game {
   minutesRemainingReg: number;
   awayTeam: string;
   homeTeam: string;
+  awayTeamId: string;
+  homeTeamId: string;
   awayScore: number;
   homeScore: number;
   liveTotal: number;
