@@ -208,7 +208,7 @@ export default function GameCard({ game, onClick }: GameCardProps) {
               <div className={`text-xs font-bold uppercase tracking-wide ${
                 game.foulGameWarningLevel === 'high' ? 'text-red-400' : 'text-amber-400'
               }`}>
-                {game.foulGameWarningLevel === 'high' ? 'High Impact Foul Game' : 'Foul Game Alert'}
+                {game.foulGameWarningLevel === 'high' ? '🏀 Free Throw Frenzy - High Impact' : '🏀 Free Throw Frenzy Alert'}
               </div>
               {game.foulGameWarningMessage && (
                 <div className="text-sm text-amber-200/90 mt-0.5">{game.foulGameWarningMessage}</div>
@@ -307,7 +307,7 @@ export default function GameCard({ game, onClick }: GameCardProps) {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75"></span>
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500"></span>
                 </span>
-                <span className="text-xs font-semibold text-orange-400 uppercase tracking-wide">Foul Game Active</span>
+                <span className="text-xs font-semibold text-orange-400 uppercase tracking-wide">🏀 Free Throw Frenzy Active</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-slate-400">Adjusted Projection</span>
@@ -316,7 +316,7 @@ export default function GameCard({ game, onClick }: GameCardProps) {
                 }`}>
                   {game.adjustedProjectedTotal.toFixed(1)}
                   <span className="text-xs text-orange-400 ml-2">
-                    (+{game.foulGameAdjustment.toFixed(1)} foul pts)
+                    (+{game.foulGameAdjustment.toFixed(1)} FTF pts)
                   </span>
                 </span>
               </div>

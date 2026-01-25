@@ -475,7 +475,7 @@ export async function GET() {
         adjustedProjectedTotal,
         foulGameWarning,
         foulGameWarningMessage: foulGameWarning && matchupAnalysis.combinedImpact > 0
-          ? `Expect +${(5.8 + matchupAnalysis.combinedImpact).toFixed(0)}-${(7.3 + matchupAnalysis.combinedImpact).toFixed(0)} extra pts in foul game`
+          ? `Expect +${(5.8 + matchupAnalysis.combinedImpact).toFixed(0)}-${(7.3 + matchupAnalysis.combinedImpact).toFixed(0)} extra pts from Free Throw Frenzy`
           : null,
         teamFoulGameImpact: Math.round(teamFoulGameImpact * 10) / 10,
         homeFoulGameInfo: matchupAnalysis.homeInfo,
