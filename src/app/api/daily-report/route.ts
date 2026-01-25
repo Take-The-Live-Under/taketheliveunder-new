@@ -1,8 +1,25 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase, TriggerLog } from '@/lib/supabase';
 
 const ESPN_SCOREBOARD_URL =
   'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard';
+
+// Parse date string (YYYY-MM-DD) to get ESPN date format (YYYYMMDD)
+function getESPNDateStr(dateStr: string): string {
+  return dateStr.replace(/-/g, '');
+}
+
+// Get date range for Supabase query from a specific date
+function getDateRange(dateStr: string): { start: string; end: string } {
+  const date = new Date(dateStr + 'T00:00:00');
+  const nextDay = new Date(date);
+  nextDay.setDate(nextDay.getDate() + 1);
+
+  return {
+    start: date.toISOString(),
+    end: nextDay.toISOString(),
+  };
+}
 
 interface GameResult {
   gameId: string;
@@ -35,30 +52,14 @@ interface DailyReport {
   allResults: GameResult[];
 }
 
-// Get yesterday's date in YYYYMMDD format for ESPN
+// Get yesterday's date in YYYY-MM-DD format
 function getYesterdayDateStr(): string {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const year = yesterday.getFullYear();
   const month = String(yesterday.getMonth() + 1).padStart(2, '0');
   const day = String(yesterday.getDate()).padStart(2, '0');
-  return `${year}${month}${day}`;
-}
-
-// Get yesterday's date range for Supabase query
-function getYesterdayRange(): { start: string; end: string } {
-  const now = new Date();
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  yesterday.setHours(0, 0, 0, 0);
-
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-
-  return {
-    start: yesterday.toISOString(),
-    end: today.toISOString(),
-  };
+  return `${year}-${month}-${day}`;
 }
 
 // Fetch final scores from ESPN for a specific date
@@ -103,12 +104,12 @@ async function fetchFinalScores(dateStr: string): Promise<Map<string, { home: nu
   return scores;
 }
 
-// Get triggered games from yesterday
-async function getYesterdayTriggers(): Promise<TriggerLog[]> {
+// Get triggered games for a specific date
+async function getTriggersForDate(dateStr: string): Promise<TriggerLog[]> {
   const client = getSupabase();
   if (!client) return [];
 
-  const { start, end } = getYesterdayRange();
+  const { start, end } = getDateRange(dateStr);
 
   try {
     const { data, error } = await client
@@ -146,15 +147,16 @@ function deduplicateTriggers(triggers: TriggerLog[]): TriggerLog[] {
   return Array.from(gameMap.values());
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Get yesterday's date
-    const yesterdayStr = getYesterdayDateStr();
-    const { start } = getYesterdayRange();
-    const reportDate = start.split('T')[0];
+    // Get date from query param, default to yesterday
+    const searchParams = request.nextUrl.searchParams;
+    const dateParam = searchParams.get('date');
+    const reportDate = dateParam || getYesterdayDateStr();
+    const espnDateStr = getESPNDateStr(reportDate);
 
-    // Fetch triggered games from yesterday
-    const allTriggers = await getYesterdayTriggers();
+    // Fetch triggered games for the specified date
+    const allTriggers = await getTriggersForDate(reportDate);
     const triggers = deduplicateTriggers(allTriggers);
 
     if (triggers.length === 0) {
@@ -176,7 +178,7 @@ export async function GET() {
     }
 
     // Fetch final scores from ESPN
-    const finalScores = await fetchFinalScores(yesterdayStr);
+    const finalScores = await fetchFinalScores(espnDateStr);
 
     // Match triggers with final scores
     const results: GameResult[] = [];

@@ -1,6 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+
+// Get yesterday's date in YYYY-MM-DD format
+function getYesterdayDate(): string {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  return yesterday.toISOString().split('T')[0];
+}
+
+// Format date for display
+function formatDisplayDate(dateStr: string): string {
+  const date = new Date(dateStr + 'T12:00:00');
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
 
 interface GameResult {
   gameId: string;
@@ -38,23 +56,46 @@ export default function ReportPage() {
   const [report, setReport] = useState<DailyReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(getYesterdayDate());
+
+  const fetchReport = useCallback(async (date: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/daily-report?date=${date}`);
+      if (!response.ok) throw new Error('Failed to fetch report');
+      const data = await response.json();
+      setReport(data);
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    async function fetchReport() {
-      try {
-        const response = await fetch('/api/daily-report');
-        if (!response.ok) throw new Error('Failed to fetch report');
-        const data = await response.json();
-        setReport(data);
-      } catch (err) {
-        setError(String(err));
-      } finally {
-        setLoading(false);
-      }
-    }
+    fetchReport(selectedDate);
+  }, [selectedDate, fetchReport]);
 
-    fetchReport();
-  }, []);
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedDate(e.target.value);
+  };
+
+  const goToPreviousDay = () => {
+    const date = new Date(selectedDate + 'T12:00:00');
+    date.setDate(date.getDate() - 1);
+    setSelectedDate(date.toISOString().split('T')[0]);
+  };
+
+  const goToNextDay = () => {
+    const date = new Date(selectedDate + 'T12:00:00');
+    date.setDate(date.getDate() + 1);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (date <= today) {
+      setSelectedDate(date.toISOString().split('T')[0]);
+    }
+  };
 
   if (loading) {
     return (
@@ -88,8 +129,43 @@ export default function ReportPage() {
           <h1 className="text-3xl font-bold text-yellow-400 mb-2">
             🏀 Daily Performance Report
           </h1>
-          <p className="text-slate-400">
-            Golden Zone Triggers from {report.reportDate}
+
+          {/* Date Picker */}
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <button
+              onClick={goToPreviousDay}
+              className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+              title="Previous day"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={handleDateChange}
+                max={new Date().toISOString().split('T')[0]}
+                className="bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              />
+            </div>
+
+            <button
+              onClick={goToNextDay}
+              disabled={selectedDate >= new Date().toISOString().split('T')[0]}
+              className="p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Next day"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          <p className="text-slate-400 mt-2">
+            {formatDisplayDate(selectedDate)}
           </p>
         </div>
 
