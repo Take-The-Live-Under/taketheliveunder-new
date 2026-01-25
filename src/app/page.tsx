@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import GameCard from '@/components/GameCard';
 import SkeletonCard from '@/components/SkeletonCard';
 import LandingPage from '@/components/LandingPage';
@@ -178,7 +179,13 @@ export default function Home() {
               className="h-14 w-auto"
               priority
             />
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
+              <Link
+                href="/research"
+                className="text-xs text-slate-400 hover:text-orange-400 transition-colors tap-target font-medium"
+              >
+                Research
+              </Link>
               <button
                 onClick={() => setShowHowItWorks(true)}
                 className="text-xs text-slate-400 hover:text-orange-400 transition-colors tap-target"
