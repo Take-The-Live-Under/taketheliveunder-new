@@ -1,14 +1,19 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 let supabaseInstance: SupabaseClient | null = null;
+let supabaseDisabled = false;
 
-function getSupabaseClient(): SupabaseClient {
+function getSupabaseClient(): SupabaseClient | null {
+  if (supabaseDisabled) return null;
+
   if (!supabaseInstance) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Missing Supabase environment variables');
+      console.warn('Supabase not configured - logging disabled');
+      supabaseDisabled = true;
+      return null;
     }
 
     supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
@@ -16,11 +21,10 @@ function getSupabaseClient(): SupabaseClient {
   return supabaseInstance;
 }
 
-export const supabase = new Proxy({} as SupabaseClient, {
-  get(_, prop) {
-    return getSupabaseClient()[prop as keyof SupabaseClient];
-  }
-});
+// Export getter function for use in other modules
+export function getSupabase(): SupabaseClient | null {
+  return getSupabaseClient();
+}
 
 export interface TriggerLog {
   id?: number;
@@ -43,8 +47,11 @@ export interface TriggerLog {
 }
 
 export async function logTrigger(trigger: Omit<TriggerLog, 'id' | 'created_at'>): Promise<void> {
+  const client = getSupabase();
+  if (!client) return;
+
   try {
-    const { error } = await supabase
+    const { error } = await client
       .from('trigger_logs')
       .insert([trigger]);
 
@@ -57,8 +64,11 @@ export async function logTrigger(trigger: Omit<TriggerLog, 'id' | 'created_at'>)
 }
 
 export async function getTriggerLogs(limit = 100): Promise<TriggerLog[]> {
+  const client = getSupabase();
+  if (!client) return [];
+
   try {
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('trigger_logs')
       .select('*')
       .order('created_at', { ascending: false })
@@ -77,11 +87,14 @@ export async function getTriggerLogs(limit = 100): Promise<TriggerLog[]> {
 }
 
 export async function hasBeenLoggedRecently(gameId: string, minutesRemaining: number): Promise<boolean> {
+  const client = getSupabase();
+  if (!client) return false;
+
   try {
     // Check if this game was logged in the last 5 minutes with similar minutes remaining
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('trigger_logs')
       .select('id, minutes_remaining')
       .eq('game_id', gameId)
@@ -132,8 +145,11 @@ export interface GameSnapshot {
 export async function logGameSnapshots(snapshots: Omit<GameSnapshot, 'id' | 'created_at'>[]): Promise<void> {
   if (snapshots.length === 0) return;
 
+  const client = getSupabase();
+  if (!client) return;
+
   try {
-    const { error } = await supabase
+    const { error } = await client
       .from('game_snapshots')
       .insert(snapshots);
 
@@ -159,8 +175,11 @@ export interface SiteAnalytics {
 }
 
 export async function logAnalyticsEvent(event: Omit<SiteAnalytics, 'id' | 'created_at'>): Promise<void> {
+  const client = getSupabase();
+  if (!client) return;
+
   try {
-    const { error } = await supabase
+    const { error } = await client
       .from('site_analytics')
       .insert([event]);
 
@@ -177,10 +196,13 @@ export async function getAnalyticsSummary(days = 7): Promise<{
   uniqueSessions: number;
   pageViews: Record<string, number>;
 }> {
+  const client = getSupabase();
+  if (!client) return { totalVisits: 0, uniqueSessions: 0, pageViews: {} };
+
   try {
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('site_analytics')
       .select('event_type, page, session_id')
       .gte('created_at', startDate);
