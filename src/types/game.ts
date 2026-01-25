@@ -1,3 +1,10 @@
+export interface BonusStatus {
+  inBonus: boolean;
+  inDoubleBonus: boolean;
+  fouls: number;          // Current half fouls (or total if can't determine)
+  isEstimated: boolean;   // True if we can't accurately determine 2nd half fouls
+}
+
 export interface Game {
   id: string;
   startTime: string;
@@ -18,6 +25,9 @@ export interface Game {
   triggerType: 'under' | 'over' | null;  // Which trigger is active
   isOvertime: boolean;
   isTomorrow?: boolean;
+  // Bonus status - fouls against each team (opponent fouls = your free throws)
+  homeBonusStatus?: BonusStatus;  // Based on away team's fouls against home
+  awayBonusStatus?: BonusStatus;  // Based on home team's fouls against away
 }
 
 export interface ESPNGame {

@@ -165,21 +165,40 @@ function extractStat(stats: ESPNTeamStat[], name: string): string | number | nul
   return null;
 }
 
-// Determine bonus status based on fouls and period
-function getBonusStatus(fouls: number, period: number): { inBonus: boolean; inDoubleBonus: boolean; label: string } {
+// Determine bonus status based on fouls for current half
+// Note: This function is now called with current-half fouls, not total game fouls
+function getBonusStatus(currentHalfFouls: number): { inBonus: boolean; inDoubleBonus: boolean; label: string } {
   // NCAA: Bonus at 7 fouls per half, Double bonus at 10
-  // We have total game fouls, so we estimate per-half
-  // For first half (period 1): use fouls directly
-  // For second half (period 2): assume even split or recent fouls
-
-  const estimatedHalfFouls = period === 1 ? fouls : Math.max(0, fouls - 7);
-
-  if (estimatedHalfFouls >= 10) {
+  if (currentHalfFouls >= 10) {
     return { inBonus: true, inDoubleBonus: true, label: 'Double Bonus' };
-  } else if (estimatedHalfFouls >= 7) {
+  } else if (currentHalfFouls >= 7) {
     return { inBonus: true, inDoubleBonus: false, label: 'Bonus' };
   }
   return { inBonus: false, inDoubleBonus: false, label: '' };
+}
+
+// Count fouls from plays for a specific half
+function countFoulsByHalf(
+  plays: Array<{ period?: { number: number }; type?: { text: string }; team?: { id: string } }>,
+  targetPeriod: number,
+  teamId: string
+): number {
+  const foulPlayTypes = ['foul', 'personalfoul', 'shootingfoul', 'offensivefoul', 'technicalfoul', 'flagrantfoul'];
+
+  let fouls = 0;
+  for (const play of plays) {
+    const playPeriod = play.period?.number || 1;
+    if (playPeriod !== targetPeriod) continue;
+
+    const playType = (play.type?.text || '').toLowerCase().replace(/\s+/g, '');
+    const isFoul = foulPlayTypes.some(ft => playType.includes(ft));
+
+    if (isFoul && play.team?.id === teamId) {
+      fouls++;
+    }
+  }
+
+  return fouls;
 }
 
 export async function GET(request: Request) {
@@ -274,37 +293,90 @@ export async function GET(request: Request) {
     const competitors = competition?.competitors || [];
     const homeTeamId = competitors.find((c: { homeAway: string }) => c.homeAway === 'home')?.id;
 
+    // Get plays data for accurate per-half foul counting
+    const plays = data.plays || [];
+
+    // First pass: collect team data and fouls
+    interface TeamFoulData {
+      teamId: string;
+      isHome: boolean;
+      totalFouls: number;
+      currentHalfFouls: number;
+      stats: typeof boxscoreTeams[0]['statistics'];
+      teamName: string;
+      abbreviation: string;
+    }
+
+    const teamFoulData: TeamFoulData[] = [];
+
     for (const team of boxscoreTeams) {
       const stats = team.statistics || [];
       const isHome = team.team?.id === homeTeamId;
+      const teamId = team.team?.id;
 
-      const fouls = parseInt(extractStat(stats, 'fouls') as string) || 0;
-      const bonusStatus = getBonusStatus(fouls, currentPeriod);
+      const totalFouls = parseInt(extractStat(stats, 'fouls') as string) || 0;
 
-      teamStats.push({
-        teamId: team.team?.id,
+      // Calculate current-half fouls for accurate bonus status
+      let currentHalfFouls: number;
+      if (currentPeriod === 1) {
+        // First half: total fouls = first half fouls
+        currentHalfFouls = totalFouls;
+      } else if (plays.length > 0) {
+        // Second half+: count fouls from plays for current period
+        currentHalfFouls = countFoulsByHalf(plays, currentPeriod, teamId);
+      } else {
+        // Fallback if no plays data: conservative estimate
+        currentHalfFouls = totalFouls;
+      }
+
+      teamFoulData.push({
+        teamId,
+        isHome,
+        totalFouls,
+        currentHalfFouls,
+        stats,
         teamName: team.team?.displayName,
         abbreviation: team.team?.abbreviation,
-        isHome,
+      });
+    }
+
+    // Second pass: calculate bonus status based on OPPONENT's fouls
+    // A team is "in bonus" when the OPPONENT has committed 7+ fouls
+    const homeTeamData = teamFoulData.find(t => t.isHome);
+    const awayTeamData = teamFoulData.find(t => !t.isHome);
+
+    for (const teamData of teamFoulData) {
+      // Bonus is based on opponent's fouls, not your own
+      const opponentFouls = teamData.isHome
+        ? (awayTeamData?.currentHalfFouls || 0)
+        : (homeTeamData?.currentHalfFouls || 0);
+
+      const bonusStatus = getBonusStatus(opponentFouls);
+
+      teamStats.push({
+        teamId: teamData.teamId,
+        teamName: teamData.teamName,
+        abbreviation: teamData.abbreviation,
+        isHome: teamData.isHome,
         stats: {
-          fouls,
-          technicalFouls: parseInt(extractStat(stats, 'technicalFouls') as string) || 0,
-          fieldGoals: extractStat(stats, 'fieldGoalsMade-fieldGoalsAttempted') as string || '0-0',
-          fieldGoalPct: parseInt(extractStat(stats, 'fieldGoalPct') as string) || 0,
-          threePointers: extractStat(stats, 'threePointFieldGoalsMade-threePointFieldGoalsAttempted') as string || '0-0',
-          threePointPct: parseInt(extractStat(stats, 'threePointFieldGoalPct') as string) || 0,
-          freeThrows: extractStat(stats, 'freeThrowsMade-freeThrowsAttempted') as string || '0-0',
-          freeThrowPct: parseInt(extractStat(stats, 'freeThrowPct') as string) || 0,
-          rebounds: parseInt(extractStat(stats, 'totalRebounds') as string) || 0,
-          offRebounds: parseInt(extractStat(stats, 'offensiveRebounds') as string) || 0,
-          defRebounds: parseInt(extractStat(stats, 'defensiveRebounds') as string) || 0,
-          assists: parseInt(extractStat(stats, 'assists') as string) || 0,
-          steals: parseInt(extractStat(stats, 'steals') as string) || 0,
-          blocks: parseInt(extractStat(stats, 'blocks') as string) || 0,
-          turnovers: parseInt(extractStat(stats, 'turnovers') as string) || 0,
-          pointsInPaint: parseInt(extractStat(stats, 'pointsInPaint') as string) || 0,
-          fastBreakPoints: parseInt(extractStat(stats, 'fastBreakPoints') as string) || 0,
-          largestLead: parseInt(extractStat(stats, 'largestLead') as string) || 0,
+          fouls: teamData.totalFouls, // Keep showing total game fouls in stats
+          technicalFouls: parseInt(extractStat(teamData.stats, 'technicalFouls') as string) || 0,
+          fieldGoals: extractStat(teamData.stats, 'fieldGoalsMade-fieldGoalsAttempted') as string || '0-0',
+          fieldGoalPct: parseInt(extractStat(teamData.stats, 'fieldGoalPct') as string) || 0,
+          threePointers: extractStat(teamData.stats, 'threePointFieldGoalsMade-threePointFieldGoalsAttempted') as string || '0-0',
+          threePointPct: parseInt(extractStat(teamData.stats, 'threePointFieldGoalPct') as string) || 0,
+          freeThrows: extractStat(teamData.stats, 'freeThrowsMade-freeThrowsAttempted') as string || '0-0',
+          freeThrowPct: parseInt(extractStat(teamData.stats, 'freeThrowPct') as string) || 0,
+          rebounds: parseInt(extractStat(teamData.stats, 'totalRebounds') as string) || 0,
+          offRebounds: parseInt(extractStat(teamData.stats, 'offensiveRebounds') as string) || 0,
+          defRebounds: parseInt(extractStat(teamData.stats, 'defensiveRebounds') as string) || 0,
+          assists: parseInt(extractStat(teamData.stats, 'assists') as string) || 0,
+          steals: parseInt(extractStat(teamData.stats, 'steals') as string) || 0,
+          blocks: parseInt(extractStat(teamData.stats, 'blocks') as string) || 0,
+          turnovers: parseInt(extractStat(teamData.stats, 'turnovers') as string) || 0,
+          pointsInPaint: parseInt(extractStat(teamData.stats, 'pointsInPaint') as string) || 0,
+          fastBreakPoints: parseInt(extractStat(teamData.stats, 'fastBreakPoints') as string) || 0,
+          largestLead: parseInt(extractStat(teamData.stats, 'largestLead') as string) || 0,
         },
         bonusStatus,
       });

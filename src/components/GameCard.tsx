@@ -125,6 +125,16 @@ export default function GameCard({ game, onClick }: GameCardProps) {
           <div className="flex items-center gap-3 min-w-0">
             <span className="text-xs text-slate-500 font-medium w-10">AWAY</span>
             <span className="text-base font-semibold text-slate-100 truncate">{game.awayTeam}</span>
+            {/* Away team bonus indicator */}
+            {isLive && game.awayBonusStatus && (game.awayBonusStatus.inBonus || game.awayBonusStatus.inDoubleBonus) && (
+              <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                game.awayBonusStatus.inDoubleBonus
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+              }`}>
+                {game.awayBonusStatus.inDoubleBonus ? '2X' : 'BONUS'}
+              </span>
+            )}
           </div>
           <span className="text-2xl font-bold text-white tabular-nums">{game.awayScore}</span>
         </div>
@@ -132,6 +142,16 @@ export default function GameCard({ game, onClick }: GameCardProps) {
           <div className="flex items-center gap-3 min-w-0">
             <span className="text-xs text-slate-500 font-medium w-10">HOME</span>
             <span className="text-base font-semibold text-slate-100 truncate">{game.homeTeam}</span>
+            {/* Home team bonus indicator */}
+            {isLive && game.homeBonusStatus && (game.homeBonusStatus.inBonus || game.homeBonusStatus.inDoubleBonus) && (
+              <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                game.homeBonusStatus.inDoubleBonus
+                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+              }`}>
+                {game.homeBonusStatus.inDoubleBonus ? '2X' : 'BONUS'}
+              </span>
+            )}
           </div>
           <span className="text-2xl font-bold text-white tabular-nums">{game.homeScore}</span>
         </div>
