@@ -4,15 +4,15 @@ __pycache__/
 venv/
 *.pyc
 
-# Ignore Python-specific directories
-api/
-utils/
-models/
-cache/
-data/
-logs/
-training/
-scripts/
+# Ignore Python-specific directories at root level (not src/app/api)
+/api/
+/utils/
+/models/
+/cache/
+/data/
+/logs/
+/training/
+/scripts/
 
 # Ignore non-web files
 *.md
