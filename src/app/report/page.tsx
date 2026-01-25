@@ -52,11 +52,37 @@ interface DailyReport {
   message?: string;
 }
 
+interface TimelinePoint {
+  time: string;
+  minutesRemaining: number;
+  period: number;
+  clock: string;
+  homeScore: number;
+  awayScore: number;
+  liveTotal: number;
+  ouLine: number | null;
+  requiredPPM: number | null;
+  currentPPM: number | null;
+  isUnderTriggered: boolean;
+  isOverTriggered: boolean;
+}
+
+interface GameDetail {
+  gameId: string;
+  homeTeam: string;
+  awayTeam: string;
+  snapshotCount: number;
+  timeline: TimelinePoint[];
+}
+
 export default function ReportPage() {
   const [report, setReport] = useState<DailyReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(getYesterdayDate());
+  const [selectedGame, setSelectedGame] = useState<GameResult | null>(null);
+  const [gameDetail, setGameDetail] = useState<GameDetail | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   const fetchReport = useCallback(async (date: string) => {
     setLoading(true);
@@ -95,6 +121,29 @@ export default function ReportPage() {
     if (date <= today) {
       setSelectedDate(date.toISOString().split('T')[0]);
     }
+  };
+
+  const openGameDetail = async (game: GameResult) => {
+    setSelectedGame(game);
+    setLoadingDetail(true);
+    setGameDetail(null);
+
+    try {
+      const res = await fetch(`/api/game-snapshots?gameId=${game.gameId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setGameDetail(data);
+      }
+    } catch (err) {
+      console.error('Failed to load game detail:', err);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const closeModal = () => {
+    setSelectedGame(null);
+    setGameDetail(null);
   };
 
   if (loading) {
@@ -207,13 +256,14 @@ export default function ReportPage() {
                 </h2>
                 <div className="space-y-3">
                   {report.topPerformers.map((game, index) => (
-                    <div
+                    <button
                       key={game.gameId}
-                      className={`bg-gradient-to-r ${
+                      onClick={() => openGameDetail(game)}
+                      className={`w-full text-left bg-gradient-to-r ${
                         index === 0
-                          ? 'from-yellow-900/40 to-amber-900/20 border-yellow-500/30'
-                          : 'from-slate-800 to-slate-800/50 border-slate-700'
-                      } border rounded-xl p-4`}
+                          ? 'from-yellow-900/40 to-amber-900/20 border-yellow-500/30 hover:from-yellow-900/60'
+                          : 'from-slate-800 to-slate-800/50 border-slate-700 hover:from-slate-700'
+                      } border rounded-xl p-4 transition-colors`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
@@ -240,8 +290,9 @@ export default function ReportPage() {
                         <span>O/U: {game.ouLine}</span>
                         <span>Triggered at {game.triggerMinutesRemaining.toFixed(1)} min</span>
                         <span className="text-yellow-400">{game.triggerStrength}</span>
+                        <span className="ml-auto text-xs text-slate-500">Click for details →</span>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -263,7 +314,11 @@ export default function ReportPage() {
                   </thead>
                   <tbody>
                     {report.allResults.map((game) => (
-                      <tr key={game.gameId} className="border-t border-slate-700">
+                      <tr
+                        key={game.gameId}
+                        onClick={() => openGameDetail(game)}
+                        className="border-t border-slate-700 hover:bg-slate-700/50 cursor-pointer transition-colors"
+                      >
                         <td className="p-3">
                           <div className="font-medium">{game.awayTeam}</div>
                           <div className="text-slate-400">@ {game.homeTeam}</div>
@@ -301,6 +356,169 @@ export default function ReportPage() {
               Report generated at {new Date(report.generatedAt).toLocaleString()}
             </div>
           </>
+        )}
+
+        {/* Game Detail Modal */}
+        {selectedGame && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={closeModal}>
+            <div
+              className="bg-slate-800 rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white">
+                    {selectedGame.awayTeam} @ {selectedGame.homeTeam}
+                  </h2>
+                  <p className="text-sm text-slate-400">
+                    Final: {selectedGame.finalAwayScore}-{selectedGame.finalHomeScore} ({selectedGame.finalTotal}) | O/U: {selectedGame.ouLine}
+                  </p>
+                </div>
+                <button
+                  onClick={closeModal}
+                  className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-4">
+                {loadingDetail ? (
+                  <div className="text-center py-8 text-slate-400">Loading game data...</div>
+                ) : gameDetail && gameDetail.timeline.length > 0 ? (
+                  <>
+                    {/* Summary Stats */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-green-400">
+                          {selectedGame.margin > 0 ? '+' : ''}{selectedGame.margin.toFixed(1)}
+                        </div>
+                        <div className="text-xs text-slate-400">Margin</div>
+                      </div>
+                      <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-yellow-400">
+                          {selectedGame.triggerMinutesRemaining.toFixed(1)}
+                        </div>
+                        <div className="text-xs text-slate-400">Trigger Min</div>
+                      </div>
+                      <div className="bg-slate-700/50 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-white">
+                          {gameDetail.snapshotCount}
+                        </div>
+                        <div className="text-xs text-slate-400">Snapshots</div>
+                      </div>
+                    </div>
+
+                    {/* Line Movement Chart */}
+                    <h3 className="text-lg font-semibold text-white mb-3">Line Movement</h3>
+                    <div className="bg-slate-900 rounded-lg p-4 mb-4">
+                      <div className="relative h-48">
+                        {/* Y-axis labels */}
+                        <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-xs text-slate-500">
+                          <span>{Math.max(...gameDetail.timeline.map(t => t.liveTotal), selectedGame.ouLine)}</span>
+                          <span>{selectedGame.ouLine}</span>
+                          <span>{Math.min(...gameDetail.timeline.filter(t => t.liveTotal > 0).map(t => t.liveTotal), 0)}</span>
+                        </div>
+
+                        {/* Chart area */}
+                        <div className="ml-12 h-full relative">
+                          {/* O/U Line */}
+                          <div
+                            className="absolute w-full border-t-2 border-dashed border-yellow-500/50"
+                            style={{
+                              top: `${100 - ((selectedGame.ouLine - Math.min(...gameDetail.timeline.filter(t => t.liveTotal > 0).map(t => t.liveTotal), 0)) / (Math.max(...gameDetail.timeline.map(t => t.liveTotal), selectedGame.ouLine) - Math.min(...gameDetail.timeline.filter(t => t.liveTotal > 0).map(t => t.liveTotal), 0))) * 100}%`
+                            }}
+                          >
+                            <span className="absolute right-0 -top-3 text-xs text-yellow-500">O/U {selectedGame.ouLine}</span>
+                          </div>
+
+                          {/* Score line as SVG */}
+                          <svg className="w-full h-full" preserveAspectRatio="none">
+                            <polyline
+                              fill="none"
+                              stroke="#22c55e"
+                              strokeWidth="2"
+                              points={gameDetail.timeline.map((point, i) => {
+                                const x = (i / (gameDetail.timeline.length - 1)) * 100;
+                                const minScore = Math.min(...gameDetail.timeline.filter(t => t.liveTotal > 0).map(t => t.liveTotal), 0);
+                                const maxScore = Math.max(...gameDetail.timeline.map(t => t.liveTotal), selectedGame.ouLine);
+                                const y = 100 - ((point.liveTotal - minScore) / (maxScore - minScore)) * 100;
+                                return `${x}%,${y}%`;
+                              }).join(' ')}
+                            />
+                            {/* Trigger points */}
+                            {gameDetail.timeline.filter(t => t.isUnderTriggered).map((point, i) => {
+                              const idx = gameDetail.timeline.indexOf(point);
+                              const x = (idx / (gameDetail.timeline.length - 1)) * 100;
+                              const minScore = Math.min(...gameDetail.timeline.filter(t => t.liveTotal > 0).map(t => t.liveTotal), 0);
+                              const maxScore = Math.max(...gameDetail.timeline.map(t => t.liveTotal), selectedGame.ouLine);
+                              const y = 100 - ((point.liveTotal - minScore) / (maxScore - minScore)) * 100;
+                              return (
+                                <circle
+                                  key={i}
+                                  cx={`${x}%`}
+                                  cy={`${y}%`}
+                                  r="4"
+                                  fill="#eab308"
+                                  stroke="#000"
+                                  strokeWidth="1"
+                                />
+                              );
+                            })}
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-xs text-slate-500 mt-2 ml-12">
+                        <span>Start</span>
+                        <span>Halftime</span>
+                        <span>End</span>
+                      </div>
+                    </div>
+
+                    {/* Timeline Table */}
+                    <h3 className="text-lg font-semibold text-white mb-3">Game Timeline</h3>
+                    <div className="bg-slate-900 rounded-lg overflow-hidden max-h-64 overflow-y-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-700 sticky top-0">
+                          <tr>
+                            <th className="text-left p-2 text-slate-300">Time</th>
+                            <th className="text-center p-2 text-slate-300">Score</th>
+                            <th className="text-center p-2 text-slate-300">Total</th>
+                            <th className="text-center p-2 text-slate-300">O/U</th>
+                            <th className="text-center p-2 text-slate-300">PPM</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {gameDetail.timeline.slice().reverse().map((point, i) => (
+                            <tr key={i} className={`border-t border-slate-800 ${point.isUnderTriggered ? 'bg-yellow-500/10' : ''}`}>
+                              <td className="p-2 text-slate-400">
+                                {point.period === 1 ? '1H' : point.period === 2 ? '2H' : `OT${point.period - 2}`} {point.clock}
+                              </td>
+                              <td className="text-center p-2">{point.awayScore}-{point.homeScore}</td>
+                              <td className="text-center p-2 font-medium">{point.liveTotal}</td>
+                              <td className="text-center p-2 text-yellow-400">{point.ouLine || '-'}</td>
+                              <td className="text-center p-2">
+                                {point.currentPPM ? point.currentPPM.toFixed(2) : '-'}
+                                {point.isUnderTriggered && <span className="ml-1 text-yellow-400">⚡</span>}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-slate-400">
+                    No snapshot data available for this game
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
