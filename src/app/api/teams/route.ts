@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
 
 interface TeamData {
   team_id: string;
@@ -12,15 +10,12 @@ interface TeamData {
   fg_pct: number;
   three_p_rate: number;
   three_p_pct: number;
-  ft_rate: number;
   ft_pct: number;
   oreb_pct: number;
   dreb_pct: number;
   to_rate: number;
   efg_pct: number;
   ts_pct: number;
-  two_p_pct: number;
-  efficiency_margin: number;
   avg_ppm: number;
   avg_ppg: number;
   assists_per_game: number;
@@ -29,91 +24,205 @@ interface TeamData {
   fouls_per_game: number;
   ast_to_ratio: number;
   espn_rank: number;
+  record: string;
 }
 
-let teamsCache: TeamData[] | null = null;
-let cacheTime = 0;
-const CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+interface TeamListItem {
+  id: string;
+  name: string;
+  rank: number;
+}
 
-async function loadTeamsFromCache(): Promise<TeamData[]> {
+let teamsListCache: TeamListItem[] | null = null;
+let teamStatsCache: Map<string, TeamData> = new Map();
+let listCacheTime = 0;
+const LIST_CACHE_DURATION = 60 * 60 * 1000; // 1 hour
+const STATS_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+// Fetch list of all teams
+async function fetchTeamsList(): Promise<TeamListItem[]> {
   const now = Date.now();
-  if (teamsCache && now - cacheTime < CACHE_DURATION) {
-    return teamsCache;
+  if (teamsListCache && now - listCacheTime < LIST_CACHE_DURATION) {
+    return teamsListCache;
   }
 
   try {
-    // Find the most recent ESPN stats CSV
-    const cacheDir = path.join(process.cwd(), 'cache');
-    const files = await fs.readdir(cacheDir);
-    const espnFiles = files
-      .filter(f => f.startsWith('espn_stats_') && f.endsWith('.csv'))
-      .sort()
-      .reverse();
-
-    if (espnFiles.length === 0) {
-      console.log('No ESPN stats files found, fetching from API...');
-      return await fetchTeamsFromESPN();
-    }
-
-    const latestFile = path.join(cacheDir, espnFiles[0]);
-    const content = await fs.readFile(latestFile, 'utf-8');
-    const lines = content.split('\n');
-    const headers = lines[0].split(',');
-
-    const teams: TeamData[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      if (!lines[i].trim()) continue;
-      const values = lines[i].split(',');
-
-      const team: Record<string, string | number> = {};
-      headers.forEach((header, idx) => {
-        const value = values[idx]?.trim();
-        team[header] = isNaN(Number(value)) ? value : Number(value);
-      });
-
-      teams.push(team as unknown as TeamData);
-    }
-
-    teamsCache = teams;
-    cacheTime = now;
-    return teams;
-  } catch (error) {
-    console.error('Error loading teams from cache:', error);
-    return await fetchTeamsFromESPN();
-  }
-}
-
-async function fetchTeamsFromESPN(): Promise<TeamData[]> {
-  try {
-    const response = await fetch(
+    // Fetch teams list
+    const teamsResponse = await fetch(
       'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams?limit=500',
-      { next: { revalidate: 3600 } }
+      { next: { revalidate: 3600 }, cache: 'no-store' }
     );
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch teams from ESPN');
+    if (!teamsResponse.ok) {
+      throw new Error('Failed to fetch teams');
     }
 
-    const data = await response.json();
-    const teams: TeamData[] = data.sports?.[0]?.leagues?.[0]?.teams?.map((t: { team: { id: string; displayName: string } }) => ({
-      team_id: t.team.id,
-      team_name: t.team.displayName,
+    const teamsData = await teamsResponse.json();
+
+    // Fetch rankings
+    let rankings: Map<string, number> = new Map();
+    try {
+      const rankingsResponse = await fetch(
+        'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/rankings',
+        { next: { revalidate: 3600 }, cache: 'no-store' }
+      );
+      if (rankingsResponse.ok) {
+        const rankingsData = await rankingsResponse.json();
+        const apPoll = rankingsData.rankings?.find((r: { name: string }) =>
+          r.name?.toLowerCase().includes('ap') || r.name?.toLowerCase().includes('poll')
+        );
+        if (apPoll?.ranks) {
+          apPoll.ranks.forEach((r: { team: { id: string }; current: number }) => {
+            rankings.set(r.team.id, r.current);
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Error fetching rankings:', e);
+    }
+
+    const teams: TeamListItem[] = teamsData.sports?.[0]?.leagues?.[0]?.teams?.map(
+      (t: { team: { id: string; displayName: string } }) => ({
+        id: t.team.id,
+        name: t.team.displayName,
+        rank: rankings.get(t.team.id) || 999,
+      })
+    ) || [];
+
+    teamsListCache = teams;
+    listCacheTime = now;
+    return teams;
+  } catch (error) {
+    console.error('Error fetching teams list:', error);
+    return teamsListCache || [];
+  }
+}
+
+// Fetch detailed stats for a specific team
+async function fetchTeamStats(teamId: string, teamName: string): Promise<TeamData> {
+  const cacheKey = teamId;
+  const cached = teamStatsCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    // Fetch team statistics
+    const statsResponse = await fetch(
+      `https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams/${teamId}/statistics`,
+      { next: { revalidate: 0 }, cache: 'no-store' }
+    );
+
+    if (!statsResponse.ok) {
+      throw new Error(`Failed to fetch stats for team ${teamId}`);
+    }
+
+    const statsData = await statsResponse.json();
+
+    // Extract stats from response
+    const stats = statsData.splits?.categories || [];
+
+    const getStat = (category: string, name: string): number => {
+      const cat = stats.find((c: { name: string }) => c.name === category);
+      if (!cat) return 0;
+      const stat = cat.stats?.find((s: { name: string }) => s.name === name);
+      return stat?.value ?? 0;
+    };
+
+    // Get team record
+    const teamInfo = statsData.team || {};
+    const record = teamInfo.record?.items?.[0]?.summary || '';
+    const gamesPlayed = parseInt(record.split('-').reduce((a: number, b: string) => a + parseInt(b) || 0, 0)) || 0;
+
+    // Calculate derived stats
+    const fgm = getStat('offensive', 'fieldGoalsMade');
+    const fga = getStat('offensive', 'fieldGoalsAttempted');
+    const fg3m = getStat('offensive', 'threePointFieldGoalsMade');
+    const fg3a = getStat('offensive', 'threePointFieldGoalsAttempted');
+    const ftm = getStat('offensive', 'freeThrowsMade');
+    const fta = getStat('offensive', 'freeThrowsAttempted');
+    const pts = getStat('offensive', 'avgPoints');
+    const oreb = getStat('offensive', 'offensiveRebounds');
+    const dreb = getStat('defensive', 'defensiveRebounds');
+    const ast = getStat('offensive', 'assists');
+    const to = getStat('offensive', 'turnovers');
+    const stl = getStat('defensive', 'steals');
+    const blk = getStat('defensive', 'blocks');
+    const pf = getStat('general', 'fouls');
+
+    const fg_pct = fga > 0 ? (fgm / fga) * 100 : 0;
+    const three_p_pct = fg3a > 0 ? (fg3m / fg3a) * 100 : 0;
+    const ft_pct = fta > 0 ? (ftm / fta) * 100 : 0;
+    const three_p_rate = fga > 0 ? (fg3a / fga) * 100 : 0;
+
+    // Effective FG% = (FGM + 0.5 * 3PM) / FGA
+    const efg_pct = fga > 0 ? ((fgm + 0.5 * fg3m) / fga) * 100 : 0;
+
+    // True Shooting % = PTS / (2 * (FGA + 0.44 * FTA))
+    const ts_pct = (fga + 0.44 * fta) > 0 ? (pts / (2 * (fga + 0.44 * fta))) * 100 : 0;
+
+    // Estimate pace (simplified)
+    const totalReb = oreb + dreb;
+    const pace = fga + 0.44 * fta - oreb + to;
+
+    // Offensive/Defensive efficiency (per 100 possessions estimate)
+    const possessions = pace > 0 ? pace : 70; // Default to 70 if no data
+    const off_efficiency = possessions > 0 ? (pts / possessions) * 100 : 0;
+
+    const teamData: TeamData = {
+      team_id: teamId,
+      team_name: teamName,
+      games_played: gamesPlayed,
+      record,
+      pace: Math.round(pace * 10) / 10,
+      off_efficiency: Math.round(off_efficiency * 10) / 10,
+      def_efficiency: 0, // Would need opponent data
+      fg_pct: Math.round(fg_pct * 10) / 10,
+      three_p_rate: Math.round(three_p_rate * 10) / 10,
+      three_p_pct: Math.round(three_p_pct * 10) / 10,
+      ft_pct: Math.round(ft_pct * 10) / 10,
+      oreb_pct: Math.round((oreb / (oreb + dreb || 1)) * 100 * 10) / 10,
+      dreb_pct: Math.round((dreb / (oreb + dreb || 1)) * 100 * 10) / 10,
+      to_rate: Math.round(to * 10) / 10,
+      efg_pct: Math.round(efg_pct * 10) / 10,
+      ts_pct: Math.round(ts_pct * 10) / 10,
+      avg_ppm: Math.round((pts / 40) * 100) / 100,
+      avg_ppg: Math.round(pts * 10) / 10,
+      assists_per_game: Math.round(ast * 10) / 10,
+      steals_per_game: Math.round(stl * 10) / 10,
+      blocks_per_game: Math.round(blk * 10) / 10,
+      fouls_per_game: Math.round(pf * 10) / 10,
+      ast_to_ratio: to > 0 ? Math.round((ast / to) * 100) / 100 : 0,
+      espn_rank: 999,
+    };
+
+    teamStatsCache.set(cacheKey, teamData);
+
+    // Clean old cache entries
+    setTimeout(() => {
+      teamStatsCache.delete(cacheKey);
+    }, STATS_CACHE_DURATION);
+
+    return teamData;
+  } catch (error) {
+    console.error(`Error fetching stats for team ${teamId}:`, error);
+    return {
+      team_id: teamId,
+      team_name: teamName,
       games_played: 0,
+      record: '',
       pace: 0,
       off_efficiency: 0,
       def_efficiency: 0,
       fg_pct: 0,
       three_p_rate: 0,
       three_p_pct: 0,
-      ft_rate: 0,
       ft_pct: 0,
       oreb_pct: 0,
       dreb_pct: 0,
       to_rate: 0,
       efg_pct: 0,
       ts_pct: 0,
-      two_p_pct: 0,
-      efficiency_margin: 0,
       avg_ppm: 0,
       avg_ppg: 0,
       assists_per_game: 0,
@@ -122,12 +231,7 @@ async function fetchTeamsFromESPN(): Promise<TeamData[]> {
       fouls_per_game: 0,
       ast_to_ratio: 0,
       espn_rank: 999,
-    })) || [];
-
-    return teams;
-  } catch (error) {
-    console.error('Error fetching from ESPN:', error);
-    return [];
+    };
   }
 }
 
@@ -138,29 +242,39 @@ export async function GET(request: Request) {
   const team2 = searchParams.get('team2');
 
   try {
-    const allTeams = await loadTeamsFromCache();
+    const allTeams = await fetchTeamsList();
 
     // If requesting specific teams for comparison
     if (team1 && team2) {
-      const teamA = allTeams.find(t =>
-        t.team_name.toLowerCase() === team1.toLowerCase() ||
-        t.team_id === team1
+      const teamAInfo = allTeams.find(t =>
+        t.name.toLowerCase() === team1.toLowerCase() ||
+        t.id === team1
       );
-      const teamB = allTeams.find(t =>
-        t.team_name.toLowerCase() === team2.toLowerCase() ||
-        t.team_id === team2
+      const teamBInfo = allTeams.find(t =>
+        t.name.toLowerCase() === team2.toLowerCase() ||
+        t.id === team2
       );
 
-      if (!teamA || !teamB) {
+      if (!teamAInfo || !teamBInfo) {
         return NextResponse.json(
           { error: 'One or both teams not found' },
           { status: 404 }
         );
       }
 
+      // Fetch detailed stats for both teams in parallel
+      const [teamAStats, teamBStats] = await Promise.all([
+        fetchTeamStats(teamAInfo.id, teamAInfo.name),
+        fetchTeamStats(teamBInfo.id, teamBInfo.name),
+      ]);
+
+      // Add rankings
+      teamAStats.espn_rank = teamAInfo.rank;
+      teamBStats.espn_rank = teamBInfo.rank;
+
       return NextResponse.json({
-        team1: teamA,
-        team2: teamB,
+        team1: teamAStats,
+        team2: teamBStats,
         timestamp: new Date().toISOString(),
       });
     }
@@ -168,25 +282,16 @@ export async function GET(request: Request) {
     // If searching for teams
     if (search) {
       const filtered = allTeams
-        .filter(t => t.team_name.toLowerCase().includes(search))
-        .slice(0, 20)
-        .map(t => ({
-          id: t.team_id,
-          name: t.team_name,
-          rank: t.espn_rank,
-        }));
+        .filter(t => t.name.toLowerCase().includes(search))
+        .sort((a, b) => a.rank - b.rank)
+        .slice(0, 20);
 
       return NextResponse.json({ teams: filtered });
     }
 
-    // Return all teams (for initial list)
+    // Return all teams (sorted by rank)
     const teamList = allTeams
-      .sort((a, b) => (a.espn_rank || 999) - (b.espn_rank || 999))
-      .map(t => ({
-        id: t.team_id,
-        name: t.team_name,
-        rank: t.espn_rank,
-      }));
+      .sort((a, b) => a.rank - b.rank);
 
     return NextResponse.json({ teams: teamList });
   } catch (error) {

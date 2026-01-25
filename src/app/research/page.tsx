@@ -14,21 +14,19 @@ interface TeamStats {
   team_id: string;
   team_name: string;
   games_played: number;
+  record: string;
   pace: number;
   off_efficiency: number;
   def_efficiency: number;
   fg_pct: number;
   three_p_rate: number;
   three_p_pct: number;
-  ft_rate: number;
   ft_pct: number;
   oreb_pct: number;
   dreb_pct: number;
   to_rate: number;
   efg_pct: number;
   ts_pct: number;
-  two_p_pct: number;
-  efficiency_margin: number;
   avg_ppm: number;
   avg_ppg: number;
   assists_per_game: number;
@@ -56,8 +54,6 @@ const METRICS: MetricConfig[] = [
 
   // Efficiency
   { key: 'off_efficiency', label: 'Off Eff', description: 'Points per 100 possessions', format: 'decimal', higherIsBetter: true, category: 'Efficiency' },
-  { key: 'def_efficiency', label: 'Def Eff', description: 'Points allowed per 100 poss', format: 'decimal', higherIsBetter: false, category: 'Efficiency' },
-  { key: 'efficiency_margin', label: 'Net Rating', description: 'Off Eff - Def Eff', format: 'decimal', higherIsBetter: true, category: 'Efficiency' },
 
   // Shooting
   { key: 'fg_pct', label: 'FG%', description: 'Field Goal Percentage', format: 'percent', higherIsBetter: true, category: 'Shooting' },
@@ -65,7 +61,6 @@ const METRICS: MetricConfig[] = [
   { key: 'ts_pct', label: 'TS%', description: 'True Shooting %', format: 'percent', higherIsBetter: true, category: 'Shooting' },
   { key: 'three_p_pct', label: '3P%', description: '3-Point Percentage', format: 'percent', higherIsBetter: true, category: 'Shooting' },
   { key: 'three_p_rate', label: '3P Rate', description: '3PA / FGA', format: 'percent', higherIsBetter: true, category: 'Shooting' },
-  { key: 'two_p_pct', label: '2P%', description: '2-Point Percentage', format: 'percent', higherIsBetter: true, category: 'Shooting' },
   { key: 'ft_pct', label: 'FT%', description: 'Free Throw Percentage', format: 'percent', higherIsBetter: true, category: 'Shooting' },
 
   // Rebounding
@@ -74,15 +69,16 @@ const METRICS: MetricConfig[] = [
 
   // Ball Control
   { key: 'assists_per_game', label: 'APG', description: 'Assists per game', format: 'decimal', higherIsBetter: true, category: 'Ball Control' },
-  { key: 'to_rate', label: 'TO Rate', description: 'Turnovers per game', format: 'decimal', higherIsBetter: false, category: 'Ball Control' },
+  { key: 'to_rate', label: 'TO/G', description: 'Turnovers per game', format: 'decimal', higherIsBetter: false, category: 'Ball Control' },
   { key: 'ast_to_ratio', label: 'AST/TO', description: 'Assist to Turnover Ratio', format: 'decimal', higherIsBetter: true, category: 'Ball Control' },
 
   // Defense
   { key: 'steals_per_game', label: 'SPG', description: 'Steals per game', format: 'decimal', higherIsBetter: true, category: 'Defense' },
   { key: 'blocks_per_game', label: 'BPG', description: 'Blocks per game', format: 'decimal', higherIsBetter: true, category: 'Defense' },
+  { key: 'fouls_per_game', label: 'Fouls', description: 'Fouls per game', format: 'decimal', higherIsBetter: false, category: 'Defense' },
 
   // Rankings
-  { key: 'espn_rank', label: 'ESPN Rank', description: 'ESPN Efficiency Ranking', format: 'rank', higherIsBetter: false, category: 'Rankings' },
+  { key: 'espn_rank', label: 'AP Rank', description: 'AP Poll Ranking', format: 'rank', higherIsBetter: false, category: 'Rankings' },
 ];
 
 const CATEGORIES = Array.from(new Set(METRICS.map(m => m.category)));
@@ -357,7 +353,10 @@ export default function ResearchPage() {
               <div className="text-center">
                 <p className="text-lg font-bold text-white">{team1Stats.team_name}</p>
                 <p className="text-sm text-slate-500">
-                  {team1Stats.espn_rank ? `#${team1Stats.espn_rank}` : ''} • {team1Stats.games_played} games
+                  {team1Stats.espn_rank && team1Stats.espn_rank < 26 ? (
+                    <span className="text-orange-400 font-medium">#{team1Stats.espn_rank} </span>
+                  ) : ''}
+                  {team1Stats.record || `${team1Stats.games_played} games`}
                 </p>
               </div>
               <div className="flex items-center justify-center">
@@ -366,7 +365,10 @@ export default function ResearchPage() {
               <div className="text-center">
                 <p className="text-lg font-bold text-white">{team2Stats.team_name}</p>
                 <p className="text-sm text-slate-500">
-                  {team2Stats.espn_rank ? `#${team2Stats.espn_rank}` : ''} • {team2Stats.games_played} games
+                  {team2Stats.espn_rank && team2Stats.espn_rank < 26 ? (
+                    <span className="text-orange-400 font-medium">#{team2Stats.espn_rank} </span>
+                  ) : ''}
+                  {team2Stats.record || `${team2Stats.games_played} games`}
                 </p>
               </div>
             </div>
