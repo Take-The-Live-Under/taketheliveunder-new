@@ -54,10 +54,8 @@ logs/
 Thumbs.db
 
 # Next.js
-frontend/.next/
-frontend/out/
-frontend/node_modules/
-frontend/build/
+.next/
+out/
 
 # Dependencies
 node_modules/
