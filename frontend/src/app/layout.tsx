@@ -5,6 +5,7 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://taketheliveunder.com'),
   title: 'Take The Live Under - NCAA Basketball Analytics',
   description: 'Real-time NCAA basketball scoring pace analysis and predictions. Track live game momentum, points per minute trends, and AI-powered projections.',
   keywords: 'NCAA basketball, college basketball, basketball analytics, pace analysis, PPM, points per minute, game predictions, scoring trends',
