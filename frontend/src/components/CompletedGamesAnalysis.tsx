@@ -48,7 +48,7 @@ export default function CompletedGamesAnalysis() {
       ouLine,
       isOver,
       lineWouldWinUnder,
-      betType: entry.bet_type || 'under',
+      pickType: entry.bet_type || 'under',
     };
   }) || [];
 
@@ -207,7 +207,7 @@ export default function CompletedGamesAnalysis() {
           <div className="bg-gray-800 rounded-lg p-6">
             <h3 className="text-lg font-bold mb-4">Over/Under Line Movement</h3>
             <p className="text-sm text-gray-400 mb-4">
-              Track how the O/U betting line changed throughout the game. Final Total: <span className="font-bold text-yellow-400">{selectedGame?.final_total}</span>
+              Track how the O/U line changed throughout the game. Final Total: <span className="font-bold text-yellow-400">{selectedGame?.final_total}</span>
               <br />
               <span className="text-blue-400 font-bold">Blue dots</span> = O/U line below final (UNDER would have lost).
               <span className="text-green-400 font-bold"> Green dots</span> = O/U line above final (UNDER would have won).
@@ -287,7 +287,7 @@ export default function CompletedGamesAnalysis() {
                     <th className="text-right py-2 px-2 text-gray-400">Total Points</th>
                     <th className="text-right py-2 px-2 text-gray-400">O/U Line</th>
                     <th className="text-center py-2 px-2 text-gray-400">Position</th>
-                    <th className="text-left py-2 px-2 text-gray-400">Our Bet</th>
+                    <th className="text-left py-2 px-2 text-gray-400">Our Pick</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -301,8 +301,8 @@ export default function CompletedGamesAnalysis() {
                           {row.isOver ? 'OVER ↑' : 'UNDER ↓'}
                         </span>
                       </td>
-                      <td className={`py-2 px-2 font-bold ${row.betType === 'over' ? 'text-green-400' : 'text-blue-400'}`}>
-                        {row.betType?.toUpperCase() || 'N/A'}
+                      <td className={`py-2 px-2 font-bold ${row.pickType === 'over' ? 'text-green-400' : 'text-blue-400'}`}>
+                        {row.pickType?.toUpperCase() || 'N/A'}
                       </td>
                     </tr>
                   ))}

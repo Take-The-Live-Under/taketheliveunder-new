@@ -109,7 +109,7 @@ function showNotification(game: GameData, alertLevel: string, confidence: number
   }
 
   const title = `${alertLevel} Confidence Alert!`;
-  const body = `${game.away_team} @ ${game.home_team}\n${game.bet_type?.toUpperCase()} at ${confidence}% confidence\n${game.unit_size} units recommended`;
+  const body = `${game.away_team} @ ${game.home_team}\n${game.bet_type?.toUpperCase()} at ${confidence}% confidence\nStrength: ${game.unit_size}/3`;
 
   const notification = new Notification(title, {
     body,

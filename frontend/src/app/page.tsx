@@ -69,7 +69,7 @@ export default function Dashboard() {
 
   // Request notification permission on mount
   useEffect(() => {
-    console.log('NCAA Betting Monitor v3.0 - Real-time WebSocket Edition');
+    console.log('TTLU Analytics v3.0 - Real-time Data Edition');
 
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().then(permission => {
@@ -188,8 +188,8 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">NCAA Basketball Monitor</h1>
-              <p className="text-base text-brand-purple-200 font-medium">Real-time betting intelligence powered by data</p>
+              <h1 className="text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">Take The Live Under</h1>
+              <p className="text-base text-brand-purple-200 font-medium">Real-time NCAA basketball scoring analytics</p>
             </div>
 
             <div className="flex gap-5 items-center">
@@ -209,8 +209,8 @@ export default function Dashboard() {
           {perfData && (
             <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="glass-card rounded-lg p-3 hover:shadow-elevation-2 transition-all">
-                <div className="text-xs text-deep-slate-400 mb-1 font-medium">Total Bets</div>
-                <div className="text-2xl font-bold text-white">{perfData.total_bets}</div>
+                <div className="text-xs text-deep-slate-400 mb-1 font-medium">Predictions</div>
+                <div className="text-2xl font-bold text-white">{perfData.total_predictions || perfData.total_bets}</div>
               </div>
 
               <div className="glass-card rounded-lg p-3 hover:shadow-elevation-2 transition-all">
@@ -476,13 +476,13 @@ export default function Dashboard() {
             <h3 className="text-lg font-bold mb-4">Performance Summary</h3>
 
             {/* Today's Performance */}
-            {perfData.today && perfData.today.total_bets > 0 && (
+            {perfData.today && (perfData.today.total_predictions || perfData.today.total_bets) > 0 && (
               <div className="mb-6 bg-gradient-to-r from-brand-purple-900/30 to-brand-orange-900/30 rounded-lg p-4 border border-brand-purple-500/30">
                 <h4 className="text-sm font-semibold mb-3 text-brand-purple-300">Today's Performance</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <div className="text-xs text-gray-400">Bets</div>
-                    <div className="text-xl font-bold">{perfData.today.total_bets}</div>
+                    <div className="text-xs text-gray-400">Predictions</div>
+                    <div className="text-xl font-bold">{perfData.today.total_predictions || perfData.today.total_bets}</div>
                   </div>
 
                   <div>
@@ -512,8 +512,8 @@ export default function Dashboard() {
             <h4 className="text-sm font-semibold mb-3 text-gray-400">All-Time Performance</h4>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <div className="text-sm text-gray-400">Total Bets</div>
-                <div className="text-2xl font-bold">{perfData.total_bets}</div>
+                <div className="text-sm text-gray-400">Predictions</div>
+                <div className="text-2xl font-bold">{perfData.total_predictions || perfData.total_bets}</div>
               </div>
 
               <div>
@@ -546,7 +546,7 @@ export default function Dashboard() {
                   <div key={tier} className="bg-gray-900/50 rounded p-3">
                     <div className="text-xs text-gray-400 mb-1">{tier}</div>
                     <div className="text-sm">
-                      <span className="font-bold">{data.bets}</span> bets
+                      <span className="font-bold">{data.predictions || data.bets}</span> predictions
                     </div>
                     <div className="text-sm">
                       <span className="font-bold text-green-400">{data.win_rate?.toFixed(0)}%</span> win rate

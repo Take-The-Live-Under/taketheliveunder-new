@@ -1,5 +1,5 @@
 /**
- * Core Betting Calculations
+ * Core Analytics Calculations
  * Pure functions for confidence, momentum, and trigger logic
  */
 

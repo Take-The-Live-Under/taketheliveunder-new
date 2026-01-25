@@ -41,7 +41,7 @@ export default function GameCard({ game, onClick }: GameCardProps) {
     if (score >= 76) return { tier: 'HIGH', colorClass: 'badge-gradient-purple' };
     if (score >= 61) return { tier: 'MEDIUM', colorClass: 'badge-gradient-orange' };
     if (score >= 41) return { tier: 'LOW', colorClass: 'bg-deep-slate-600 text-deep-slate-300' };
-    return { tier: 'NO BET', colorClass: 'bg-deep-slate-700 text-deep-slate-400' };
+    return { tier: 'MONITOR', colorClass: 'bg-deep-slate-700 text-deep-slate-400' };
   };
 
   const { tier, colorClass } = getConfidenceTier(confidence);
@@ -69,14 +69,14 @@ export default function GameCard({ game, onClick }: GameCardProps) {
 
   const betStyle = getBetTypeStyle();
 
-  // Bet recommendation styling
+  // Action recommendation styling
   const getBetRecommendationStyle = () => {
     if (betRecommendation === 'BET_NOW') {
       return {
         containerClass: 'bg-gradient-to-r from-green-600 to-green-500 border-2 border-green-400',
         textClass: 'text-white font-bold',
         icon: '✓',
-        label: 'BET NOW'
+        label: 'STRONG SIGNAL'
       };
     } else if (betRecommendation === 'WAIT') {
       return {
@@ -90,7 +90,7 @@ export default function GameCard({ game, onClick }: GameCardProps) {
         containerClass: 'bg-gradient-to-r from-red-600 to-red-500 border-2 border-red-400',
         textClass: 'text-white font-bold',
         icon: '⚠',
-        label: 'DANGER ZONE - AVOID'
+        label: 'LOW CONFIDENCE - AVOID'
       };
     } else {
       return {
@@ -194,7 +194,7 @@ export default function GameCard({ game, onClick }: GameCardProps) {
         )}
       </div>
 
-      {/* Betting Recommendation Indicator */}
+      {/* Action Recommendation Indicator */}
       {triggered && betRecommendation !== 'MONITOR' && (
         <Tooltip
           content={
@@ -203,7 +203,7 @@ export default function GameCard({ game, onClick }: GameCardProps) {
               : betRecommendation === 'WAIT'
               ? 'Waiting for: Higher confidence (≥65) OR stronger PPM confirmation (≥5.0)'
               : betRecommendation === 'DANGER_ZONE'
-              ? 'Avoid: Medium confidence (60-70) with weak PPM (<4.0) has only 50% win rate'
+              ? 'Avoid: Medium confidence (60-70) with weak PPM (<4.0) has only 50% accuracy'
               : 'Monitoring game for trigger conditions'
           }
           position="bottom"
@@ -236,7 +236,7 @@ export default function GameCard({ game, onClick }: GameCardProps) {
         </div>
         <div className="text-right">
           <div className="text-sm text-deep-slate-400 mb-1">
-            O/U Line {game.sportsbook && <span className="text-xs bg-deep-slate-800 px-2 py-0.5 rounded ml-1">({game.sportsbook})</span>}
+            O/U Line {game.sportsbook && <span className="text-xs bg-deep-slate-800 px-2 py-0.5 rounded ml-1">(Source: {game.sportsbook})</span>}
           </div>
           <div className="text-2xl font-bold text-gradient-purple-orange">{game.ou_line}</div>
           {espnClosingTotal > 0 && (

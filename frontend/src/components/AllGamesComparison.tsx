@@ -154,7 +154,7 @@ export default function AllGamesComparison() {
       <div className="bg-gray-800 rounded-lg p-6">
         <h3 className="text-lg font-bold mb-4">All Games - O/U Line Movement</h3>
         <p className="text-sm text-gray-400 mb-4">
-          Compare how O/U betting lines changed across all games.
+          Compare how O/U lines changed across all games.
         </p>
         {combinedData.length > 0 ? (
           <ResponsiveContainer width="100%" height={500}>

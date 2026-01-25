@@ -37,7 +37,7 @@ interface PregameGame {
     avg_ppg: number;
     three_point_rate: number;
   };
-  // New betting optimization fields
+  // Prediction optimization fields
   in_tempo_sweet_spot?: boolean;
   is_blowout_risk?: boolean;
   early_season_bonus?: number;
@@ -129,7 +129,7 @@ export default function PregamePredictions() {
         three_point_rate: 0.35
       },
       ai_summary: pred.ai_summary,
-      // New betting optimization fields
+      // Prediction optimization fields
       in_tempo_sweet_spot: pred.in_tempo_sweet_spot,
       is_blowout_risk: pred.is_blowout_risk,
       early_season_bonus: pred.early_season_bonus || 0,
@@ -271,7 +271,15 @@ function PregameGameCard({ game, liveGame, history }: { game: PregameGame; liveG
   };
 
   const getRecommendationLabel = (recommendation: string) => {
-    return recommendation.replace(/_/g, ' ');
+    // Convert internal codes to user-friendly labels
+    const labelMap: Record<string, string> = {
+      'BET_UNDER': 'STRONG UNDER',
+      'LEAN_UNDER': 'LEAN UNDER',
+      'PASS': 'PASS',
+      'LEAN_OVER': 'LEAN OVER',
+      'BET_OVER': 'STRONG OVER',
+    };
+    return labelMap[recommendation] || recommendation.replace(/_/g, ' ');
   };
 
   const getConfidenceColor = (score: number) => {
@@ -332,7 +340,7 @@ function PregameGameCard({ game, liveGame, history }: { game: PregameGame; liveG
         </div>
       </div>
 
-      {/* Betting Indicators */}
+      {/* Game Indicators */}
       {(game.in_tempo_sweet_spot || game.is_blowout_risk || (game.early_season_bonus ?? 0) > 0) && (
         <div className="flex flex-wrap gap-2 mb-3">
           {game.in_tempo_sweet_spot && (

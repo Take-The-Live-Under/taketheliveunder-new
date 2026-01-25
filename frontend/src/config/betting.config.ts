@@ -1,5 +1,5 @@
 /**
- * Betting Dashboard Configuration
+ * Analytics Dashboard Configuration
  * All tunables for confidence calculation, momentum, triggers, and UI thresholds
  */
 

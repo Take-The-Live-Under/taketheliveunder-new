@@ -112,7 +112,7 @@ export default function TrendsView({ liveGames = [], preSelectedGameId, hideSele
                 <span className="ml-2 font-bold">{gameInfo.ou_line}</span>
               </div>
               <div>
-                <span className="text-gray-400">Current Bet:</span>
+                <span className="text-gray-400">Prediction:</span>
                 <span className={`ml-2 font-bold ${gameInfo.bet_type === 'over' ? 'text-green-400' : 'text-blue-400'}`}>
                   {gameInfo.bet_type?.toUpperCase() || 'UNDER'}
                 </span>
@@ -124,8 +124,8 @@ export default function TrendsView({ liveGames = [], preSelectedGameId, hideSele
           <div className="bg-gray-800 rounded-lg p-6">
             <h3 className="text-lg font-bold mb-4">Over/Under Line Movement</h3>
             <p className="text-sm text-gray-400 mb-4">
-              Shows how the sportsbook O/U betting line changes over elapsed game time.
-              Line movements indicate how bookmakers are adjusting based on betting action and game flow.
+              Shows how the O/U line changes over elapsed game time.
+              Line movements indicate market adjustments based on game flow.
             </p>
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={350}>
@@ -283,7 +283,7 @@ export default function TrendsView({ liveGames = [], preSelectedGameId, hideSele
                     }}
                   />
                   <Legend />
-                  <ReferenceLine y={40} label="Min Bet" stroke="#6B7280" strokeDasharray="5 5" />
+                  <ReferenceLine y={40} label="Minimum" stroke="#6B7280" strokeDasharray="5 5" />
                   <ReferenceLine y={61} label="Medium" stroke="#F59E0B" strokeDasharray="5 5" />
                   <ReferenceLine y={76} label="High" stroke="#10B981" strokeDasharray="5 5" />
                   <ReferenceLine y={86} label="MAX" stroke="#EF4444" strokeDasharray="5 5" />
@@ -315,7 +315,7 @@ export default function TrendsView({ liveGames = [], preSelectedGameId, hideSele
                     <th className="text-right py-2 px-2 text-gray-400">Req PPM</th>
                     <th className="text-right py-2 px-2 text-gray-400">Cur PPM</th>
                     <th className="text-right py-2 px-2 text-gray-400">Conf</th>
-                    <th className="text-left py-2 px-2 text-gray-400">Bet</th>
+                    <th className="text-left py-2 px-2 text-gray-400">Signal</th>
                   </tr>
                 </thead>
                 <tbody>

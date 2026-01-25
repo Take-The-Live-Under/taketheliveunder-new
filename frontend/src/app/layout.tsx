@@ -5,8 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'NCAA Basketball Betting Monitor',
-  description: 'Real-time NCAA basketball betting intelligence platform - Public Beta',
+  title: 'Take The Live Under - NCAA Basketball Analytics',
+  description: 'Real-time NCAA basketball scoring analytics and predictions platform',
 }
 
 export default function RootLayout({

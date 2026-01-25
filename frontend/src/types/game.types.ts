@@ -23,7 +23,7 @@ export interface EnhancedGame {
   projected_final_score: number;
   total_time_remaining: number;
 
-  // Bet info
+  // Prediction info
   bet_type: 'OVER' | 'UNDER' | 'over' | 'under';
   trigger_flag: boolean;
   confidence_score: number;
