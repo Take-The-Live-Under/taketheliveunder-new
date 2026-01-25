@@ -235,6 +235,37 @@ async function fetchTeamStats(teamId: string, teamName: string): Promise<TeamDat
   }
 }
 
+// Fuzzy match team names (handles variations like "North Carolina" vs "North Carolina Tar Heels")
+function findTeamByName(teams: TeamListItem[], searchName: string): TeamListItem | undefined {
+  const searchLower = searchName.toLowerCase().trim();
+
+  // Exact match first
+  const exact = teams.find(t => t.name.toLowerCase() === searchLower);
+  if (exact) return exact;
+
+  // ID match
+  const byId = teams.find(t => t.id === searchName);
+  if (byId) return byId;
+
+  // Contains match (search is contained in team name)
+  const contains = teams.find(t => t.name.toLowerCase().includes(searchLower));
+  if (contains) return contains;
+
+  // Reverse contains (team name is contained in search)
+  const reverseContains = teams.find(t => searchLower.includes(t.name.toLowerCase()));
+  if (reverseContains) return reverseContains;
+
+  // Word-based match (first word matches, e.g., "Duke" matches "Duke Blue Devils")
+  const searchFirstWord = searchLower.split(' ')[0];
+  const wordMatch = teams.find(t => {
+    const teamFirstWord = t.name.toLowerCase().split(' ')[0];
+    return teamFirstWord === searchFirstWord || t.name.toLowerCase().split(' ').includes(searchFirstWord);
+  });
+  if (wordMatch) return wordMatch;
+
+  return undefined;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const search = searchParams.get('search')?.toLowerCase();
@@ -246,18 +277,16 @@ export async function GET(request: Request) {
 
     // If requesting specific teams for comparison
     if (team1 && team2) {
-      const teamAInfo = allTeams.find(t =>
-        t.name.toLowerCase() === team1.toLowerCase() ||
-        t.id === team1
-      );
-      const teamBInfo = allTeams.find(t =>
-        t.name.toLowerCase() === team2.toLowerCase() ||
-        t.id === team2
-      );
+      const teamAInfo = findTeamByName(allTeams, team1);
+      const teamBInfo = findTeamByName(allTeams, team2);
 
       if (!teamAInfo || !teamBInfo) {
+        const notFound = [];
+        if (!teamAInfo) notFound.push(team1);
+        if (!teamBInfo) notFound.push(team2);
+        console.error(`Teams not found: ${notFound.join(', ')}`);
         return NextResponse.json(
-          { error: 'One or both teams not found' },
+          { error: `Teams not found: ${notFound.join(', ')}` },
           { status: 404 }
         );
       }
