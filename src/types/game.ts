@@ -33,6 +33,10 @@ export interface Game {
   foulGameWarning: boolean;    // True if close game around 4 min with notable teams
   foulGameWarningMessage: string | null;  // Warning message to display
   teamFoulGameImpact: number;  // Extra adjustment based on specific team tendencies
+  // Team-specific foul game info
+  homeFoulGameInfo: string | null;  // Home team's foul game tendency info
+  awayFoulGameInfo: string | null;  // Away team's foul game tendency info
+  foulGameWarningLevel: 'high' | 'medium' | 'low' | 'none';  // Overall warning level
   // Bonus status - fouls against each team (opponent fouls = your free throws)
   homeBonusStatus?: BonusStatus;  // Based on away team's fouls against home
   awayBonusStatus?: BonusStatus;  // Based on home team's fouls against away

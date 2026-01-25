@@ -193,19 +193,39 @@ export default function GameCard({ game, onClick }: GameCardProps) {
         )}
       </div>
 
-      {/* Foul Game Warning - appears around 4 min mark for notable teams */}
-      {isLive && game.foulGameWarning && game.foulGameWarningMessage && (
-        <div className="mb-4 rounded-xl bg-gradient-to-r from-amber-900/40 to-orange-900/40 border border-amber-500/30 p-3">
+      {/* Foul Game Warning - appears around 4 min mark */}
+      {isLive && game.foulGameWarning && (
+        <div className={`mb-4 rounded-xl border p-3 ${
+          game.foulGameWarningLevel === 'high'
+            ? 'bg-gradient-to-r from-red-900/40 to-orange-900/40 border-red-500/30'
+            : game.foulGameWarningLevel === 'medium'
+            ? 'bg-gradient-to-r from-amber-900/40 to-orange-900/40 border-amber-500/30'
+            : 'bg-gradient-to-r from-slate-800/60 to-slate-700/40 border-slate-600/30'
+        }`}>
           <div className="flex items-center gap-2">
-            <span className="text-lg">⚠️</span>
-            <div>
-              <div className="text-xs font-bold text-amber-400 uppercase tracking-wide">Foul Game Alert</div>
-              <div className="text-sm text-amber-200/90 mt-0.5">{game.foulGameWarningMessage}</div>
-              {game.teamFoulGameImpact > 0 && (
-                <div className="text-xs text-amber-300/70 mt-1">
-                  Expect +{(5.8 + game.teamFoulGameImpact).toFixed(0)}-{(7.3 + game.teamFoulGameImpact).toFixed(0)} extra pts if foul game starts
-                </div>
+            <span className="text-lg">{game.foulGameWarningLevel === 'high' ? '🔥' : '⚠️'}</span>
+            <div className="flex-1">
+              <div className={`text-xs font-bold uppercase tracking-wide ${
+                game.foulGameWarningLevel === 'high' ? 'text-red-400' : 'text-amber-400'
+              }`}>
+                {game.foulGameWarningLevel === 'high' ? 'High Impact Foul Game' : 'Foul Game Alert'}
+              </div>
+              {game.foulGameWarningMessage && (
+                <div className="text-sm text-amber-200/90 mt-0.5">{game.foulGameWarningMessage}</div>
               )}
+              {/* Show team-specific info */}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {game.homeFoulGameInfo && (
+                  <span className="text-xs bg-slate-700/50 rounded px-2 py-0.5 text-slate-300">
+                    {game.homeTeam.split(' ')[0]}: {game.homeFoulGameInfo}
+                  </span>
+                )}
+                {game.awayFoulGameInfo && (
+                  <span className="text-xs bg-slate-700/50 rounded px-2 py-0.5 text-slate-300">
+                    {game.awayTeam.split(' ')[0]}: {game.awayFoulGameInfo}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>

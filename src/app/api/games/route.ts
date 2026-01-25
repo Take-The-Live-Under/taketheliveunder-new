@@ -12,7 +12,7 @@ import {
   getFoulGameAdjustment,
 } from '@/lib/calculations';
 import { logTrigger, hasBeenLoggedRecently, logGameSnapshots } from '@/lib/supabase';
-import { checkMatchupFoulGameTendencies } from '@/lib/teamFoulGameStats';
+import { analyzeMatchup } from '@/lib/allTeamFoulGameData';
 
 const ESPN_URL =
   'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard';
@@ -422,18 +422,18 @@ export async function GET() {
       const inFoulGame = status === 'in' && isInFoulGame(period, clockMinutes, clockSeconds, pointDiff);
       const baseFoulGameAdjustment = inFoulGame ? getFoulGameAdjustment(pointDiff) : null;
 
-      // Check team-specific foul game tendencies
-      const teamTendencies = checkMatchupFoulGameTendencies(homeTeam, awayTeam);
+      // Check team-specific foul game tendencies (now with data on 358 teams)
+      const matchupAnalysis = analyzeMatchup(homeTeam, awayTeam);
 
-      // Foul game warning: show at ~4 minutes (3-5 min) in 2nd half for close games with notable teams
+      // Foul game warning: show at ~4 minutes (3-5 min) in 2nd half for close games
       const secondsRemaining = clockMinutes * 60 + clockSeconds;
       const isCloseGame = pointDiff >= 1 && pointDiff <= 12; // Slightly wider range for warning
       const isWarningWindow = status === 'in' && period === 2 && secondsRemaining > 120 && secondsRemaining <= 300; // 2-5 min
-      const hasNotableTeams = teamTendencies.hasHighImpactTeam || teamTendencies.hasEarlyFouler;
-      const foulGameWarning = isWarningWindow && isCloseGame && hasNotableTeams;
+      const hasTeamData = matchupAnalysis.homeData !== null || matchupAnalysis.awayData !== null;
+      const foulGameWarning = isWarningWindow && isCloseGame && hasTeamData && matchupAnalysis.warningLevel !== 'none';
 
       // Team-specific extra impact (on top of base adjustment)
-      const teamFoulGameImpact = teamTendencies.totalExtraImpact;
+      const teamFoulGameImpact = matchupAnalysis.combinedImpact;
 
       // Total foul game adjustment includes team-specific impact
       const foulGameAdjustment = baseFoulGameAdjustment !== null
@@ -474,8 +474,13 @@ export async function GET() {
         foulGameAdjustment: foulGameAdjustment !== null ? Math.round(foulGameAdjustment * 10) / 10 : null,
         adjustedProjectedTotal,
         foulGameWarning,
-        foulGameWarningMessage: foulGameWarning ? teamTendencies.warningMessage : null,
+        foulGameWarningMessage: foulGameWarning && matchupAnalysis.combinedImpact > 0
+          ? `Expect +${(5.8 + matchupAnalysis.combinedImpact).toFixed(0)}-${(7.3 + matchupAnalysis.combinedImpact).toFixed(0)} extra pts in foul game`
+          : null,
         teamFoulGameImpact: Math.round(teamFoulGameImpact * 10) / 10,
+        homeFoulGameInfo: matchupAnalysis.homeInfo,
+        awayFoulGameInfo: matchupAnalysis.awayInfo,
+        foulGameWarningLevel: matchupAnalysis.warningLevel,
       };
     });
 
