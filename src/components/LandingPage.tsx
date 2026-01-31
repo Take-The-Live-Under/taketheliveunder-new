@@ -20,7 +20,19 @@ export default function LandingPage({ onAccess }: LandingPageProps) {
     setIsLoading(true);
     setError('');
 
-    // Pass email up to parent for registration
+    try {
+      // Save email to database
+      await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+    } catch (err) {
+      // Don't block access if save fails
+      console.error('Failed to save signup:', err);
+    }
+
+    // Pass email up to parent for access
     onAccess(email);
   };
 
