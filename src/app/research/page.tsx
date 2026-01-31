@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 
 interface Team {
@@ -60,37 +59,37 @@ interface MetricConfig {
 
 const METRICS: MetricConfig[] = [
   // Tempo & Scoring
-  { key: 'pace', label: 'Pace', description: 'Possessions per game', format: 'decimal', higherIsBetter: true, category: 'Tempo & Scoring' },
-  { key: 'avg_ppg', label: 'PPG', description: 'Points per game', format: 'decimal', higherIsBetter: true, category: 'Tempo & Scoring' },
-  { key: 'avg_ppm', label: 'PPM', description: 'Points per minute', format: 'decimal', higherIsBetter: true, category: 'Tempo & Scoring' },
+  { key: 'pace', label: 'PACE', description: 'Possessions per game', format: 'decimal', higherIsBetter: true, category: 'TEMPO' },
+  { key: 'avg_ppg', label: 'PPG', description: 'Points per game', format: 'decimal', higherIsBetter: true, category: 'TEMPO' },
+  { key: 'avg_ppm', label: 'PPM', description: 'Points per minute', format: 'decimal', higherIsBetter: true, category: 'TEMPO' },
 
   // Efficiency
-  { key: 'off_efficiency', label: 'Off Eff', description: 'Points per 100 possessions', format: 'decimal', higherIsBetter: true, category: 'Efficiency' },
+  { key: 'off_efficiency', label: 'OFF_EFF', description: 'Pts per 100 poss', format: 'decimal', higherIsBetter: true, category: 'EFFICIENCY' },
 
   // Shooting
-  { key: 'fg_pct', label: 'FG%', description: 'Field Goal Percentage', format: 'percent', higherIsBetter: true, category: 'Shooting' },
-  { key: 'efg_pct', label: 'eFG%', description: 'Effective FG% (accounts for 3s)', format: 'percent', higherIsBetter: true, category: 'Shooting' },
-  { key: 'ts_pct', label: 'TS%', description: 'True Shooting %', format: 'percent', higherIsBetter: true, category: 'Shooting' },
-  { key: 'three_p_pct', label: '3P%', description: '3-Point Percentage', format: 'percent', higherIsBetter: true, category: 'Shooting' },
-  { key: 'three_p_rate', label: '3P Rate', description: '3PA / FGA', format: 'percent', higherIsBetter: true, category: 'Shooting' },
-  { key: 'ft_pct', label: 'FT%', description: 'Free Throw Percentage', format: 'percent', higherIsBetter: true, category: 'Shooting' },
+  { key: 'fg_pct', label: 'FG%', description: 'Field Goal %', format: 'percent', higherIsBetter: true, category: 'SHOOTING' },
+  { key: 'efg_pct', label: 'eFG%', description: 'Effective FG%', format: 'percent', higherIsBetter: true, category: 'SHOOTING' },
+  { key: 'ts_pct', label: 'TS%', description: 'True Shooting %', format: 'percent', higherIsBetter: true, category: 'SHOOTING' },
+  { key: 'three_p_pct', label: '3P%', description: '3-Point %', format: 'percent', higherIsBetter: true, category: 'SHOOTING' },
+  { key: 'three_p_rate', label: '3P_RATE', description: '3PA / FGA', format: 'percent', higherIsBetter: true, category: 'SHOOTING' },
+  { key: 'ft_pct', label: 'FT%', description: 'Free Throw %', format: 'percent', higherIsBetter: true, category: 'SHOOTING' },
 
   // Rebounding
-  { key: 'oreb_pct', label: 'OReb%', description: 'Offensive Rebound Rate', format: 'percent', higherIsBetter: true, category: 'Rebounding' },
-  { key: 'dreb_pct', label: 'DReb%', description: 'Defensive Rebound Rate', format: 'percent', higherIsBetter: true, category: 'Rebounding' },
+  { key: 'oreb_pct', label: 'OREB%', description: 'Off Reb Rate', format: 'percent', higherIsBetter: true, category: 'REBOUNDING' },
+  { key: 'dreb_pct', label: 'DREB%', description: 'Def Reb Rate', format: 'percent', higherIsBetter: true, category: 'REBOUNDING' },
 
   // Ball Control
-  { key: 'assists_per_game', label: 'APG', description: 'Assists per game', format: 'decimal', higherIsBetter: true, category: 'Ball Control' },
-  { key: 'to_rate', label: 'TO/G', description: 'Turnovers per game', format: 'decimal', higherIsBetter: false, category: 'Ball Control' },
-  { key: 'ast_to_ratio', label: 'AST/TO', description: 'Assist to Turnover Ratio', format: 'decimal', higherIsBetter: true, category: 'Ball Control' },
+  { key: 'assists_per_game', label: 'APG', description: 'Assists/game', format: 'decimal', higherIsBetter: true, category: 'BALL_CTRL' },
+  { key: 'to_rate', label: 'TO/G', description: 'Turnovers/game', format: 'decimal', higherIsBetter: false, category: 'BALL_CTRL' },
+  { key: 'ast_to_ratio', label: 'AST/TO', description: 'Assist:TO Ratio', format: 'decimal', higherIsBetter: true, category: 'BALL_CTRL' },
 
   // Defense
-  { key: 'steals_per_game', label: 'SPG', description: 'Steals per game', format: 'decimal', higherIsBetter: true, category: 'Defense' },
-  { key: 'blocks_per_game', label: 'BPG', description: 'Blocks per game', format: 'decimal', higherIsBetter: true, category: 'Defense' },
-  { key: 'fouls_per_game', label: 'Fouls', description: 'Fouls per game', format: 'decimal', higherIsBetter: false, category: 'Defense' },
+  { key: 'steals_per_game', label: 'SPG', description: 'Steals/game', format: 'decimal', higherIsBetter: true, category: 'DEFENSE' },
+  { key: 'blocks_per_game', label: 'BPG', description: 'Blocks/game', format: 'decimal', higherIsBetter: true, category: 'DEFENSE' },
+  { key: 'fouls_per_game', label: 'FOULS', description: 'Fouls/game', format: 'decimal', higherIsBetter: false, category: 'DEFENSE' },
 
   // Rankings
-  { key: 'espn_rank', label: 'AP Rank', description: 'AP Poll Ranking', format: 'rank', higherIsBetter: false, category: 'Rankings' },
+  { key: 'espn_rank', label: 'AP_RANK', description: 'AP Poll Ranking', format: 'rank', higherIsBetter: false, category: 'RANKINGS' },
 ];
 
 const CATEGORIES = Array.from(new Set(METRICS.map(m => m.category)));
@@ -145,7 +144,6 @@ export default function ResearchPage() {
       try {
         const res = await fetch('/api/games');
         const data = await res.json();
-        // Get games that are scheduled or in progress
         const games: UpcomingGame[] = (data.games || [])
           .filter((g: { status: string }) => g.status === 'pre' || g.status === 'in')
           .map((g: { id: string; homeTeam: string; awayTeam: string; homeTeamId: string; awayTeamId: string; startTime: string; status: string; homeScore: number; awayScore: number }) => ({
@@ -177,7 +175,6 @@ export default function ResearchPage() {
 
     setComparing(true);
     try {
-      // Use team IDs if available, otherwise fall back to names
       const team1Param = team1.id && team1.id !== team1.name ? team1.id : team1.name;
       const team2Param = team2.id && team2.id !== team2.name ? team2.id : team2.name;
       const res = await fetch(`/api/teams?team1=${encodeURIComponent(team1Param)}&team2=${encodeURIComponent(team2Param)}`);
@@ -197,7 +194,6 @@ export default function ResearchPage() {
     fetchComparison();
   }, [fetchComparison]);
 
-  // Filter teams based on search
   const filteredTeams1 = teams.filter(t =>
     t.name.toLowerCase().includes(team1Search.toLowerCase())
   ).slice(0, 10);
@@ -218,9 +214,7 @@ export default function ResearchPage() {
 
   const visibleMetrics = METRICS.filter(m => selectedCategories.has(m.category));
 
-  // Select a game to analyze
   const selectGame = (game: UpcomingGame) => {
-    // Use ESPN team IDs directly - these are the reliable keys
     const awayTeamObj = { id: game.awayTeamId, name: game.awayTeam, rank: 0 };
     const homeTeamObj = { id: game.homeTeamId, name: game.homeTeam, rank: 0 };
 
@@ -230,35 +224,30 @@ export default function ResearchPage() {
     setTeam2Search('');
   };
 
-  // Format game time
   const formatGameTime = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 
   return (
-    <main className="min-h-screen bg-slate-900">
+    <main className="min-h-screen bg-[#0a0a0a] text-green-400 font-mono">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur-sm border-b border-slate-800">
+      <div className="sticky top-0 z-20 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-green-900/50">
         <div className="mx-auto max-w-4xl px-4 py-3">
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <Image
-                src="/logo.png"
-                alt="TakeTheLiveUnder"
-                width={140}
-                height={56}
-                className="h-10 w-auto"
-              />
+            <Link href="/" className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-lg font-bold tracking-tight text-green-400">TTLU_TERMINAL</span>
+              <span className="text-green-700 text-xs">v2.1.0</span>
             </Link>
             <div className="flex items-center gap-4">
               <Link
                 href="/"
-                className="text-sm text-slate-400 hover:text-white transition-colors"
+                className="text-xs text-green-600 hover:text-green-400 transition-colors"
               >
-                Live Games
+                LIVE
               </Link>
-              <span className="text-sm font-medium text-orange-400">Research</span>
+              <span className="text-xs font-medium text-green-400 border-b border-green-500">RESEARCH</span>
             </div>
           </div>
         </div>
@@ -267,47 +256,48 @@ export default function ResearchPage() {
       <div className="mx-auto max-w-4xl px-4 py-6">
         {/* Title */}
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-white mb-2">Team Research</h1>
-          <p className="text-slate-400 text-sm">
-            Compare any two NCAA teams head-to-head on KenPom & ESPN metrics
+          <div className="text-green-600 text-xs mb-2">// TEAM_ANALYSIS</div>
+          <h1 className="text-2xl font-bold text-green-400 mb-2">HEAD_TO_HEAD</h1>
+          <p className="text-green-700 text-sm">
+            Compare any two NCAA teams on KenPom & ESPN metrics
           </p>
         </div>
 
         {/* Upcoming Games */}
         {!loadingGames && upcomingGames.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-sm font-medium text-slate-400 mb-3">Today&apos;s Games — Click to analyze</h2>
+            <div className="text-green-600 text-xs mb-3">// TODAY&apos;S_GAMES — Click to analyze</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {upcomingGames.slice(0, 12).map((game) => (
                 <button
                   key={game.id}
                   onClick={() => selectGame(game)}
-                  className={`bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700 hover:border-orange-500/50 rounded-xl p-3 text-left transition-all ${
+                  className={`bg-green-900/20 hover:bg-green-900/40 border border-green-900 hover:border-green-700 p-3 text-left transition-all ${
                     team1?.name === game.awayTeam && team2?.name === game.homeTeam
-                      ? 'ring-2 ring-orange-500 border-orange-500'
+                      ? 'border-green-500 bg-green-900/40'
                       : ''
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className={`text-xs px-2 py-0.5 rounded ${
+                    <span className={`text-[10px] px-2 py-0.5 border ${
                       game.status === 'in'
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-slate-700 text-slate-400'
+                        ? 'border-green-600 text-green-400'
+                        : 'border-green-900 text-green-700'
                     }`}>
                       {game.status === 'in' ? 'LIVE' : formatGameTime(game.startTime)}
                     </span>
                   </div>
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-white truncate pr-2">{game.awayTeam}</span>
+                      <span className="text-xs text-green-400 truncate pr-2">{game.awayTeam}</span>
                       {game.status === 'in' && (
-                        <span className="text-sm font-medium text-slate-300">{game.awayScore}</span>
+                        <span className="text-xs font-medium text-green-300">{game.awayScore}</span>
                       )}
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-white truncate pr-2">{game.homeTeam}</span>
+                      <span className="text-xs text-green-400 truncate pr-2">{game.homeTeam}</span>
                       {game.status === 'in' && (
-                        <span className="text-sm font-medium text-slate-300">{game.homeScore}</span>
+                        <span className="text-xs font-medium text-green-300">{game.homeScore}</span>
                       )}
                     </div>
                   </div>
@@ -315,7 +305,7 @@ export default function ResearchPage() {
               ))}
             </div>
             {upcomingGames.length > 12 && (
-              <p className="text-center text-xs text-slate-500 mt-3">
+              <p className="text-center text-[10px] text-green-800 mt-3">
                 +{upcomingGames.length - 12} more games
               </p>
             )}
@@ -323,18 +313,18 @@ export default function ResearchPage() {
         )}
 
         {loadingGames && (
-          <div className="flex items-center justify-center gap-2 text-slate-400 mb-8">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-orange-500 border-t-transparent"></div>
-            <span className="text-sm">Loading today&apos;s games...</span>
+          <div className="flex items-center justify-center gap-2 text-green-600 mb-8">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-green-500 border-t-transparent"></div>
+            <span className="text-xs">LOADING_GAMES...</span>
           </div>
         )}
 
         {/* Divider */}
         {!loadingGames && upcomingGames.length > 0 && (
           <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 h-px bg-slate-700"></div>
-            <span className="text-xs text-slate-500 uppercase tracking-wide">Or search any team</span>
-            <div className="flex-1 h-px bg-slate-700"></div>
+            <div className="flex-1 h-px bg-green-900"></div>
+            <span className="text-[10px] text-green-700">// OR_SEARCH_ANY_TEAM</span>
+            <div className="flex-1 h-px bg-green-900"></div>
           </div>
         )}
 
@@ -342,11 +332,11 @@ export default function ResearchPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           {/* Team 1 Selector */}
           <div className="relative">
-            <label className="block text-sm font-medium text-slate-400 mb-2">Team 1</label>
+            <label className="block text-xs text-green-600 mb-2">TEAM_1</label>
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search teams..."
+                placeholder="SEARCH..."
                 value={team1 ? team1.name : team1Search}
                 onChange={(e) => {
                   setTeam1Search(e.target.value);
@@ -354,7 +344,7 @@ export default function ResearchPage() {
                   setShowTeam1Dropdown(true);
                 }}
                 onFocus={() => setShowTeam1Dropdown(true)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white placeholder-slate-500 focus:border-orange-500 focus:outline-none"
+                className="w-full border border-green-900 bg-black px-4 py-3 text-green-400 placeholder-green-800 focus:border-green-500 focus:outline-none text-sm"
               />
               {team1 && (
                 <button
@@ -363,16 +353,16 @@ export default function ResearchPage() {
                     setTeam1Search('');
                     setTeam1Stats(null);
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-green-700 hover:text-green-400"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               )}
             </div>
             {showTeam1Dropdown && !team1 && team1Search && (
-              <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-1 bg-black border border-green-900 max-h-60 overflow-y-auto">
                 {filteredTeams1.map((t) => (
                   <button
                     key={t.id}
@@ -381,16 +371,16 @@ export default function ResearchPage() {
                       setTeam1Search('');
                       setShowTeam1Dropdown(false);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 flex items-center justify-between"
+                    className="w-full px-4 py-2 text-left text-xs text-green-400 hover:bg-green-900/30 flex items-center justify-between"
                   >
                     <span>{t.name}</span>
                     {t.rank && t.rank < 100 && (
-                      <span className="text-xs text-slate-500">#{t.rank}</span>
+                      <span className="text-green-700">#{t.rank}</span>
                     )}
                   </button>
                 ))}
                 {filteredTeams1.length === 0 && (
-                  <div className="px-4 py-2 text-sm text-slate-500">No teams found</div>
+                  <div className="px-4 py-2 text-xs text-green-700">NO_TEAMS_FOUND</div>
                 )}
               </div>
             )}
@@ -398,11 +388,11 @@ export default function ResearchPage() {
 
           {/* Team 2 Selector */}
           <div className="relative">
-            <label className="block text-sm font-medium text-slate-400 mb-2">Team 2</label>
+            <label className="block text-xs text-green-600 mb-2">TEAM_2</label>
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search teams..."
+                placeholder="SEARCH..."
                 value={team2 ? team2.name : team2Search}
                 onChange={(e) => {
                   setTeam2Search(e.target.value);
@@ -410,7 +400,7 @@ export default function ResearchPage() {
                   setShowTeam2Dropdown(true);
                 }}
                 onFocus={() => setShowTeam2Dropdown(true)}
-                className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white placeholder-slate-500 focus:border-orange-500 focus:outline-none"
+                className="w-full border border-green-900 bg-black px-4 py-3 text-green-400 placeholder-green-800 focus:border-green-500 focus:outline-none text-sm"
               />
               {team2 && (
                 <button
@@ -419,16 +409,16 @@ export default function ResearchPage() {
                     setTeam2Search('');
                     setTeam2Stats(null);
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-green-700 hover:text-green-400"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               )}
             </div>
             {showTeam2Dropdown && !team2 && team2Search && (
-              <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+              <div className="absolute z-10 w-full mt-1 bg-black border border-green-900 max-h-60 overflow-y-auto">
                 {filteredTeams2.map((t) => (
                   <button
                     key={t.id}
@@ -437,16 +427,16 @@ export default function ResearchPage() {
                       setTeam2Search('');
                       setShowTeam2Dropdown(false);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 flex items-center justify-between"
+                    className="w-full px-4 py-2 text-left text-xs text-green-400 hover:bg-green-900/30 flex items-center justify-between"
                   >
                     <span>{t.name}</span>
                     {t.rank && t.rank < 100 && (
-                      <span className="text-xs text-slate-500">#{t.rank}</span>
+                      <span className="text-green-700">#{t.rank}</span>
                     )}
                   </button>
                 ))}
                 {filteredTeams2.length === 0 && (
-                  <div className="px-4 py-2 text-sm text-slate-500">No teams found</div>
+                  <div className="px-4 py-2 text-xs text-green-700">NO_TEAMS_FOUND</div>
                 )}
               </div>
             )}
@@ -455,16 +445,16 @@ export default function ResearchPage() {
 
         {/* Category Filters */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-slate-400 mb-2">Stat Categories</label>
+          <label className="block text-xs text-green-600 mb-2">// STAT_CATEGORIES</label>
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
                 onClick={() => toggleCategory(cat)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium transition-colors border ${
                   selectedCategories.has(cat)
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    ? 'bg-green-500 text-black border-green-500'
+                    : 'bg-transparent text-green-600 border-green-900 hover:border-green-700'
                 }`}
               >
                 {cat}
@@ -477,24 +467,24 @@ export default function ResearchPage() {
         {team1Stats && team2Stats ? (
           <div className="space-y-4">
             {/* Team Headers */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-3 gap-4 mb-6 border border-green-900 bg-green-900/20 p-4">
               <div className="text-center">
-                <p className="text-lg font-bold text-white">{team1Stats.team_name}</p>
-                <p className="text-sm text-slate-500">
+                <p className="text-lg font-bold text-green-400">{team1Stats.team_name}</p>
+                <p className="text-xs text-green-700">
                   {team1Stats.espn_rank && team1Stats.espn_rank < 26 ? (
-                    <span className="text-orange-400 font-medium">#{team1Stats.espn_rank} </span>
+                    <span className="text-yellow-400 font-medium">#{team1Stats.espn_rank} </span>
                   ) : ''}
                   {team1Stats.record || `${team1Stats.games_played} games`}
                 </p>
               </div>
               <div className="flex items-center justify-center">
-                <span className="text-2xl font-bold text-slate-600">VS</span>
+                <span className="text-xl font-bold text-green-700">VS</span>
               </div>
               <div className="text-center">
-                <p className="text-lg font-bold text-white">{team2Stats.team_name}</p>
-                <p className="text-sm text-slate-500">
+                <p className="text-lg font-bold text-green-400">{team2Stats.team_name}</p>
+                <p className="text-xs text-green-700">
                   {team2Stats.espn_rank && team2Stats.espn_rank < 26 ? (
-                    <span className="text-orange-400 font-medium">#{team2Stats.espn_rank} </span>
+                    <span className="text-yellow-400 font-medium">#{team2Stats.espn_rank} </span>
                   ) : ''}
                   {team2Stats.record || `${team2Stats.games_played} games`}
                 </p>
@@ -507,11 +497,11 @@ export default function ResearchPage() {
               if (categoryMetrics.length === 0) return null;
 
               return (
-                <div key={category} className="bg-slate-800/60 rounded-xl border border-slate-700 overflow-hidden">
-                  <div className="bg-slate-800 px-4 py-2 border-b border-slate-700">
-                    <h3 className="text-sm font-semibold text-white">{category}</h3>
+                <div key={category} className="border border-green-900 overflow-hidden">
+                  <div className="bg-green-900/30 px-4 py-2 border-b border-green-900">
+                    <h3 className="text-xs font-semibold text-green-400">// {category}</h3>
                   </div>
-                  <div className="divide-y divide-slate-700/50">
+                  <div className="divide-y divide-green-900/50">
                     {categoryMetrics.map((metric) => {
                       const val1 = team1Stats[metric.key] as number;
                       const val2 = team2Stats[metric.key] as number;
@@ -524,22 +514,24 @@ export default function ResearchPage() {
                         <div key={metric.key} className="grid grid-cols-3 gap-4 px-4 py-3">
                           <div className="text-right">
                             <span className={`text-sm font-medium ${
-                              isDraw ? 'text-slate-300' :
-                              team1Better ? 'text-green-400' : 'text-slate-400'
+                              isDraw ? 'text-green-600' :
+                              team1Better ? 'text-green-400' : 'text-green-700'
                             }`}>
+                              {team1Better && !isDraw && <span className="text-yellow-400 mr-1">*</span>}
                               {formatValue(val1, metric.format)}
                             </span>
                           </div>
                           <div className="text-center">
-                            <p className="text-sm font-medium text-slate-300">{metric.label}</p>
-                            <p className="text-xs text-slate-500">{metric.description}</p>
+                            <p className="text-xs font-medium text-green-500">{metric.label}</p>
+                            <p className="text-[10px] text-green-800">{metric.description}</p>
                           </div>
                           <div className="text-left">
                             <span className={`text-sm font-medium ${
-                              isDraw ? 'text-slate-300' :
-                              team2Better ? 'text-green-400' : 'text-slate-400'
+                              isDraw ? 'text-green-600' :
+                              team2Better ? 'text-green-400' : 'text-green-700'
                             }`}>
                               {formatValue(val2, metric.format)}
+                              {team2Better && !isDraw && <span className="text-yellow-400 ml-1">*</span>}
                             </span>
                           </div>
                         </div>
@@ -551,40 +543,41 @@ export default function ResearchPage() {
             })}
 
             {/* Legend */}
-            <div className="flex items-center justify-center gap-6 text-xs text-slate-500 pt-4">
+            <div className="flex items-center justify-center gap-6 text-[10px] text-green-700 pt-4">
               <span className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded bg-green-500/30"></span>
-                Advantage
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded bg-slate-700"></span>
-                Neutral
+                <span className="text-yellow-400">*</span>
+                ADVANTAGE
               </span>
             </div>
           </div>
         ) : (
-          <div className="text-center py-12">
+          <div className="text-center py-12 border border-green-900 bg-green-900/10">
             {comparing ? (
-              <div className="flex items-center justify-center gap-2 text-slate-400">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-orange-500 border-t-transparent"></div>
-                <span>Loading comparison...</span>
+              <div className="flex items-center justify-center gap-2 text-green-600">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-green-500 border-t-transparent"></div>
+                <span className="text-xs">LOADING_COMPARISON...</span>
               </div>
             ) : loading ? (
-              <div className="flex items-center justify-center gap-2 text-slate-400">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-orange-500 border-t-transparent"></div>
-                <span>Loading teams...</span>
+              <div className="flex items-center justify-center gap-2 text-green-600">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-green-500 border-t-transparent"></div>
+                <span className="text-xs">LOADING_TEAMS...</span>
               </div>
             ) : (
-              <div className="text-slate-500">
-                <svg className="w-16 h-16 mx-auto mb-4 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                <p className="text-lg font-medium mb-1">Select two teams to compare</p>
-                <p className="text-sm">Search and select teams above to see head-to-head stats</p>
+              <div className="text-green-700">
+                <div className="text-green-600 text-xs mb-4">// AWAITING_INPUT</div>
+                <p className="text-lg font-medium text-green-500 mb-1">SELECT_TWO_TEAMS</p>
+                <p className="text-xs">Search and select teams above to see head-to-head stats</p>
               </div>
             )}
           </div>
         )}
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-green-900/50 py-6 mt-12">
+        <div className="text-center text-green-800 text-[10px]">
+          TTLU_TERMINAL v2.1.0 | RESEARCH_MODULE
+        </div>
       </div>
     </main>
   );
