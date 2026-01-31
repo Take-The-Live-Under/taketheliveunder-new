@@ -71,16 +71,16 @@ export default function LandingPage({ onAccess }: LandingPageProps) {
             {/* Stats Grid */}
             <div className="grid grid-cols-3 gap-3 md:gap-4 mb-8">
               <div className="border border-green-900 p-3 md:p-4 terminal-glow-box">
-                <div className="text-2xl md:text-3xl font-bold text-green-400">69.7%</div>
-                <div className="text-green-700 text-[10px] md:text-xs mt-1">WIN_RATE</div>
-              </div>
-              <div className="border border-green-900 p-3 md:p-4 terminal-glow-box">
-                <div className="text-2xl md:text-3xl font-bold text-green-400">+33.1%</div>
-                <div className="text-green-700 text-[10px] md:text-xs mt-1">ROI</div>
+                <div className="text-2xl md:text-3xl font-bold text-green-400">162K+</div>
+                <div className="text-green-700 text-[10px] md:text-xs mt-1">DATA_POINTS</div>
               </div>
               <div className="border border-green-900 p-3 md:p-4 terminal-glow-box">
                 <div className="text-2xl md:text-3xl font-bold text-green-400">4,026</div>
-                <div className="text-green-700 text-[10px] md:text-xs mt-1">GAMES</div>
+                <div className="text-green-700 text-[10px] md:text-xs mt-1">GAMES_TRACKED</div>
+              </div>
+              <div className="border border-green-900 p-3 md:p-4 terminal-glow-box">
+                <div className="text-2xl md:text-3xl font-bold text-green-400">716</div>
+                <div className="text-green-700 text-[10px] md:text-xs mt-1">TEAMS</div>
               </div>
             </div>
 
@@ -245,8 +245,8 @@ export default function LandingPage({ onAccess }: LandingPageProps) {
               <div className="text-green-700 text-sm">No. This is a research tool for entertainment purposes. We surface statistical patterns. All decisions are yours. Past performance does not guarantee future results.</div>
             </div>
             <div className="border-l-2 border-green-800 pl-4">
-              <div className="text-green-400 font-bold mb-2">How accurate is it?</div>
-              <div className="text-green-700 text-sm">Our Golden Zone triggers have hit at a 69.7% rate across 4,026 games analyzed. We track every prediction and update our stats daily.</div>
+              <div className="text-green-400 font-bold mb-2">What data do you track?</div>
+              <div className="text-green-700 text-sm">We&apos;ve collected 162K+ data points across 4,026 games this season. Every score update, line movement, and pace calculation is logged and analyzed in real-time.</div>
             </div>
             <div className="border-l-2 border-green-800 pl-4">
               <div className="text-green-400 font-bold mb-2">What&apos;s the Golden Zone?</div>
