@@ -72,40 +72,40 @@ export default function AdminPage() {
   const getStrengthColor = (strength: string) => {
     switch (strength) {
       case 'STRONG':
-        return 'bg-green-500/20 text-green-400';
+        return 'border-green-500 text-green-400 bg-green-500/10';
       case 'GOOD':
-        return 'bg-green-400/20 text-green-300';
+        return 'border-green-600 text-green-500 bg-green-600/10';
       case 'MODERATE':
-        return 'bg-yellow-500/20 text-yellow-400';
+        return 'border-yellow-600 text-yellow-500 bg-yellow-600/10';
       default:
-        return 'bg-gray-500/20 text-gray-400';
+        return 'border-green-800 text-green-700 bg-green-800/10';
     }
   };
 
   return (
-    <main className="min-h-screen bg-gray-900 p-6">
+    <main className="min-h-screen bg-[#0a0a0a] p-4 md:p-6 font-mono">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 border-b border-green-800 pb-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">Trigger Logs</h1>
-            <p className="text-gray-400 text-sm mt-1">
-              {logs.length} triggered games recorded
+            <h1 className="text-xl md:text-2xl font-bold text-green-500 tracking-wider">TRIGGER_LOGS</h1>
+            <p className="text-green-700 text-xs mt-1">
+              {logs.length} TRIGGERED_GAMES_RECORDED
             </p>
           </div>
           <div className="flex gap-3">
             <button
               onClick={fetchLogs}
-              className="px-4 py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 transition-colors text-sm font-medium"
+              className="px-3 py-1.5 border border-green-700 text-green-500 hover:bg-green-900/30 transition-colors text-xs font-medium"
             >
-              Refresh
+              REFRESH
             </button>
             <button
               onClick={exportCSV}
               disabled={logs.length === 0}
-              className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-500 disabled:bg-gray-700 disabled:text-gray-500 transition-colors text-sm font-medium"
+              className="px-3 py-1.5 border border-green-500 text-green-400 hover:bg-green-500/20 disabled:border-green-800 disabled:text-green-800 transition-colors text-xs font-medium"
             >
-              Export CSV
+              EXPORT_CSV
             </button>
           </div>
         </div>
@@ -113,27 +113,23 @@ export default function AdminPage() {
         {/* Loading */}
         {loading && (
           <div className="flex items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-green-500 border-t-transparent"></div>
+            <div className="text-green-500 text-sm">LOADING_DATA...</div>
           </div>
         )}
 
         {/* Error */}
         {error && (
-          <div className="rounded-xl border border-red-500/50 bg-red-900/20 p-4 text-red-400">
-            {error}
+          <div className="border border-red-700 bg-red-900/20 p-4 text-red-400 text-sm">
+            ERROR: {error}
           </div>
         )}
 
         {/* Empty State */}
         {!loading && !error && logs.length === 0 && (
-          <div className="rounded-xl border border-gray-700 bg-gray-800/50 p-12 text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <p className="text-lg font-semibold text-gray-200 mb-2">No Logs Yet</p>
-            <p className="text-sm text-gray-500">
+          <div className="border border-green-800 bg-green-900/10 p-12 text-center">
+            <div className="text-4xl mb-4 text-green-600">[ ]</div>
+            <p className="text-green-500 font-medium mb-2">NO_LOGS_FOUND</p>
+            <p className="text-xs text-green-700">
               Triggered games will appear here as they happen.
             </p>
           </div>
@@ -141,26 +137,26 @@ export default function AdminPage() {
 
         {/* Logs Table */}
         {!loading && logs.length > 0 && (
-          <div className="rounded-xl border border-gray-700 overflow-hidden">
+          <div className="border border-green-800 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-800/80">
+              <table className="w-full text-xs">
+                <thead className="bg-green-900/30 border-b border-green-800">
                   <tr>
-                    <th className="text-left px-4 py-3 text-gray-400 font-medium">Time</th>
-                    <th className="text-left px-4 py-3 text-gray-400 font-medium">Matchup</th>
-                    <th className="text-center px-4 py-3 text-gray-400 font-medium">Score</th>
-                    <th className="text-center px-4 py-3 text-gray-400 font-medium">O/U</th>
-                    <th className="text-center px-4 py-3 text-gray-400 font-medium">Req PPM</th>
-                    <th className="text-center px-4 py-3 text-gray-400 font-medium">Cur PPM</th>
-                    <th className="text-center px-4 py-3 text-gray-400 font-medium">PPM Diff</th>
-                    <th className="text-center px-4 py-3 text-gray-400 font-medium">Min Left</th>
-                    <th className="text-center px-4 py-3 text-gray-400 font-medium">Strength</th>
+                    <th className="text-left px-3 py-2 text-green-600 font-medium">TIME</th>
+                    <th className="text-left px-3 py-2 text-green-600 font-medium">MATCHUP</th>
+                    <th className="text-center px-3 py-2 text-green-600 font-medium">SCORE</th>
+                    <th className="text-center px-3 py-2 text-green-600 font-medium">O/U</th>
+                    <th className="text-center px-3 py-2 text-green-600 font-medium">REQ_PPM</th>
+                    <th className="text-center px-3 py-2 text-green-600 font-medium">CUR_PPM</th>
+                    <th className="text-center px-3 py-2 text-green-600 font-medium">PPM_DIFF</th>
+                    <th className="text-center px-3 py-2 text-green-600 font-medium">MIN_LEFT</th>
+                    <th className="text-center px-3 py-2 text-green-600 font-medium">STRENGTH</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-800">
+                <tbody className="divide-y divide-green-900">
                   {logs.map((log) => (
-                    <tr key={log.id} className="bg-gray-900/50 hover:bg-gray-800/50 transition-colors">
-                      <td className="px-4 py-3 text-gray-300 whitespace-nowrap">
+                    <tr key={log.id} className="hover:bg-green-900/20 transition-colors">
+                      <td className="px-3 py-2 text-green-400 whitespace-nowrap">
                         {new Date(log.created_at!).toLocaleString([], {
                           month: 'short',
                           day: 'numeric',
@@ -168,30 +164,30 @@ export default function AdminPage() {
                           minute: '2-digit',
                         })}
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="text-gray-200">{log.away_team}</div>
-                        <div className="text-gray-400 text-xs">@ {log.home_team}</div>
+                      <td className="px-3 py-2">
+                        <div className="text-green-300">{log.away_team}</div>
+                        <div className="text-green-600 text-xs">@ {log.home_team}</div>
                       </td>
-                      <td className="px-4 py-3 text-center text-white font-medium">
+                      <td className="px-3 py-2 text-center text-green-400 font-medium">
                         {log.away_score}-{log.home_score}
                       </td>
-                      <td className="px-4 py-3 text-center text-yellow-400 font-medium">
+                      <td className="px-3 py-2 text-center text-yellow-500 font-medium">
                         {log.ou_line}
                       </td>
-                      <td className="px-4 py-3 text-center text-green-400 font-medium">
+                      <td className="px-3 py-2 text-center text-green-400 font-medium">
                         {log.required_ppm.toFixed(2)}
                       </td>
-                      <td className="px-4 py-3 text-center text-gray-300">
+                      <td className="px-3 py-2 text-center text-green-500">
                         {log.current_ppm.toFixed(2)}
                       </td>
-                      <td className="px-4 py-3 text-center text-green-400 font-medium">
+                      <td className="px-3 py-2 text-center text-green-400 font-medium">
                         +{log.ppm_difference.toFixed(2)}
                       </td>
-                      <td className="px-4 py-3 text-center text-gray-300">
+                      <td className="px-3 py-2 text-center text-green-500">
                         {log.minutes_remaining.toFixed(1)}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${getStrengthColor(log.trigger_strength)}`}>
+                      <td className="px-3 py-2 text-center">
+                        <span className={`px-2 py-0.5 border text-xs font-bold ${getStrengthColor(log.trigger_strength)}`}>
                           {log.trigger_strength}
                         </span>
                       </td>
@@ -207,9 +203,9 @@ export default function AdminPage() {
         <div className="mt-6 text-center">
           <a
             href="/"
-            className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+            className="text-xs text-green-700 hover:text-green-500 transition-colors"
           >
-            Back to Dashboard
+            &lt; BACK_TO_DASHBOARD
           </a>
         </div>
       </div>
