@@ -284,10 +284,12 @@ export default function GameCard({ game, onClick }: GameCardProps) {
           <div className="flex items-center justify-between">
             <span className="text-xs text-green-700">PROJ_FINAL</span>
             <span className={`text-sm font-bold tabular-nums ${
-              projectedFinal < game.ouLine ? 'text-green-400' : 'text-red-400'
+              game.inFoulGame
+                ? 'text-red-400'
+                : projectedFinal < game.ouLine ? 'text-green-400' : 'text-red-400'
             }`}>
               {projectedFinal.toFixed(1)}
-              <span className="text-[10px] text-green-700 ml-2">
+              <span className={`text-[10px] ml-2 ${game.inFoulGame ? 'text-red-400' : 'text-green-700'}`}>
                 ({projectedFinal < game.ouLine ? 'UNDER' : 'OVER'} {Math.abs(projectedFinal - game.ouLine).toFixed(1)})
               </span>
             </span>
