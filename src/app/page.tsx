@@ -171,14 +171,19 @@ export default function Home() {
         <div className="mx-auto max-w-2xl px-4 py-3">
           {/* Logo Row */}
           <div className="flex items-center justify-between mb-4">
-            <Image
-              src="/logo.png"
-              alt="TakeTheLiveUnder"
-              width={180}
-              height={72}
-              className="h-14 w-auto"
-              priority
-            />
+            <div className="flex items-center gap-2">
+              <Image
+                src="/logo.png"
+                alt="TakeTheLiveUnder"
+                width={180}
+                height={72}
+                className="h-14 w-auto"
+                priority
+              />
+              <span className="rounded bg-green-500/20 border border-green-500/30 px-1.5 py-0.5 text-[10px] font-medium text-green-400">
+                v2.0
+              </span>
+            </div>
             <div className="flex items-center gap-4">
               <Link
                 href="/research"
