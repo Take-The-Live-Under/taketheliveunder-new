@@ -17,27 +17,27 @@ function getPeriodDisplay(game: Game): string {
     const otNumber = game.period - 2;
     return otNumber > 1 ? `OT${otNumber}` : 'OT';
   }
-  if (game.period === 1) return '1st Half';
-  if (game.period === 2) return '2nd Half';
-  return `Period ${game.period}`;
+  if (game.period === 1) return 'H1';
+  if (game.period === 2) return 'H2';
+  return `P${game.period}`;
 }
 
 // Edge color coding based on PPM difference
 function getEdgeColor(edge: number | null): { bg: string; text: string; label: string } {
-  if (edge === null) return { bg: 'bg-slate-700', text: 'text-slate-400', label: '' };
+  if (edge === null) return { bg: 'bg-green-900/30', text: 'text-green-700', label: '' };
 
   const absEdge = Math.abs(edge);
 
   if (absEdge >= 1.5) {
-    return { bg: 'bg-red-500/20', text: 'text-red-400', label: 'STRONG' };
+    return { bg: 'bg-yellow-900/40', text: 'text-yellow-400', label: 'STRONG' };
   }
   if (absEdge >= 1.0) {
-    return { bg: 'bg-orange-500/20', text: 'text-orange-400', label: 'GOOD' };
+    return { bg: 'bg-green-900/40', text: 'text-green-400', label: 'GOOD' };
   }
   if (absEdge >= 0.5) {
-    return { bg: 'bg-green-500/20', text: 'text-green-400', label: 'MODERATE' };
+    return { bg: 'bg-green-900/30', text: 'text-green-500', label: 'MODERATE' };
   }
-  return { bg: 'bg-slate-700', text: 'text-slate-400', label: '' };
+  return { bg: 'bg-green-900/20', text: 'text-green-700', label: '' };
 }
 
 // Calculate trigger strength (0-100) based on how far above 4.5 the required PPM is
@@ -76,42 +76,42 @@ export default function GameCard({ game, onClick }: GameCardProps) {
   // Determine card styling based on trigger type
   const getCardStyle = () => {
     if (isUnderTriggered) {
-      return 'border-yellow-500 bg-gradient-to-br from-yellow-900/20 to-slate-900 shadow-lg shadow-yellow-500/20 animate-pulse-glow';
+      return 'border-yellow-500/50 bg-black/60 terminal-glow-box';
     }
     if (isOverTriggered) {
-      return 'border-blue-500 bg-gradient-to-br from-slate-800 to-slate-900 shadow-lg shadow-blue-500/10';
+      return 'border-green-500/50 bg-black/60';
     }
-    return 'border-slate-700 bg-slate-800/50 hover:border-slate-600';
+    return 'border-green-900 bg-black/40 hover:border-green-700';
   };
 
   return (
     <div
       onClick={onClick}
-      className={`rounded-2xl border-2 p-5 transition-all duration-300 card-enter ${getCardStyle()} ${onClick ? 'cursor-pointer active:scale-[0.98]' : ''}`}
+      className={`border p-4 transition-all duration-200 card-enter font-mono ${getCardStyle()} ${onClick ? 'cursor-pointer active:scale-[0.99]' : ''}`}
     >
       {/* Trigger Badge */}
       {(isUnderTriggered || isOverTriggered) && (
-        <div className="mb-4">
+        <div className="mb-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="relative flex h-3 w-3">
-                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${isUnderTriggered ? 'bg-yellow-400' : 'bg-blue-400'} opacity-75`}></span>
-                <span className={`relative inline-flex h-3 w-3 rounded-full ${isUnderTriggered ? 'bg-yellow-500' : 'bg-blue-500'}`}></span>
+              <span className="relative flex h-2.5 w-2.5">
+                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${isUnderTriggered ? 'bg-yellow-400' : 'bg-green-400'} opacity-75`}></span>
+                <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${isUnderTriggered ? 'bg-yellow-500' : 'bg-green-500'}`}></span>
               </span>
-              <span className={`text-sm font-bold uppercase tracking-wide ${isUnderTriggered ? 'text-yellow-400' : 'text-blue-400'}`}>
-                {isUnderTriggered ? 'Golden Zone' : 'Over Edge'}
+              <span className={`text-xs font-bold uppercase tracking-wide ${isUnderTriggered ? 'text-yellow-400' : 'text-green-400'}`}>
+                {isUnderTriggered ? 'GOLDEN_ZONE' : 'OVER_EDGE'}
               </span>
             </div>
-            {edge !== null && (
-              <span className={`text-xs font-bold px-2 py-1 rounded ${edgeStyle.bg} ${edgeStyle.text}`}>
+            {edge !== null && edgeStyle.label && (
+              <span className={`text-[10px] font-bold px-2 py-0.5 border ${isUnderTriggered ? 'border-yellow-700 text-yellow-400' : 'border-green-700 text-green-400'}`}>
                 {edgeStyle.label}
               </span>
             )}
           </div>
           {isUnderTriggered && (
-            <div className="mt-2 h-1.5 w-full bg-slate-700 rounded-full overflow-hidden">
+            <div className="mt-2 h-1 w-full bg-green-900/50 overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-yellow-500 to-orange-400"
+                className="h-full transition-all duration-500 bg-gradient-to-r from-yellow-500 to-yellow-400"
                 style={{ width: `${triggerStrength}%` }}
               />
             </div>
@@ -120,74 +120,74 @@ export default function GameCard({ game, onClick }: GameCardProps) {
       )}
 
       {/* Teams & Score */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between gap-3 py-2">
+      <div className="mb-3">
+        <div className="flex items-center justify-between gap-3 py-1.5">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="text-xs text-slate-500 font-medium w-10">AWAY</span>
-            <span className="text-base font-semibold text-slate-100 truncate">{game.awayTeam}</span>
+            <span className="text-[10px] text-green-700 font-medium w-8">AWAY</span>
+            <span className="text-sm font-semibold text-green-400 truncate">{game.awayTeam}</span>
             {/* Away team bonus indicator */}
             {isLive && game.awayBonusStatus && (game.awayBonusStatus.inBonus || game.awayBonusStatus.inDoubleBonus) && (
-              <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold border ${
                 game.awayBonusStatus.inDoubleBonus
-                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                  : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                  ? 'border-red-700 text-red-400'
+                  : 'border-yellow-700 text-yellow-400'
               }`}>
-                {game.awayBonusStatus.inDoubleBonus ? '2X' : 'BONUS'}
+                {game.awayBonusStatus.inDoubleBonus ? '2X' : 'BNS'}
               </span>
             )}
           </div>
-          <span className="text-2xl font-bold text-white tabular-nums">{game.awayScore}</span>
+          <span className="text-xl font-bold text-green-400 tabular-nums">{game.awayScore}</span>
         </div>
-        <div className="flex items-center justify-between gap-3 py-2">
+        <div className="flex items-center justify-between gap-3 py-1.5 border-t border-green-900/30">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="text-xs text-slate-500 font-medium w-10">HOME</span>
-            <span className="text-base font-semibold text-slate-100 truncate">{game.homeTeam}</span>
+            <span className="text-[10px] text-green-700 font-medium w-8">HOME</span>
+            <span className="text-sm font-semibold text-green-400 truncate">{game.homeTeam}</span>
             {/* Home team bonus indicator */}
             {isLive && game.homeBonusStatus && (game.homeBonusStatus.inBonus || game.homeBonusStatus.inDoubleBonus) && (
-              <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold border ${
                 game.homeBonusStatus.inDoubleBonus
-                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                  : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                  ? 'border-red-700 text-red-400'
+                  : 'border-yellow-700 text-yellow-400'
               }`}>
-                {game.homeBonusStatus.inDoubleBonus ? '2X' : 'BONUS'}
+                {game.homeBonusStatus.inDoubleBonus ? '2X' : 'BNS'}
               </span>
             )}
           </div>
-          <span className="text-2xl font-bold text-white tabular-nums">{game.homeScore}</span>
+          <span className="text-xl font-bold text-green-400 tabular-nums">{game.homeScore}</span>
         </div>
       </div>
 
       {/* Game Status Bar */}
-      <div className="mb-4 flex items-center gap-3 bg-slate-800/80 rounded-xl px-4 py-3">
+      <div className="mb-3 flex items-center gap-3 bg-green-900/20 border border-green-900/50 px-3 py-2">
         {isLive ? (
           <>
             <span className="relative flex h-2 w-2 flex-shrink-0">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
             </span>
-            <span className="text-sm font-semibold text-red-400">
-              {game.clock} · {getPeriodDisplay(game)}
+            <span className="text-xs font-semibold text-green-400">
+              {game.clock} | {getPeriodDisplay(game)}
             </span>
-            <span className="text-xs text-slate-500 ml-auto">
-              {game.minutesRemainingReg.toFixed(1)} min left
+            <span className="text-[10px] text-green-700 ml-auto">
+              {game.minutesRemainingReg.toFixed(1)}m LEFT
             </span>
           </>
         ) : game.status === 'post' ? (
-          <span className="text-sm font-medium text-slate-400">Final</span>
+          <span className="text-xs font-medium text-green-600">FINAL</span>
         ) : (
           <div className="flex items-center gap-2">
             {game.isTomorrow && (
-              <span className="rounded bg-purple-500/20 border border-purple-500/30 px-2 py-0.5 text-xs font-medium text-purple-400">
-                Tomorrow
+              <span className="border border-green-700 px-2 py-0.5 text-[10px] font-medium text-green-500">
+                TOMORROW
               </span>
             )}
-            <span className="text-sm font-medium text-blue-400">
+            <span className="text-xs font-medium text-green-500">
               {new Date(game.startTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
             </span>
           </div>
         )}
         {game.isOvertime && (
-          <span className="rounded bg-yellow-500/20 px-2 py-0.5 text-xs font-bold text-yellow-400">
+          <span className="border border-yellow-700 px-2 py-0.5 text-[10px] font-bold text-yellow-400">
             OT
           </span>
         )}
@@ -195,33 +195,32 @@ export default function GameCard({ game, onClick }: GameCardProps) {
 
       {/* Foul Game Warning - appears around 4 min mark */}
       {isLive && game.foulGameWarning && (
-        <div className={`mb-4 rounded-xl border p-3 ${
+        <div className={`mb-3 border p-3 ${
           game.foulGameWarningLevel === 'high'
-            ? 'bg-gradient-to-r from-red-900/40 to-orange-900/40 border-red-500/30'
+            ? 'bg-red-900/20 border-red-700/50'
             : game.foulGameWarningLevel === 'medium'
-            ? 'bg-gradient-to-r from-amber-900/40 to-orange-900/40 border-amber-500/30'
-            : 'bg-gradient-to-r from-slate-800/60 to-slate-700/40 border-slate-600/30'
+            ? 'bg-yellow-900/20 border-yellow-700/50'
+            : 'bg-green-900/20 border-green-700/50'
         }`}>
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{game.foulGameWarningLevel === 'high' ? '🔥' : '⚠️'}</span>
+          <div className="flex items-start gap-2">
             <div className="flex-1">
-              <div className={`text-xs font-bold uppercase tracking-wide ${
-                game.foulGameWarningLevel === 'high' ? 'text-red-400' : 'text-amber-400'
+              <div className={`text-[10px] font-bold uppercase tracking-wide ${
+                game.foulGameWarningLevel === 'high' ? 'text-red-400' : 'text-yellow-400'
               }`}>
-                {game.foulGameWarningLevel === 'high' ? '🏀 Free Throw Frenzy - High Impact' : '🏀 Free Throw Frenzy Alert'}
+                // FT_FRENZY {game.foulGameWarningLevel === 'high' ? '- HIGH IMPACT' : ''}
               </div>
               {game.foulGameWarningMessage && (
-                <div className="text-sm text-amber-200/90 mt-0.5">{game.foulGameWarningMessage}</div>
+                <div className="text-xs text-green-500 mt-1">{game.foulGameWarningMessage}</div>
               )}
               {/* Show team-specific info */}
               <div className="flex flex-wrap gap-2 mt-2">
                 {game.homeFoulGameInfo && (
-                  <span className="text-xs bg-slate-700/50 rounded px-2 py-0.5 text-slate-300">
+                  <span className="text-[10px] bg-green-900/30 border border-green-900 px-2 py-0.5 text-green-500">
                     {game.homeTeam.split(' ')[0]}: {game.homeFoulGameInfo}
                   </span>
                 )}
                 {game.awayFoulGameInfo && (
-                  <span className="text-xs bg-slate-700/50 rounded px-2 py-0.5 text-slate-300">
+                  <span className="text-[10px] bg-green-900/30 border border-green-900 px-2 py-0.5 text-green-500">
                     {game.awayTeam.split(' ')[0]}: {game.awayFoulGameInfo}
                   </span>
                 )}
@@ -233,90 +232,85 @@ export default function GameCard({ game, onClick }: GameCardProps) {
 
       {/* Metrics Grid for Live Games */}
       {isLive && (
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-4 gap-2 mb-3">
           {/* Current Total */}
-          <div className="bg-slate-800/60 rounded-xl p-3 text-center">
-            <div className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">Score</div>
-            <div className="text-xl font-bold text-white tabular-nums">{game.liveTotal}</div>
+          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
+            <div className="text-[10px] text-green-700 uppercase tracking-wide">SCORE</div>
+            <div className="text-lg font-bold text-green-400 tabular-nums">{game.liveTotal}</div>
           </div>
 
           {/* O/U Line */}
-          <div className="bg-slate-800/60 rounded-xl p-3 text-center">
-            <div className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">O/U</div>
-            <div className="text-xl font-bold text-yellow-400 tabular-nums">
+          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
+            <div className="text-[10px] text-green-700 uppercase tracking-wide">O/U</div>
+            <div className="text-lg font-bold text-green-400 tabular-nums">
               {game.ouLine !== null ? game.ouLine.toFixed(1) : '—'}
             </div>
           </div>
 
-          {/* Edge */}
-          <div className={`rounded-xl p-3 text-center ${edgeStyle.bg}`}>
-            <div className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">Edge</div>
-            <div className={`text-xl font-bold tabular-nums ${edgeStyle.text}`}>
-              {edge !== null ? (edge > 0 ? '+' : '') + edge.toFixed(2) : '—'}
+          {/* Required PPM */}
+          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
+            <div className="text-[10px] text-green-700 uppercase tracking-wide">REQ_PPM</div>
+            <div className={`text-lg font-bold tabular-nums ${isUnderFriendly ? 'text-yellow-400' : 'text-green-400'}`}>
+              {formatPPM(game.requiredPPM)}
+            </div>
+          </div>
+
+          {/* Current PPM */}
+          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
+            <div className="text-[10px] text-green-700 uppercase tracking-wide">CUR_PPM</div>
+            <div className="text-lg font-bold text-green-400 tabular-nums">
+              {formatPPM(game.currentPPM)}
             </div>
           </div>
         </div>
       )}
 
-      {/* PPM Details Row */}
-      {isLive && (
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          {/* Current PPM */}
-          <div className="bg-slate-800/60 rounded-xl p-3">
-            <div className="flex items-center justify-between">
-              <div className="text-[10px] text-slate-500 uppercase tracking-wide">Current PPM</div>
-              <div className="text-lg font-bold text-slate-200 tabular-nums">
-                {formatPPM(game.currentPPM)}
-              </div>
-            </div>
-          </div>
-
-          {/* Required PPM */}
-          <div className="bg-slate-800/60 rounded-xl p-3">
-            <div className="flex items-center justify-between">
-              <div className="text-[10px] text-slate-500 uppercase tracking-wide">Required PPM</div>
-              <div className={`text-lg font-bold tabular-nums ${isUnderFriendly ? 'text-orange-400' : 'text-slate-200'}`}>
-                {formatPPM(game.requiredPPM)}
-              </div>
-            </div>
+      {/* Edge Display */}
+      {isLive && edge !== null && (
+        <div className={`border p-2 mb-3 ${edgeStyle.bg} ${isUnderTriggered ? 'border-yellow-700/50' : 'border-green-900/50'}`}>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-green-700 uppercase">EDGE</span>
+            <span className={`text-lg font-bold tabular-nums ${edgeStyle.text}`}>
+              {edge > 0 ? '+' : ''}{edge.toFixed(2)}
+            </span>
           </div>
         </div>
       )}
 
       {/* Projected Final - with foul game adjustment */}
       {isLive && projectedFinal !== null && game.ouLine !== null && (
-        <div className="bg-slate-800/60 rounded-xl p-3 mb-4">
+        <div className="bg-green-900/20 border border-green-900/50 p-3 mb-3">
           {/* Base projection */}
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-400">Projected Final</span>
-            <span className={`text-lg font-bold tabular-nums ${
+            <span className="text-xs text-green-700">PROJ_FINAL</span>
+            <span className={`text-sm font-bold tabular-nums ${
               projectedFinal < game.ouLine ? 'text-green-400' : 'text-red-400'
             }`}>
               {projectedFinal.toFixed(1)}
-              <span className="text-xs text-slate-500 ml-2">
-                ({projectedFinal < game.ouLine ? 'Under' : 'Over'} by {Math.abs(projectedFinal - game.ouLine).toFixed(1)})
+              <span className="text-[10px] text-green-700 ml-2">
+                ({projectedFinal < game.ouLine ? 'UNDER' : 'OVER'} {Math.abs(projectedFinal - game.ouLine).toFixed(1)})
               </span>
             </span>
           </div>
 
           {/* Foul game adjusted projection */}
           {game.inFoulGame && game.adjustedProjectedTotal !== null && game.foulGameAdjustment !== null && (
-            <div className="mt-3 pt-3 border-t border-slate-700">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75"></span>
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500"></span>
+            <div className="mt-2 pt-2 border-t border-green-900/50">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-yellow-400 opacity-75"></span>
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-yellow-500"></span>
                 </span>
-                <span className="text-xs font-semibold text-orange-400 uppercase tracking-wide">🏀 Free Throw Frenzy Active</span>
+                <span className="text-[10px] font-semibold text-yellow-400 uppercase tracking-wide">FT_FRENZY_ACTIVE</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Adjusted Projection</span>
-                <span className={`text-lg font-bold tabular-nums ${
+                <span className="text-xs text-green-700">ADJ_PROJ</span>
+                <span className={`text-sm font-bold tabular-nums ${
                   game.adjustedProjectedTotal < game.ouLine ? 'text-green-400' : 'text-red-400'
                 }`}>
                   {game.adjustedProjectedTotal.toFixed(1)}
-                  <span className="text-xs text-orange-400 ml-2">
-                    (+{game.foulGameAdjustment.toFixed(1)} FTF pts)
+                  <span className="text-[10px] text-yellow-500 ml-2">
+                    (+{game.foulGameAdjustment.toFixed(1)} FTF)
                   </span>
                 </span>
               </div>
@@ -327,17 +321,17 @@ export default function GameCard({ game, onClick }: GameCardProps) {
 
       {/* Simplified view for non-live games */}
       {!isLive && (
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-slate-800/60 rounded-xl p-4">
-            <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">O/U Line</div>
-            <div className="text-2xl font-bold text-yellow-400 tabular-nums">
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="bg-green-900/20 border border-green-900/50 p-3">
+            <div className="text-[10px] text-green-700 uppercase tracking-wide mb-1">O/U_LINE</div>
+            <div className="text-xl font-bold text-green-400 tabular-nums">
               {game.ouLine !== null ? game.ouLine.toFixed(1) : '—'}
             </div>
           </div>
-          <div className="bg-slate-800/60 rounded-xl p-4">
-            <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">Status</div>
-            <div className="text-2xl font-bold text-slate-200">
-              {game.status === 'pre' ? 'Scheduled' : 'Final'}
+          <div className="bg-green-900/20 border border-green-900/50 p-3">
+            <div className="text-[10px] text-green-700 uppercase tracking-wide mb-1">STATUS</div>
+            <div className="text-xl font-bold text-green-500">
+              {game.status === 'pre' ? 'SCHED' : 'FINAL'}
             </div>
           </div>
         </div>
@@ -345,19 +339,19 @@ export default function GameCard({ game, onClick }: GameCardProps) {
 
       {/* CTA for triggered games */}
       {isUnderTriggered && game.ouLine !== null && (
-        <div className="rounded-xl bg-gradient-to-r from-yellow-600 to-orange-500 p-4 text-center shadow-lg">
-          <div className="text-xs text-yellow-100 uppercase tracking-wider mb-1">Golden Zone Signal</div>
-          <div className="text-xl font-bold text-white">
+        <div className="border border-yellow-500/50 bg-yellow-900/20 p-3 text-center terminal-glow-box">
+          <div className="text-[10px] text-yellow-500 uppercase tracking-wider mb-1">// GOLDEN_ZONE_SIGNAL</div>
+          <div className="text-xl font-bold text-yellow-400">
             UNDER {game.ouLine.toFixed(1)}
           </div>
-          <div className="text-xs text-yellow-200/80 mt-1">69.7% Win Rate</div>
+          <div className="text-[10px] text-yellow-600 mt-1">WIN_RATE: 69.7%</div>
         </div>
       )}
 
       {isOverTriggered && game.ouLine !== null && (
-        <div className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 p-4 text-center shadow-lg">
-          <div className="text-xs text-blue-100 uppercase tracking-wider mb-1">Signal</div>
-          <div className="text-xl font-bold text-white">
+        <div className="border border-green-500/50 bg-green-900/20 p-3 text-center">
+          <div className="text-[10px] text-green-500 uppercase tracking-wider mb-1">// SIGNAL</div>
+          <div className="text-xl font-bold text-green-400">
             OVER {game.ouLine.toFixed(1)}
           </div>
         </div>
@@ -365,12 +359,8 @@ export default function GameCard({ game, onClick }: GameCardProps) {
 
       {/* Tap indicator */}
       {onClick && (
-        <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-slate-500">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-          <span>Tap for details</span>
+        <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-green-800">
+          <span>// TAP_FOR_DETAILS</span>
         </div>
       )}
     </div>
