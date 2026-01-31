@@ -850,7 +850,7 @@ export default function ResearchPage() {
               </button>
             </div>
           </div>
-        )
+        )}
 
         {/* Empty State - Single Mode */}
         {viewMode === 'single' && !selectedTeam && !analyzing && (
