@@ -2,13 +2,25 @@
 
 import { useEffect, useRef } from 'react';
 
-// Generate a simple session ID that persists for the browser session
+// Generate a persistent user ID that survives across sessions (localStorage)
+function getUserId(): string {
+  if (typeof window === 'undefined') return '';
+
+  let userId = localStorage.getItem('ttlu_user_id');
+  if (!userId) {
+    userId = `u_${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('ttlu_user_id', userId);
+  }
+  return userId;
+}
+
+// Generate a session ID that persists for the browser session (sessionStorage)
 function getSessionId(): string {
   if (typeof window === 'undefined') return '';
 
   let sessionId = sessionStorage.getItem('ttlu_session_id');
   if (!sessionId) {
-    sessionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    sessionId = `s_${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     sessionStorage.setItem('ttlu_session_id', sessionId);
   }
   return sessionId;
@@ -23,6 +35,7 @@ interface TrackEventOptions {
 export function trackEvent({ event_type, page, metadata }: TrackEventOptions): void {
   if (typeof window === 'undefined') return;
 
+  const user_id = getUserId();
   const session_id = getSessionId();
 
   // Fire and forget - don't block on analytics
@@ -32,6 +45,7 @@ export function trackEvent({ event_type, page, metadata }: TrackEventOptions): v
     body: JSON.stringify({
       event_type,
       page: page || window.location.pathname,
+      user_id,
       session_id,
       metadata,
     }),

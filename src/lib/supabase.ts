@@ -170,6 +170,7 @@ export interface SiteAnalytics {
   page?: string;
   user_agent?: string;
   referrer?: string;
+  user_id?: string;
   session_id?: string;
   metadata?: Record<string, unknown>;
 }
@@ -193,26 +194,28 @@ export async function logAnalyticsEvent(event: Omit<SiteAnalytics, 'id' | 'creat
 
 export async function getAnalyticsSummary(days = 7): Promise<{
   totalVisits: number;
+  uniqueUsers: number;
   uniqueSessions: number;
   pageViews: Record<string, number>;
 }> {
   const client = getSupabase();
-  if (!client) return { totalVisits: 0, uniqueSessions: 0, pageViews: {} };
+  if (!client) return { totalVisits: 0, uniqueUsers: 0, uniqueSessions: 0, pageViews: {} };
 
   try {
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
     const { data, error } = await client
       .from('site_analytics')
-      .select('event_type, page, session_id')
+      .select('event_type, page, user_id, session_id')
       .gte('created_at', startDate);
 
     if (error) {
       console.error('Error fetching analytics:', error);
-      return { totalVisits: 0, uniqueSessions: 0, pageViews: {} };
+      return { totalVisits: 0, uniqueUsers: 0, uniqueSessions: 0, pageViews: {} };
     }
 
     const visits = data?.filter(e => e.event_type === 'page_view') || [];
+    const uniqueUsers = new Set(data?.map(e => e.user_id).filter(Boolean)).size;
     const uniqueSessions = new Set(data?.map(e => e.session_id).filter(Boolean)).size;
 
     const pageViews: Record<string, number> = {};
@@ -223,11 +226,12 @@ export async function getAnalyticsSummary(days = 7): Promise<{
 
     return {
       totalVisits: visits.length,
+      uniqueUsers,
       uniqueSessions,
       pageViews
     };
   } catch (err) {
     console.error('Failed to fetch analytics:', err);
-    return { totalVisits: 0, uniqueSessions: 0, pageViews: {} };
+    return { totalVisits: 0, uniqueUsers: 0, uniqueSessions: 0, pageViews: {} };
   }
 }
