@@ -276,7 +276,7 @@ export default function Home() {
               AWAITING_TRIGGERS
             </h1>
             <p className="text-green-700 text-sm leading-relaxed max-w-md mx-auto font-mono">
-              WIN_RATE: <span className="text-green-400">69.7%</span> | ROI: <span className="text-green-400">+33.1%</span>
+              Monitoring all live games for statistical edges
             </p>
           </div>
         </div>
@@ -351,7 +351,6 @@ export default function Home() {
                 </p>
                 <p className="text-sm text-green-700 max-w-sm mx-auto leading-relaxed font-mono">
                   Golden Zone: Under triggers with PPM diff 1.0-1.5 and 5+ min remaining.
-                  <span className="block mt-2 text-green-500">WIN_RATE: 69.7% | ROI: +33.1%</span>
                 </p>
                 <button
                   onClick={() => setSubTab('live')}
