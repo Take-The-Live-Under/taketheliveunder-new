@@ -51,6 +51,8 @@ interface TeamAnalysis {
   leagueAverages: Record<string, number>;
 }
 
+type ViewMode = 'single' | 'compare';
+
 interface MetricConfig {
   key: keyof TeamStats;
   label: string;
@@ -119,11 +121,33 @@ function getClassificationColor(color: Classification['color']): string {
 export default function ResearchPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>('single');
+
+  // Single team mode
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [analysis, setAnalysis] = useState<TeamAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+
+  // Compare mode
+  const [team1Search, setTeam1Search] = useState('');
+  const [team2Search, setTeam2Search] = useState('');
+  const [team1, setTeam1] = useState<Team | null>(null);
+  const [team2, setTeam2] = useState<Team | null>(null);
+  const [analysis1, setAnalysis1] = useState<TeamAnalysis | null>(null);
+  const [analysis2, setAnalysis2] = useState<TeamAnalysis | null>(null);
+  const [showDropdown1, setShowDropdown1] = useState(false);
+  const [showDropdown2, setShowDropdown2] = useState(false);
+  const [comparing, setComparing] = useState(false);
+
+  // Inline comparison (add second team from single view)
+  const [compareTeam, setCompareTeam] = useState<Team | null>(null);
+  const [compareAnalysis, setCompareAnalysis] = useState<TeamAnalysis | null>(null);
+  const [compareSearch, setCompareSearch] = useState('');
+  const [showCompareDropdown, setShowCompareDropdown] = useState(false);
+  const [showCompareInput, setShowCompareInput] = useState(false);
+  const [loadingCompare, setLoadingCompare] = useState(false);
 
   // Fetch team list
   useEffect(() => {
@@ -141,7 +165,7 @@ export default function ResearchPage() {
     fetchTeams();
   }, []);
 
-  // Fetch analysis when team selected
+  // Fetch analysis for single team
   const fetchAnalysis = useCallback(async (team: Team) => {
     setAnalyzing(true);
     setAnalysis(null);
@@ -161,15 +185,88 @@ export default function ResearchPage() {
     }
   }, []);
 
+  // Fetch comparison analysis for both teams
+  const fetchComparison = useCallback(async () => {
+    if (!team1 || !team2) return;
+
+    setComparing(true);
+    setAnalysis1(null);
+    setAnalysis2(null);
+
+    try {
+      const team1Param = team1.id && team1.id !== team1.name ? team1.id : team1.name;
+      const team2Param = team2.id && team2.id !== team2.name ? team2.id : team2.name;
+
+      const [res1, res2] = await Promise.all([
+        fetch(`/api/teams/analysis?team=${encodeURIComponent(team1Param)}`),
+        fetch(`/api/teams/analysis?team=${encodeURIComponent(team2Param)}`)
+      ]);
+
+      const [data1, data2] = await Promise.all([res1.json(), res2.json()]);
+
+      if (data1.team) setAnalysis1(data1);
+      if (data2.team) setAnalysis2(data2);
+    } catch (error) {
+      console.error('Error fetching comparison:', error);
+    } finally {
+      setComparing(false);
+    }
+  }, [team1, team2]);
+
+  // Fetch analysis for comparison team (inline compare)
+  const fetchCompareAnalysis = useCallback(async (team: Team) => {
+    setLoadingCompare(true);
+    setCompareAnalysis(null);
+
+    try {
+      const teamParam = team.id && team.id !== team.name ? team.id : team.name;
+      const res = await fetch(`/api/teams/analysis?team=${encodeURIComponent(teamParam)}`);
+      const data = await res.json();
+
+      if (data.team) {
+        setCompareAnalysis(data);
+      }
+    } catch (error) {
+      console.error('Error fetching compare analysis:', error);
+    } finally {
+      setLoadingCompare(false);
+    }
+  }, []);
+
   useEffect(() => {
-    if (selectedTeam) {
+    if (selectedTeam && viewMode === 'single') {
       fetchAnalysis(selectedTeam);
     }
-  }, [selectedTeam, fetchAnalysis]);
+  }, [selectedTeam, fetchAnalysis, viewMode]);
+
+  useEffect(() => {
+    if (compareTeam && viewMode === 'single') {
+      fetchCompareAnalysis(compareTeam);
+    }
+  }, [compareTeam, fetchCompareAnalysis, viewMode]);
+
+  useEffect(() => {
+    if (team1 && team2 && viewMode === 'compare') {
+      fetchComparison();
+    }
+  }, [team1, team2, fetchComparison, viewMode]);
 
   const filteredTeams = teams
     .filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()))
     .slice(0, 15);
+
+  const filteredTeams1 = teams
+    .filter(t => t.name.toLowerCase().includes(team1Search.toLowerCase()))
+    .slice(0, 10);
+
+  const filteredTeams2 = teams
+    .filter(t => t.name.toLowerCase().includes(team2Search.toLowerCase()))
+    .slice(0, 10);
+
+  const filteredCompareTeams = teams
+    .filter(t => t.name.toLowerCase().includes(compareSearch.toLowerCase()))
+    .filter(t => t.id !== selectedTeam?.id) // Exclude currently selected team
+    .slice(0, 10);
 
   const selectTeam = (team: Team) => {
     setSelectedTeam(team);
@@ -181,6 +278,38 @@ export default function ResearchPage() {
     setSelectedTeam(null);
     setAnalysis(null);
     setSearchQuery('');
+    // Also clear compare state
+    setCompareTeam(null);
+    setCompareAnalysis(null);
+    setShowCompareInput(false);
+    setCompareSearch('');
+  };
+
+  const clearCompareTeam = () => {
+    setCompareTeam(null);
+    setCompareAnalysis(null);
+    setCompareSearch('');
+    setShowCompareInput(false);
+  };
+
+  const selectCompareTeam = (team: Team) => {
+    setCompareTeam(team);
+    setCompareSearch('');
+    setShowCompareDropdown(false);
+  };
+
+  const switchMode = (mode: ViewMode) => {
+    setViewMode(mode);
+    // Clear states when switching
+    if (mode === 'single') {
+      setTeam1(null);
+      setTeam2(null);
+      setAnalysis1(null);
+      setAnalysis2(null);
+    } else {
+      setSelectedTeam(null);
+      setAnalysis(null);
+    }
   };
 
   return (
@@ -208,60 +337,183 @@ export default function ResearchPage() {
         {/* Title */}
         <div className="text-center mb-6">
           <div className="text-green-600 text-xs mb-2">// TEAM_ANALYSIS</div>
-          <h1 className="text-2xl font-bold text-green-400 mb-2">TEAM_PROFILE</h1>
+          <h1 className="text-2xl font-bold text-green-400 mb-2">
+            {viewMode === 'single' ? 'TEAM_PROFILE' : 'HEAD_TO_HEAD'}
+          </h1>
           <p className="text-green-700 text-sm">
-            Deep dive into any NCAA team&apos;s statistical profile
+            {viewMode === 'single'
+              ? "Deep dive into any NCAA team's statistical profile"
+              : "Compare two teams side by side"}
           </p>
         </div>
 
-        {/* Search */}
-        <div className="mb-8 relative">
-          <label className="block text-xs text-green-600 mb-2">// SELECT_TEAM</label>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="SEARCH_TEAM..."
-              value={selectedTeam ? selectedTeam.name : searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setSelectedTeam(null);
-                setShowDropdown(true);
-              }}
-              onFocus={() => setShowDropdown(true)}
-              className="w-full border border-green-900 bg-black px-4 py-3 text-green-400 placeholder-green-800 focus:border-green-500 focus:outline-none text-sm"
-            />
-            {selectedTeam && (
-              <button
-                onClick={clearTeam}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-green-700 hover:text-green-400"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
+        {/* Mode Toggle */}
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex border border-green-900">
+            <button
+              onClick={() => switchMode('single')}
+              className={`px-4 py-2 text-xs font-medium transition-colors ${
+                viewMode === 'single'
+                  ? 'bg-green-500 text-black'
+                  : 'text-green-600 hover:bg-green-900/30'
+              }`}
+            >
+              SINGLE_TEAM
+            </button>
+            <button
+              onClick={() => switchMode('compare')}
+              className={`px-4 py-2 text-xs font-medium transition-colors ${
+                viewMode === 'compare'
+                  ? 'bg-green-500 text-black'
+                  : 'text-green-600 hover:bg-green-900/30'
+              }`}
+            >
+              COMPARE
+            </button>
           </div>
+        </div>
 
-          {showDropdown && !selectedTeam && searchQuery && (
-            <div className="absolute z-10 w-full mt-1 bg-black border border-green-900 max-h-80 overflow-y-auto">
-              {filteredTeams.map((t) => (
+        {/* Single Team Search */}
+        {viewMode === 'single' && (
+          <div className="mb-8 relative">
+            <label className="block text-xs text-green-600 mb-2">// SELECT_TEAM</label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="SEARCH_TEAM..."
+                value={selectedTeam ? selectedTeam.name : searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setSelectedTeam(null);
+                  setShowDropdown(true);
+                }}
+                onFocus={() => setShowDropdown(true)}
+                className="w-full border border-green-900 bg-black px-4 py-3 text-green-400 placeholder-green-800 focus:border-green-500 focus:outline-none text-sm"
+              />
+              {selectedTeam && (
                 <button
-                  key={t.id}
-                  onClick={() => selectTeam(t)}
-                  className="w-full px-4 py-3 text-left text-sm text-green-400 hover:bg-green-900/30 flex items-center justify-between border-b border-green-900/30"
+                  onClick={clearTeam}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-green-700 hover:text-green-400"
                 >
-                  <span>{t.name}</span>
-                  {t.rank && t.rank < 26 && (
-                    <span className="text-yellow-500 text-xs">#{t.rank}</span>
-                  )}
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
-              ))}
-              {filteredTeams.length === 0 && (
-                <div className="px-4 py-3 text-xs text-green-700">NO_TEAMS_FOUND</div>
               )}
             </div>
-          )}
-        </div>
+
+            {showDropdown && !selectedTeam && searchQuery && (
+              <div className="absolute z-10 w-full mt-1 bg-black border border-green-900 max-h-80 overflow-y-auto">
+                {filteredTeams.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => selectTeam(t)}
+                    className="w-full px-4 py-3 text-left text-sm text-green-400 hover:bg-green-900/30 flex items-center justify-between border-b border-green-900/30"
+                  >
+                    <span>{t.name}</span>
+                    {t.rank && t.rank < 26 && (
+                      <span className="text-yellow-500 text-xs">#{t.rank}</span>
+                    )}
+                  </button>
+                ))}
+                {filteredTeams.length === 0 && (
+                  <div className="px-4 py-3 text-xs text-green-700">NO_TEAMS_FOUND</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Compare Mode - Two Team Selectors */}
+        {viewMode === 'compare' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            {/* Team 1 */}
+            <div className="relative">
+              <label className="block text-xs text-green-600 mb-2">// TEAM_1</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="SEARCH..."
+                  value={team1 ? team1.name : team1Search}
+                  onChange={(e) => {
+                    setTeam1Search(e.target.value);
+                    setTeam1(null);
+                    setShowDropdown1(true);
+                  }}
+                  onFocus={() => setShowDropdown1(true)}
+                  className="w-full border border-green-900 bg-black px-4 py-3 text-green-400 placeholder-green-800 focus:border-green-500 focus:outline-none text-sm"
+                />
+                {team1 && (
+                  <button
+                    onClick={() => { setTeam1(null); setAnalysis1(null); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-green-700 hover:text-green-400"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              {showDropdown1 && !team1 && team1Search && (
+                <div className="absolute z-10 w-full mt-1 bg-black border border-green-900 max-h-60 overflow-y-auto">
+                  {filteredTeams1.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => { setTeam1(t); setTeam1Search(''); setShowDropdown1(false); }}
+                      className="w-full px-4 py-2 text-left text-xs text-green-400 hover:bg-green-900/30 flex items-center justify-between"
+                    >
+                      <span>{t.name}</span>
+                      {t.rank && t.rank < 26 && <span className="text-yellow-500">#{t.rank}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Team 2 */}
+            <div className="relative">
+              <label className="block text-xs text-green-600 mb-2">// TEAM_2</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="SEARCH..."
+                  value={team2 ? team2.name : team2Search}
+                  onChange={(e) => {
+                    setTeam2Search(e.target.value);
+                    setTeam2(null);
+                    setShowDropdown2(true);
+                  }}
+                  onFocus={() => setShowDropdown2(true)}
+                  className="w-full border border-green-900 bg-black px-4 py-3 text-green-400 placeholder-green-800 focus:border-green-500 focus:outline-none text-sm"
+                />
+                {team2 && (
+                  <button
+                    onClick={() => { setTeam2(null); setAnalysis2(null); }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-green-700 hover:text-green-400"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              {showDropdown2 && !team2 && team2Search && (
+                <div className="absolute z-10 w-full mt-1 bg-black border border-green-900 max-h-60 overflow-y-auto">
+                  {filteredTeams2.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => { setTeam2(t); setTeam2Search(''); setShowDropdown2(false); }}
+                      className="w-full px-4 py-2 text-left text-xs text-green-400 hover:bg-green-900/30 flex items-center justify-between"
+                    >
+                      <span>{t.name}</span>
+                      {t.rank && t.rank < 26 && <span className="text-yellow-500">#{t.rank}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Analysis Results */}
         {analyzing && (
@@ -273,7 +525,7 @@ export default function ResearchPage() {
           </div>
         )}
 
-        {analysis && !analyzing && (
+        {analysis && !analyzing && !compareAnalysis && (
           <div className="space-y-6">
             {/* Team Header */}
             <div className="border border-green-900 bg-green-900/20 p-6">
@@ -326,6 +578,75 @@ export default function ResearchPage() {
                 </div>
               )}
             </div>
+
+            {/* Compare With Button - At Top */}
+            {!showCompareInput && (
+              <button
+                onClick={() => setShowCompareInput(true)}
+                className="w-full border border-dashed border-green-700 py-3 text-green-600 hover:border-green-500 hover:text-green-400 hover:bg-green-900/20 transition-all text-sm font-medium"
+              >
+                + COMPARE_WITH_ANOTHER_TEAM
+              </button>
+            )}
+
+            {/* Compare Team Search Input */}
+            {showCompareInput && !compareTeam && (
+              <div className="relative">
+                <label className="block text-xs text-green-600 mb-2">// SELECT_TEAM_TO_COMPARE</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="SEARCH_TEAM..."
+                    value={compareSearch}
+                    onChange={(e) => {
+                      setCompareSearch(e.target.value);
+                      setShowCompareDropdown(true);
+                    }}
+                    onFocus={() => setShowCompareDropdown(true)}
+                    autoFocus
+                    className="w-full border border-green-700 bg-black px-4 py-3 text-green-400 placeholder-green-800 focus:border-green-500 focus:outline-none text-sm"
+                  />
+                  <button
+                    onClick={() => setShowCompareInput(false)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-green-700 hover:text-green-400"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {showCompareDropdown && compareSearch && (
+                  <div className="absolute z-10 w-full mt-1 bg-black border border-green-900 max-h-60 overflow-y-auto">
+                    {filteredCompareTeams.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => selectCompareTeam(t)}
+                        className="w-full px-4 py-3 text-left text-sm text-green-400 hover:bg-green-900/30 flex items-center justify-between border-b border-green-900/30"
+                      >
+                        <span>{t.name}</span>
+                        {t.rank && t.rank < 26 && (
+                          <span className="text-yellow-500 text-xs">#{t.rank}</span>
+                        )}
+                      </button>
+                    ))}
+                    {filteredCompareTeams.length === 0 && (
+                      <div className="px-4 py-3 text-xs text-green-700">NO_TEAMS_FOUND</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Loading Compare Team */}
+            {loadingCompare && (
+              <div className="text-center py-8 border border-green-900 bg-green-900/10">
+                <div className="flex items-center justify-center gap-2 text-green-600">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-green-500 border-t-transparent"></div>
+                  <span className="text-xs">LOADING_COMPARISON...</span>
+                </div>
+              </div>
+            )}
 
             {/* Detailed Stats by Category */}
             {CATEGORIES.map((category) => {
@@ -389,8 +710,150 @@ export default function ResearchPage() {
           </div>
         )}
 
-        {/* Empty State */}
-        {!selectedTeam && !analyzing && (
+        {/* Inline Comparison View (from single team mode) */}
+        {analysis && compareAnalysis && viewMode === 'single' && !analyzing && !loadingCompare && (
+          <div className="space-y-6">
+            {/* Team Headers */}
+            <div className="grid grid-cols-7 gap-2 border border-green-900 bg-green-900/20 p-4">
+              <div className="col-span-3 text-center">
+                <h3 className="text-lg font-bold text-green-400">{analysis.team.team_name}</h3>
+                <p className="text-xs text-green-600">
+                  {analysis.team.espn_rank < 26 && <span className="text-yellow-400">#{analysis.team.espn_rank} </span>}
+                  {analysis.team.record}
+                </p>
+                {analysis.classifications.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1 mt-2">
+                    {analysis.classifications.slice(0, 3).map(c => (
+                      <span key={c.id} className={`px-1.5 py-0.5 text-[10px] border ${getClassificationColor(c.color)}`}>
+                        {c.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="col-span-1 flex items-center justify-center">
+                <span className="text-xl font-bold text-green-700">VS</span>
+              </div>
+              <div className="col-span-3 text-center">
+                <div className="flex items-center justify-center gap-2">
+                  <h3 className="text-lg font-bold text-green-400">{compareAnalysis.team.team_name}</h3>
+                  <button
+                    onClick={clearCompareTeam}
+                    className="text-green-700 hover:text-red-400 transition-colors"
+                    title="Remove comparison"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <p className="text-xs text-green-600">
+                  {compareAnalysis.team.espn_rank < 26 && <span className="text-yellow-400">#{compareAnalysis.team.espn_rank} </span>}
+                  {compareAnalysis.team.record}
+                </p>
+                {compareAnalysis.classifications.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1 mt-2">
+                    {compareAnalysis.classifications.slice(0, 3).map(c => (
+                      <span key={c.id} className={`px-1.5 py-0.5 text-[10px] border ${getClassificationColor(c.color)}`}>
+                        {c.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Stats Comparison by Category */}
+            {CATEGORIES.map((category) => {
+              const categoryMetrics = METRICS.filter(m => m.category === category);
+              if (categoryMetrics.length === 0) return null;
+
+              return (
+                <div key={category} className="border border-green-900 overflow-hidden">
+                  <div className="bg-green-900/30 px-4 py-2 border-b border-green-900">
+                    <h3 className="text-xs font-semibold text-green-400">// {category}</h3>
+                  </div>
+                  <div className="divide-y divide-green-900/50">
+                    {categoryMetrics.map((metric) => {
+                      const val1 = analysis.team[metric.key] as number;
+                      const val2 = compareAnalysis.team[metric.key] as number;
+                      const pct1 = analysis.percentiles[metric.key] || 50;
+                      const pct2 = compareAnalysis.percentiles[metric.key] || 50;
+
+                      // Determine who's better based on metric direction
+                      const team1Better = metric.higherIsBetter ? val1 > val2 : val1 < val2;
+                      const team2Better = metric.higherIsBetter ? val2 > val1 : val2 < val1;
+                      const isDraw = val1 === val2;
+
+                      return (
+                        <div key={metric.key} className="grid grid-cols-7 gap-2 px-4 py-3 items-center">
+                          {/* Team 1 Value */}
+                          <div className="col-span-3 flex items-center justify-between">
+                            <div className="flex-1 h-2 bg-green-900/50 overflow-hidden mr-2">
+                              <div
+                                className="h-full bg-green-500 transition-all duration-500 float-right"
+                                style={{ width: `${Math.min(100, Math.max(0, pct1))}%` }}
+                              />
+                            </div>
+                            <span className={`text-sm font-bold tabular-nums ${
+                              isDraw ? 'text-green-600' : team1Better ? 'text-green-400' : 'text-green-700'
+                            }`}>
+                              {team1Better && !isDraw && <span className="text-yellow-400 mr-1">*</span>}
+                              {formatValue(val1, metric.format)}
+                            </span>
+                          </div>
+
+                          {/* Metric Label */}
+                          <div className="col-span-1 text-center">
+                            <p className="text-xs font-medium text-green-500">{metric.label}</p>
+                            <p className="text-[9px] text-green-800 hidden md:block">{metric.description}</p>
+                          </div>
+
+                          {/* Team 2 Value */}
+                          <div className="col-span-3 flex items-center justify-between">
+                            <span className={`text-sm font-bold tabular-nums ${
+                              isDraw ? 'text-green-600' : team2Better ? 'text-green-400' : 'text-green-700'
+                            }`}>
+                              {formatValue(val2, metric.format)}
+                              {team2Better && !isDraw && <span className="text-yellow-400 ml-1">*</span>}
+                            </span>
+                            <div className="flex-1 h-2 bg-green-900/50 overflow-hidden ml-2">
+                              <div
+                                className="h-full bg-green-500 transition-all duration-500"
+                                style={{ width: `${Math.min(100, Math.max(0, pct2))}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Legend */}
+            <div className="flex items-center justify-center gap-6 text-[10px] text-green-700 pt-2">
+              <span className="flex items-center gap-1">
+                <span className="text-yellow-400">*</span> ADVANTAGE
+              </span>
+              <span>Bars show league percentile</span>
+            </div>
+
+            {/* Back to single view */}
+            <div className="pt-2">
+              <button
+                onClick={clearCompareTeam}
+                className="w-full border border-green-900 py-3 text-green-600 hover:border-green-700 hover:text-green-400 transition-all text-xs"
+              >
+                ← BACK_TO_SINGLE_TEAM_VIEW
+              </button>
+            </div>
+          </div>
+        )
+
+        {/* Empty State - Single Mode */}
+        {viewMode === 'single' && !selectedTeam && !analyzing && (
           <div className="text-center py-12 border border-green-900 bg-green-900/10">
             {loading ? (
               <div className="flex items-center justify-center gap-2 text-green-600">
@@ -404,6 +867,148 @@ export default function ResearchPage() {
                 <p className="text-xs">Search for any NCAA team to see their full statistical profile</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Comparison Loading */}
+        {viewMode === 'compare' && comparing && (
+          <div className="text-center py-12 border border-green-900 bg-green-900/10">
+            <div className="flex items-center justify-center gap-2 text-green-600">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-green-500 border-t-transparent"></div>
+              <span className="text-xs">COMPARING_TEAMS...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Comparison Results */}
+        {viewMode === 'compare' && analysis1 && analysis2 && !comparing && (
+          <div className="space-y-6">
+            {/* Team Headers */}
+            <div className="grid grid-cols-7 gap-2 border border-green-900 bg-green-900/20 p-4">
+              <div className="col-span-3 text-center">
+                <h3 className="text-lg font-bold text-green-400">{analysis1.team.team_name}</h3>
+                <p className="text-xs text-green-600">
+                  {analysis1.team.espn_rank < 26 && <span className="text-yellow-400">#{analysis1.team.espn_rank} </span>}
+                  {analysis1.team.record}
+                </p>
+                {analysis1.classifications.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1 mt-2">
+                    {analysis1.classifications.slice(0, 3).map(c => (
+                      <span key={c.id} className={`px-1.5 py-0.5 text-[10px] border ${getClassificationColor(c.color)}`}>
+                        {c.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="col-span-1 flex items-center justify-center">
+                <span className="text-xl font-bold text-green-700">VS</span>
+              </div>
+              <div className="col-span-3 text-center">
+                <h3 className="text-lg font-bold text-green-400">{analysis2.team.team_name}</h3>
+                <p className="text-xs text-green-600">
+                  {analysis2.team.espn_rank < 26 && <span className="text-yellow-400">#{analysis2.team.espn_rank} </span>}
+                  {analysis2.team.record}
+                </p>
+                {analysis2.classifications.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1 mt-2">
+                    {analysis2.classifications.slice(0, 3).map(c => (
+                      <span key={c.id} className={`px-1.5 py-0.5 text-[10px] border ${getClassificationColor(c.color)}`}>
+                        {c.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Stats Comparison by Category */}
+            {CATEGORIES.map((category) => {
+              const categoryMetrics = METRICS.filter(m => m.category === category);
+              if (categoryMetrics.length === 0) return null;
+
+              return (
+                <div key={category} className="border border-green-900 overflow-hidden">
+                  <div className="bg-green-900/30 px-4 py-2 border-b border-green-900">
+                    <h3 className="text-xs font-semibold text-green-400">// {category}</h3>
+                  </div>
+                  <div className="divide-y divide-green-900/50">
+                    {categoryMetrics.map((metric) => {
+                      const val1 = analysis1.team[metric.key] as number;
+                      const val2 = analysis2.team[metric.key] as number;
+                      const pct1 = analysis1.percentiles[metric.key] || 50;
+                      const pct2 = analysis2.percentiles[metric.key] || 50;
+
+                      // Determine who's better based on metric direction
+                      const team1Better = metric.higherIsBetter ? val1 > val2 : val1 < val2;
+                      const team2Better = metric.higherIsBetter ? val2 > val1 : val2 < val1;
+                      const isDraw = val1 === val2;
+
+                      return (
+                        <div key={metric.key} className="grid grid-cols-7 gap-2 px-4 py-3 items-center">
+                          {/* Team 1 Value */}
+                          <div className="col-span-3 flex items-center justify-between">
+                            <div className="flex-1 h-2 bg-green-900/50 overflow-hidden mr-2">
+                              <div
+                                className="h-full bg-green-500 transition-all duration-500 float-right"
+                                style={{ width: `${Math.min(100, Math.max(0, pct1))}%` }}
+                              />
+                            </div>
+                            <span className={`text-sm font-bold tabular-nums ${
+                              isDraw ? 'text-green-600' : team1Better ? 'text-green-400' : 'text-green-700'
+                            }`}>
+                              {team1Better && !isDraw && <span className="text-yellow-400 mr-1">*</span>}
+                              {formatValue(val1, metric.format)}
+                            </span>
+                          </div>
+
+                          {/* Metric Label */}
+                          <div className="col-span-1 text-center">
+                            <p className="text-xs font-medium text-green-500">{metric.label}</p>
+                            <p className="text-[9px] text-green-800 hidden md:block">{metric.description}</p>
+                          </div>
+
+                          {/* Team 2 Value */}
+                          <div className="col-span-3 flex items-center justify-between">
+                            <span className={`text-sm font-bold tabular-nums ${
+                              isDraw ? 'text-green-600' : team2Better ? 'text-green-400' : 'text-green-700'
+                            }`}>
+                              {formatValue(val2, metric.format)}
+                              {team2Better && !isDraw && <span className="text-yellow-400 ml-1">*</span>}
+                            </span>
+                            <div className="flex-1 h-2 bg-green-900/50 overflow-hidden ml-2">
+                              <div
+                                className="h-full bg-green-500 transition-all duration-500"
+                                style={{ width: `${Math.min(100, Math.max(0, pct2))}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Legend */}
+            <div className="flex items-center justify-center gap-6 text-[10px] text-green-700 pt-2">
+              <span className="flex items-center gap-1">
+                <span className="text-yellow-400">*</span> ADVANTAGE
+              </span>
+              <span>Bars show league percentile</span>
+            </div>
+          </div>
+        )}
+
+        {/* Empty State - Compare Mode */}
+        {viewMode === 'compare' && (!team1 || !team2) && !comparing && (
+          <div className="text-center py-12 border border-green-900 bg-green-900/10">
+            <div className="text-green-700">
+              <div className="text-green-600 text-xs mb-4">// AWAITING_INPUT</div>
+              <p className="text-lg font-medium text-green-500 mb-1">SELECT_TWO_TEAMS</p>
+              <p className="text-xs">Search and select teams above to compare their stats</p>
+            </div>
           </div>
         )}
       </div>

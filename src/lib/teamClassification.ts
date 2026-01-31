@@ -108,8 +108,14 @@ export const CLASSIFICATIONS: Record<string, Classification> = {
   TURNOVER_PRONE: {
     id: 'TURNOVER_PRONE',
     label: 'TO_PRONE',
-    description: 'Top 25% in turnovers per game',
+    description: 'High turnover rate (bottom 25%)',
     color: 'red',
+  },
+  LOW_TURNOVERS: {
+    id: 'LOW_TURNOVERS',
+    label: 'LOW_TO',
+    description: 'Excellent ball security (top 25%)',
+    color: 'green',
   },
   REBOUNDING: {
     id: 'REBOUNDING',
@@ -214,6 +220,7 @@ export function classifyTeam(team: TeamStats, allTeams: TeamStats[]): Classifica
   if (pctAstTO >= 80) classifications.push(CLASSIFICATIONS.BALL_MOVEMENT);
 
   if (pctTO <= 25) classifications.push(CLASSIFICATIONS.TURNOVER_PRONE);
+  if (pctTO >= 75) classifications.push(CLASSIFICATIONS.LOW_TURNOVERS);
 
   if (pctOReb >= 80) classifications.push(CLASSIFICATIONS.REBOUNDING);
 
@@ -253,12 +260,16 @@ export function generateInsights(team: TeamStats, percentiles: Record<string, nu
   // Ball control insight
   if (percentiles.ast_to_ratio >= 75) {
     insights.push(`Excellent ball security with ${team.ast_to_ratio} AST/TO ratio`);
+  } else if (percentiles.to_rate >= 75) {
+    insights.push(`Low turnover team (${team.to_rate}/game) - protects the ball well`);
   } else if (percentiles.to_rate <= 25) {
     insights.push(`Turnover-prone (${team.to_rate}/game) - struggles in pressure situations`);
   }
 
   // Fouls insight
-  if (percentiles.fouls_per_game <= 25) {
+  if (percentiles.fouls_per_game >= 75) {
+    insights.push(`Disciplined team (${team.fouls_per_game} fouls/game) - rarely sends opponents to the line`);
+  } else if (percentiles.fouls_per_game <= 25) {
     insights.push(`Foul-prone team (${team.fouls_per_game}/game) - watch for late-game FT situations`);
   }
 
