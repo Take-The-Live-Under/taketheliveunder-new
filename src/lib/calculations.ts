@@ -196,6 +196,7 @@ export function parseClock(clockStr: string): [number, number] {
 // =============================================================================
 
 const FOUL_GAME_TIME_THRESHOLD = 120; // 2 minutes remaining in seconds
+const FOUL_GAME_POTENTIAL_THRESHOLD = 300; // 5 minutes - show potential adjustment
 const FOUL_GAME_MIN_DEFICIT = 1;
 const FOUL_GAME_MAX_DEFICIT = 10;
 
@@ -257,4 +258,61 @@ export function getFoulGameAdjustment(pointDiff: number): number | null {
     return null;
   }
   return FOUL_GAME_ADJUSTMENTS[pointDiff] || null;
+}
+
+/**
+ * Check if game could potentially enter foul game territory
+ * Shows earlier (5 min out) so users can anticipate the adjustment
+ * @param period - Current period
+ * @param clockMinutes - Minutes on the clock
+ * @param clockSeconds - Seconds on the clock
+ * @param pointDiff - Absolute point differential
+ * @returns true if game could enter foul territory soon
+ */
+export function couldEnterFoulGame(
+  period: number,
+  clockMinutes: number,
+  clockSeconds: number,
+  pointDiff: number
+): boolean {
+  // Must be in 2nd half
+  if (period !== 2) return false;
+
+  const secondsRemaining = clockMinutes * 60 + clockSeconds;
+
+  // Show potential from 5 minutes out
+  if (secondsRemaining > FOUL_GAME_POTENTIAL_THRESHOLD) return false;
+
+  // Point differential could reasonably lead to foul game (0-12 range)
+  // 0 = tied game that could become close
+  // Up to 12 = could tighten to 10 or less
+  if (pointDiff > 12) return false;
+
+  return true;
+}
+
+/**
+ * Get the likely foul game adjustment based on current deficit
+ * For potential scenarios, estimates based on current or expected deficit
+ * @param pointDiff - Current point differential
+ * @returns Expected extra points
+ */
+export function getExpectedFoulGameAdjustment(pointDiff: number): number {
+  // If already in foul game range, use exact adjustment
+  if (pointDiff >= FOUL_GAME_MIN_DEFICIT && pointDiff <= FOUL_GAME_MAX_DEFICIT) {
+    return FOUL_GAME_ADJUSTMENTS[pointDiff] || 5.8;
+  }
+
+  // If tied or very close, assume avg 4-5 point game develops
+  if (pointDiff === 0) {
+    return 5.5; // Average for 3-5 point games
+  }
+
+  // If > 10 but <= 12, could tighten - use conservative estimate
+  if (pointDiff > 10 && pointDiff <= 12) {
+    return 5.0;
+  }
+
+  // Default average
+  return 5.8;
 }

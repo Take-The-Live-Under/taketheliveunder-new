@@ -10,6 +10,8 @@ import {
   parseClock,
   isInFoulGame,
   getFoulGameAdjustment,
+  couldEnterFoulGame,
+  getExpectedFoulGameAdjustment,
 } from '@/lib/calculations';
 import { logTrigger, hasBeenLoggedRecently, logGameSnapshots } from '@/lib/supabase';
 import { analyzeMatchup } from '@/lib/allTeamFoulGameData';
@@ -423,33 +425,40 @@ export async function GET() {
       // Calculate foul game adjustment
       const pointDiff = Math.abs(homeScore - awayScore);
       const inFoulGame = status === 'in' && isInFoulGame(period, clockMinutes, clockSeconds, pointDiff);
-      const baseFoulGameAdjustment = inFoulGame ? getFoulGameAdjustment(pointDiff) : null;
+      const couldEnterFoul = status === 'in' && couldEnterFoulGame(period, clockMinutes, clockSeconds, pointDiff);
 
       // Check team-specific foul game tendencies (now with data on 358 teams)
       const matchupAnalysis = analyzeMatchup(homeTeam, awayTeam);
 
-      // Foul game warning: show at ~4 minutes (3-5 min) in 2nd half for close games
-      const secondsRemaining = clockMinutes * 60 + clockSeconds;
-      const isCloseGame = pointDiff >= 1 && pointDiff <= 12; // Slightly wider range for warning
-      const isWarningWindow = status === 'in' && period === 2 && secondsRemaining > 120 && secondsRemaining <= 300; // 2-5 min
-      const hasTeamData = matchupAnalysis.homeData !== null || matchupAnalysis.awayData !== null;
-      const foulGameWarning = isWarningWindow && isCloseGame && hasTeamData && matchupAnalysis.warningLevel !== 'none';
-
       // Team-specific extra impact (on top of base adjustment)
       const teamFoulGameImpact = matchupAnalysis.combinedImpact;
 
-      // Total foul game adjustment includes team-specific impact
-      const foulGameAdjustment = baseFoulGameAdjustment !== null
-        ? baseFoulGameAdjustment + teamFoulGameImpact
-        : null;
+      // Calculate foul game adjustment - show it earlier when game could enter foul territory
+      let foulGameAdjustment: number | null = null;
+      if (inFoulGame) {
+        // Actually in foul game - use exact adjustment
+        const baseAdj = getFoulGameAdjustment(pointDiff);
+        foulGameAdjustment = baseAdj !== null ? baseAdj + teamFoulGameImpact : null;
+      } else if (couldEnterFoul) {
+        // Could enter foul game soon - show expected adjustment
+        const expectedAdj = getExpectedFoulGameAdjustment(pointDiff);
+        foulGameAdjustment = expectedAdj + teamFoulGameImpact;
+      }
 
-      // Calculate adjusted projected total (base projection + foul game adjustment)
+      // Foul game warning: show when game could enter foul territory (up to 5 min out)
+      const secondsRemaining = clockMinutes * 60 + clockSeconds;
+      const hasTeamData = matchupAnalysis.homeData !== null || matchupAnalysis.awayData !== null;
+      const foulGameWarning = couldEnterFoul && hasTeamData && matchupAnalysis.warningLevel !== 'none';
+
+      // Calculate adjusted projected total - show whenever foul game is possible
       let adjustedProjectedTotal: number | null = null;
       if (currentPPM !== null && minutesRemainingReg > 0) {
         const baseProjected = liveTotal + (currentPPM * minutesRemainingReg);
-        adjustedProjectedTotal = inFoulGame && foulGameAdjustment !== null
-          ? baseProjected + foulGameAdjustment
-          : baseProjected;
+        if ((inFoulGame || couldEnterFoul) && foulGameAdjustment !== null) {
+          adjustedProjectedTotal = baseProjected + foulGameAdjustment;
+        } else {
+          adjustedProjectedTotal = baseProjected;
+        }
         adjustedProjectedTotal = Math.round(adjustedProjectedTotal * 10) / 10;
       }
 
@@ -476,6 +485,7 @@ export async function GET() {
         isOvertime: isOT,
         isTomorrow: isTomorrow(event.date),
         inFoulGame,
+        couldEnterFoulGame: couldEnterFoul,
         foulGameAdjustment: foulGameAdjustment !== null ? Math.round(foulGameAdjustment * 10) / 10 : null,
         adjustedProjectedTotal,
         foulGameWarning,

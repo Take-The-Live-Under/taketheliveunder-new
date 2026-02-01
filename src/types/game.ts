@@ -29,6 +29,7 @@ export interface Game {
   isTomorrow?: boolean;
   // Foul game adjustment fields
   inFoulGame: boolean;         // True if last 2 min and 1-10 point differential
+  couldEnterFoulGame: boolean; // True if 5 min out and close game - show projection early
   foulGameAdjustment: number | null;  // Expected extra points from foul game
   adjustedProjectedTotal: number | null;  // Projected total + foul game adjustment
   // Foul game warning fields (shown around 4 min mark)

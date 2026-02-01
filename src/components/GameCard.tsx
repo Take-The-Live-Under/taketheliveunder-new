@@ -295,26 +295,26 @@ export default function GameCard({ game, onClick }: GameCardProps) {
           <div className="flex items-center justify-between">
             <span className="text-xs text-green-700">PROJ_FINAL</span>
             <span className={`text-sm font-bold tabular-nums ${
-              game.inFoulGame
-                ? 'text-red-400'
-                : projectedFinal < game.ouLine ? 'text-green-400' : 'text-red-400'
+              projectedFinal < game.ouLine ? 'text-green-400' : 'text-red-400'
             }`}>
               {projectedFinal.toFixed(1)}
-              <span className={`text-[10px] ml-2 ${game.inFoulGame ? 'text-red-400' : 'text-green-700'}`}>
+              <span className="text-[10px] ml-2 text-green-700">
                 ({projectedFinal < game.ouLine ? 'UNDER' : 'OVER'} {Math.abs(projectedFinal - game.ouLine).toFixed(1)})
               </span>
             </span>
           </div>
 
-          {/* Foul game adjusted projection */}
-          {game.inFoulGame && game.adjustedProjectedTotal !== null && game.foulGameAdjustment !== null && (
+          {/* Foul game adjusted projection - show when in foul game OR could enter soon */}
+          {(game.inFoulGame || game.couldEnterFoulGame) && game.adjustedProjectedTotal !== null && game.foulGameAdjustment !== null && (
             <div className="mt-2 pt-2 border-t border-green-900/50">
               <div className="flex items-center gap-2 mb-1">
                 <span className="relative flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-yellow-400 opacity-75"></span>
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-yellow-500"></span>
+                  <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${game.inFoulGame ? 'bg-yellow-400' : 'bg-orange-400'} opacity-75`}></span>
+                  <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${game.inFoulGame ? 'bg-yellow-500' : 'bg-orange-500'}`}></span>
                 </span>
-                <span className="text-[10px] font-semibold text-yellow-400 uppercase tracking-wide">FT_FRENZY_ACTIVE</span>
+                <span className={`text-[10px] font-semibold uppercase tracking-wide ${game.inFoulGame ? 'text-yellow-400' : 'text-orange-400'}`}>
+                  {game.inFoulGame ? 'FT_FRENZY_ACTIVE' : 'FT_FRENZY_INCOMING'}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-xs text-green-700">ADJ_PROJ</span>
@@ -322,8 +322,8 @@ export default function GameCard({ game, onClick }: GameCardProps) {
                   game.adjustedProjectedTotal < game.ouLine ? 'text-green-400' : 'text-red-400'
                 }`}>
                   {game.adjustedProjectedTotal.toFixed(1)}
-                  <span className="text-[10px] text-yellow-500 ml-2">
-                    (+{game.foulGameAdjustment.toFixed(1)} FTF)
+                  <span className={`text-[10px] ml-2 ${game.inFoulGame ? 'text-yellow-500' : 'text-orange-500'}`}>
+                    (+{game.foulGameAdjustment.toFixed(1)} FTF{!game.inFoulGame ? ' est' : ''})
                   </span>
                 </span>
               </div>
