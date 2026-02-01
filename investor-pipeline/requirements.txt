@@ -1,0 +1,15 @@
+# Investor Prospecting Pipeline Requirements
+
+# HTTP and API handling
+requests>=2.31.0
+urllib3>=2.0.0
+
+# Web scraping
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Data handling
+pyyaml>=6.0
+
+# Utilities
+python-dotenv>=1.0.0

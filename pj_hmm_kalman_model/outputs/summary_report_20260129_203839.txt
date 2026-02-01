@@ -1,0 +1,47 @@
+================================================================================
+HMM + KALMAN FILTER PJ MODEL - SUMMARY REPORT
+Generated: 2026-01-29 20:38:39
+================================================================================
+
+DATA SUMMARY
+----------------------------------------
+Total Games: 3
+Total Minutes Analyzed: 120
+Average Minutes Per Game: 40.0
+
+PROJECTION STATISTICS
+----------------------------------------
+Mean Projected Total: 166.66
+Std Projected Total: 24.17
+Mean Expected PPM: 4.04
+
+HMM STATE PROFILES
+----------------------------------------
+  State 2: Slow
+    Mean PPM (std): -0.201
+    Mean Possessions (std): -0.125
+  State 0: Normal
+    Mean PPM (std): -0.000
+    Mean Possessions (std): -0.068
+  State 3: Fast
+    Mean PPM (std): 0.716
+    Mean Possessions (std): 0.800
+  State 1: Fast
+    Mean PPM (std): 2.648
+    Mean Possessions (std): 3.100
+
+STATE DISTRIBUTION
+----------------------------------------
+  State 0 (Normal): 69 minutes (57.5%)
+  State 1 (Fast): 2 minutes (1.7%)
+  State 2 (Slow): 44 minutes (36.7%)
+  State 3 (Fast): 5 minutes (4.2%)
+
+KALMAN FILTER SUMMARY
+----------------------------------------
+  Mean Kalman Gain: 0.2906
+  Max Kalman Gain: 0.7174
+
+================================================================================
+END OF REPORT
+================================================================================

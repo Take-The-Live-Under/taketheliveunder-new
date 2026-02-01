@@ -1,0 +1,185 @@
+# Investor Prospecting Pipeline Configuration
+# API keys should be set via environment variables
+
+pipeline:
+  daily_goal: 100
+  total_days: 14
+  output_dir: "output"
+
+geography:
+  primary_regions:
+    - "Texas"
+    - "Oklahoma"
+    - "Kansas"
+    - "Missouri"
+    - "Nebraska"
+    - "Iowa"
+    - "Illinois"
+    - "Indiana"
+    - "Ohio"
+    - "Michigan"
+  country: "USA"
+  include_national: true
+
+keywords:
+  primary:
+    - "sports betting"
+    - "sportsbook"
+    - "gaming"
+    - "odds"
+    - "quantitative"
+    - "analytics"
+    - "machine learning"
+    - "trading"
+    - "risk"
+    - "totals"
+  secondary:
+    - "igaming"
+    - "fantasy sports"
+    - "betting exchange"
+    - "wagering"
+    - "bookmaker"
+    - "sharps"
+    - "handicapping"
+
+seed_companies:
+  - name: "DraftKings"
+    domain: "draftkings.com"
+    linkedin: "draftkings"
+  - name: "FanDuel"
+    domain: "fanduel.com"
+    linkedin: "fanduel"
+  - name: "Caesars"
+    domain: "caesars.com"
+    linkedin: "caesars-entertainment"
+  - name: "BetMGM"
+    domain: "betmgm.com"
+    linkedin: "betmgm"
+  - name: "PointsBet"
+    domain: "pointsbet.com"
+    linkedin: "pointsbet"
+  - name: "Fanatics Betting"
+    domain: "fanatics.com"
+    linkedin: "fanatics-inc"
+  - name: "Penn Entertainment"
+    domain: "pennentertainment.com"
+    linkedin: "penn-entertainment"
+  - name: "Rush Street Interactive"
+    domain: "rushstreetinteractive.com"
+    linkedin: "rush-street-interactive"
+
+target_titles:
+  investor_titles:
+    - "Angel Investor"
+    - "Investor"
+    - "Venture Partner"
+    - "Managing Partner"
+    - "Partner"
+    - "General Partner"
+    - "Principal"
+  founder_titles:
+    - "Founder"
+    - "Co-Founder"
+    - "CEO"
+    - "President"
+    - "Exited Founder"
+  analytics_titles:
+    - "Director of Data Science"
+    - "Head of Analytics"
+    - "VP of Analytics"
+    - "Principal Data Scientist"
+    - "Chief Data Officer"
+    - "Head of Data Science"
+    - "VP Data Science"
+  trading_titles:
+    - "Trading Analyst"
+    - "Risk Analyst"
+    - "Quantitative Analyst"
+    - "Head of Trading"
+    - "Director of Risk"
+    - "Chief Risk Officer"
+  product_titles:
+    - "Product Manager"
+    - "Senior Product Manager"
+    - "Director of Product"
+    - "VP of Product"
+    - "Chief Product Officer"
+
+buckets:
+  sportsbetting_ops:
+    description: "Current operators in sports betting industry"
+    keywords: ["sportsbook", "betting", "odds", "wagering"]
+  sportsbook_alumni:
+    description: "Former employees of major sportsbooks"
+    companies: ["DraftKings", "FanDuel", "Caesars", "BetMGM", "PointsBet"]
+  data_science_leaders:
+    description: "Data science and analytics leaders"
+    titles: ["Data Science", "Analytics", "ML", "AI"]
+  angels:
+    description: "Active angel investors"
+    keywords: ["angel", "investor", "seed", "pre-seed"]
+  exited_founders:
+    description: "Founders who have exited companies"
+    keywords: ["exited", "acquired", "sold", "former founder"]
+
+sources:
+  google_search:
+    enabled: true
+    max_results_per_query: 50
+    rate_limit_per_minute: 10
+  github:
+    enabled: true
+    orgs:
+      - "sportsreference"
+      - "statsbomb"
+      - "oddsjam"
+    rate_limit_per_minute: 30
+  wellfound:
+    enabled: true
+    rate_limit_per_minute: 10
+  crunchbase:
+    enabled: true
+    rate_limit_per_minute: 5
+  podcasts:
+    enabled: true
+    feeds:
+      - name: "Bet the Process"
+        url: "https://bettheprocess.com"
+      - name: "Sharp Angles"
+        url: "https://sharpangles.com"
+      - name: "The Action Network"
+        url: "https://actionnetwork.com"
+  conferences:
+    enabled: true
+    events:
+      - name: "SBC Summit"
+        url: "https://sbcamericas.com"
+      - name: "ICE London"
+        url: "https://icelondon.uk.messefrankfurt.com"
+      - name: "G2E"
+        url: "https://g2e.com"
+
+enrichment:
+  provider: "hunter"  # Options: hunter, apollo, peopledatalabs
+  fallback_provider: "apollo"
+  verify_emails: true
+  confidence_threshold: 50
+
+api_keys:
+  google_search_api_key: ${GOOGLE_SEARCH_API_KEY}
+  google_search_engine_id: ${GOOGLE_SEARCH_ENGINE_ID}
+  hunter_api_key: "72fe31198a3318a604f6da5c99a8dcdd0902be44"
+  apollo_api_key: ${APOLLO_API_KEY}
+  peopledatalabs_api_key: ${PEOPLEDATALABS_API_KEY}
+  github_token: ${GITHUB_TOKEN}
+  crunchbase_api_key: ${CRUNCHBASE_API_KEY}
+
+logging:
+  level: "INFO"
+  file: "logs/pipeline.log"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+retry:
+  max_attempts: 3
+  backoff_factor: 2
+  retry_on_status: [429, 500, 502, 503, 504]
