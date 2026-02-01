@@ -94,42 +94,143 @@ export function isOvertime(period: number): boolean {
   return period >= 3;
 }
 
-const MIN_MINUTES_ELAPSED = 4.0;  // Game must have been going for at least 4 minutes
-const MIN_MINUTES_REMAINING = 5.0; // GOLDEN ZONE: Must have 5+ minutes left
-const UNDER_PPM_THRESHOLD = 4.5;   // Required PPM must be >= this for under trigger
-const UNDER_PPM_BUFFER_MIN = 1.0;  // GOLDEN ZONE: PPM difference must be >= 1.0
-const UNDER_PPM_BUFFER_MAX = 1.5;  // GOLDEN ZONE: PPM difference must be <= 1.5
+// =============================================================================
+// TRIGGER TYPE DEFINITIONS
+// =============================================================================
+export type TriggerType = 'over' | 'under' | 'tripleDipper' | null;
 
 /**
- * Check if game meets basic trigger conditions (shared between under/over)
+ * OVER TRIGGER (88.9% win rate)
+ * Conditions:
+ * - Game is live (in progress)
+ * - Game minute between 20-30 (10-20 minutes remaining)
+ * - Current PPM > Required PPM + 0.3 (game running HOT)
+ * - Exclude overtime games
  */
-function meetsBasicTriggerConditions(
+export function isOverTriggered(
   status: string,
   minutesRemainingReg: number,
+  currentPPM: number | null,
+  requiredPPM: number | null,
   isOT: boolean
 ): boolean {
   if (status !== 'in') return false;
   if (isOT) return false;
+  if (currentPPM === null || requiredPPM === null) return false;
 
-  // Must have at least 4 minutes elapsed (40 - 4 = 36 max remaining)
-  const minutesElapsed = REGULATION_MINUTES - minutesRemainingReg;
-  if (minutesElapsed < MIN_MINUTES_ELAPSED) return false;
+  const gameMinute = REGULATION_MINUTES - minutesRemainingReg;
 
-  // Must have more than 2 minutes remaining
-  if (minutesRemainingReg <= MIN_MINUTES_REMAINING) return false;
+  // Game minute 20-30
+  if (gameMinute < 20 || gameMinute > 30) return false;
+
+  // Current PPM exceeds required PPM by at least 0.3
+  const ppmGap = currentPPM - requiredPPM;
+  if (ppmGap < 0.3) return false;
 
   return true;
 }
 
 /**
- * Determine if game meets GOLDEN ZONE UNDER trigger conditions
- * GOLDEN ZONE TRIGGER LOGIC (69.7% win rate, 33.1% ROI):
+ * TRIPLE DIPPER (Strict UNDER - 76.3% win rate)
+ * Conditions:
+ * - Game is live (in progress)
+ * - Game minute between 15-32 (8-25 minutes remaining)
+ * - Required PPM >= 4.5 (high pace needed to hit line)
+ * - Current PPM <= Required PPM - 1.0 (game running COLD by at least 1 PPM)
+ * - Exclude overtime games
+ */
+export function isTripleDipper(
+  status: string,
+  minutesRemainingReg: number,
+  currentPPM: number | null,
+  requiredPPM: number | null,
+  isOT: boolean
+): boolean {
+  if (status !== 'in') return false;
+  if (isOT) return false;
+  if (currentPPM === null || requiredPPM === null) return false;
+
+  const gameMinute = REGULATION_MINUTES - minutesRemainingReg;
+
+  // Game minute 15-32
+  if (gameMinute < 15 || gameMinute > 32) return false;
+
+  // Required PPM must be high (4.5+)
+  if (requiredPPM < 4.5) return false;
+
+  // Current PPM is at least 1.0 below required
+  const ppmGap = currentPPM - requiredPPM;
+  if (ppmGap > -1.0) return false;
+
+  return true;
+}
+
+/**
+ * Standard UNDER TRIGGER (69.7% win rate - Golden Zone)
+ * Original trigger logic
+ * Conditions:
  * - Game is live (in progress)
  * - At least 4 minutes elapsed
- * - 5+ minutes remaining (not late game)
+ * - 5+ minutes remaining
  * - Required PPM >= 4.5
- * - PPM Difference (required - current) between 1.0 and 1.5 (sweet spot)
+ * - PPM diff between 1.0 and 1.5
  * - Exclude overtime games
+ */
+export function isUnderTriggered(
+  status: string,
+  minutesRemainingReg: number,
+  currentPPM: number | null,
+  requiredPPM: number | null,
+  isOT: boolean
+): boolean {
+  if (status !== 'in') return false;
+  if (isOT) return false;
+  if (currentPPM === null || requiredPPM === null) return false;
+
+  const minutesElapsed = REGULATION_MINUTES - minutesRemainingReg;
+  if (minutesElapsed < 4.0) return false;
+  if (minutesRemainingReg <= 5.0) return false;
+  if (requiredPPM < 4.5) return false;
+
+  const ppmDiff = requiredPPM - currentPPM;
+  if (ppmDiff < 1.0 || ppmDiff > 1.5) return false;
+
+  return true;
+}
+
+/**
+ * Determine which trigger type applies (if any)
+ * Priority: Triple Dipper > OVER > UNDER
+ * Returns the trigger type or null if no trigger
+ */
+export function getTriggerType(
+  status: string,
+  minutesRemainingReg: number,
+  currentPPM: number | null,
+  requiredPPM: number | null,
+  isOT: boolean
+): TriggerType {
+  // Check Triple Dipper first (strict UNDER - highest confidence for UNDER)
+  if (isTripleDipper(status, minutesRemainingReg, currentPPM, requiredPPM, isOT)) {
+    return 'tripleDipper';
+  }
+
+  // Check OVER trigger (highest win rate)
+  if (isOverTriggered(status, minutesRemainingReg, currentPPM, requiredPPM, isOT)) {
+    return 'over';
+  }
+
+  // Check standard UNDER trigger
+  if (isUnderTriggered(status, minutesRemainingReg, currentPPM, requiredPPM, isOT)) {
+    return 'under';
+  }
+
+  return null;
+}
+
+/**
+ * Legacy function - kept for backward compatibility
+ * Returns true if UNDER or TRIPLE DIPPER triggers fire
  */
 export function isTriggered(
   status: string,
@@ -138,36 +239,8 @@ export function isTriggered(
   isOT: boolean,
   currentPPM: number | null = null
 ): boolean {
-  if (!meetsBasicTriggerConditions(status, minutesRemainingReg, isOT)) return false;
-
-  if (requiredPPM === null || requiredPPM < UNDER_PPM_THRESHOLD) return false;
-
-  // GOLDEN ZONE: Must have currentPPM and PPM diff must be in sweet spot (1.0-1.5)
-  if (currentPPM === null) return false;
-
-  const ppmDiff = requiredPPM - currentPPM;
-  if (ppmDiff < UNDER_PPM_BUFFER_MIN || ppmDiff > UNDER_PPM_BUFFER_MAX) return false;
-
-  return true;
-}
-
-/**
- * Determine if game meets OVER trigger conditions
- * DISABLED: Golden Zone model focuses on Under triggers only
- * Over triggers showed 56.5% win rate but Golden Zone Under has 69.7%
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function isOverTriggered(
-  status: string,
-  minutesRemainingReg: number,
-  requiredPPM: number | null,
-  currentPPM: number | null,
-  isOT: boolean
-): boolean {
-  // DISABLED - Golden Zone model is Under-only
-  // Keep params for API compatibility
-  void status; void minutesRemainingReg; void requiredPPM; void currentPPM; void isOT;
-  return false;
+  const triggerType = getTriggerType(status, minutesRemainingReg, currentPPM, requiredPPM, isOT);
+  return triggerType === 'under' || triggerType === 'tripleDipper';
 }
 
 /**

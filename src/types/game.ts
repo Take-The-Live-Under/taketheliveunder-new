@@ -1,3 +1,5 @@
+export type TriggerType = 'over' | 'under' | 'tripleDipper' | null;
+
 export interface BonusStatus {
   inBonus: boolean;
   inDoubleBonus: boolean;
@@ -24,7 +26,7 @@ export interface Game {
   requiredPPM: number | null;
   triggeredFlag: boolean;      // Under trigger (legacy, kept for compatibility)
   overTriggeredFlag: boolean;  // Over trigger - pace tracking close to line
-  triggerType: 'under' | 'over' | null;  // Which trigger is active
+  triggerType: TriggerType;  // Which trigger is active
   isOvertime: boolean;
   isTomorrow?: boolean;
   // Foul game adjustment fields

@@ -10,6 +10,10 @@ import HowItWorksModal from '@/components/HowItWorksModal';
 import OnboardingOverlay from '@/components/OnboardingOverlay';
 import TrustFooter from '@/components/TrustFooter';
 import GameDetailModal from '@/components/GameDetailModal';
+import SystemLog from '@/components/SystemLog';
+import AsciiLogo from '@/components/AsciiLogo';
+import SearchingCode from '@/components/SearchingCode';
+import TriggerAnnouncement from '@/components/TriggerAnnouncement';
 import { Game } from '@/types/game';
 import { usePageView, useAnalytics } from '@/hooks/useAnalytics';
 
@@ -143,7 +147,8 @@ export default function Home() {
     }
 
     if (subTab === 'under') {
-      return game.triggeredFlag;
+      // GOLDEN tab shows ALL triggers: under, tripleDipper, and over
+      return game.triggerType !== null;
     } else if (subTab === 'over') {
       return game.overTriggeredFlag;
     } else if (subTab === 'live') {
@@ -171,7 +176,11 @@ export default function Home() {
     });
   }, [filteredGames]);
 
-  const underCount = games.filter((g) => g.triggeredFlag).length;
+  // Count all triggered games (under, tripleDipper, and over)
+  const underCount = games.filter((g) => g.triggerType === 'under').length;
+  const tripleDipperCount = games.filter((g) => g.triggerType === 'tripleDipper').length;
+  const overCount = games.filter((g) => g.triggerType === 'over').length;
+  const goldenCount = underCount + tripleDipperCount + overCount;  // All triggers combined
   const liveCount = games.filter((g) => g.status === 'in').length;
   const upcomingCount = games.filter((g) => g.status === 'pre').length;
 
@@ -231,6 +240,18 @@ export default function Home() {
                 ALERTS
               </a>
               <Link
+                href="/brief"
+                className="text-xs text-green-600 hover:text-green-400 transition-colors tap-target font-medium"
+              >
+                BRIEF
+              </Link>
+              <Link
+                href="/labs"
+                className="text-xs text-yellow-500 hover:text-yellow-400 transition-colors tap-target font-medium"
+              >
+                LABS
+              </Link>
+              <Link
                 href="/research"
                 className="text-xs text-green-600 hover:text-green-400 transition-colors tap-target font-medium"
               >
@@ -259,13 +280,13 @@ export default function Home() {
               }`}
             >
               <span className="flex items-center justify-center gap-1.5">
-                {underCount > 0 && (
+                {goldenCount > 0 && (
                   <span className="relative flex h-2 w-2">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-300 opacity-75"></span>
                     <span className={`relative inline-flex h-2 w-2 rounded-full ${subTab === 'under' ? 'bg-black' : 'bg-green-500'}`}></span>
                   </span>
                 )}
-                GOLDEN {underCount > 0 && <span className="opacity-80">({underCount})</span>}
+                TRIGGERS {goldenCount > 0 && <span className="opacity-80">({goldenCount})</span>}
               </span>
             </button>
             <button
@@ -300,17 +321,24 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Hero Section - Only show on Golden Zone tab when no triggers */}
-      {subTab === 'under' && sortedGames.length === 0 && !loading && (
-        <div className="mx-auto max-w-2xl px-4 pt-8 pb-4">
-          <div className="text-center mb-6">
-            <div className="text-green-600 text-xs mb-4 font-mono">// GOLDEN_ZONE</div>
-            <h1 className="text-2xl font-bold text-green-400 mb-2">
-              AWAITING_TRIGGERS
-            </h1>
-            <p className="text-green-700 text-sm leading-relaxed max-w-md mx-auto font-mono">
-              Monitoring all live games for statistical edges
-            </p>
+      {/* Hero Section - Show trigger stats when triggers are active */}
+      {subTab === 'under' && goldenCount > 0 && !loading && (
+        <div className="mx-auto max-w-2xl px-4 pt-6 pb-2">
+          <div className="border border-green-500/30 bg-black/50 p-4 terminal-glow-box">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="relative flex h-3 w-3">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex h-3 w-3 rounded-full bg-green-500"></span>
+                </span>
+                <span className="text-green-400 font-bold">{goldenCount} ACTIVE_TRIGGER{goldenCount > 1 ? 'S' : ''}</span>
+              </div>
+              <div className="flex gap-4 text-xs">
+                {overCount > 0 && <span className="text-orange-400">🔥 {overCount} OVER</span>}
+                {tripleDipperCount > 0 && <span className="text-yellow-400">🏆 {tripleDipperCount} TRIPLE</span>}
+                {underCount > 0 && <span className="text-green-400">✓ {underCount} UNDER</span>}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -342,6 +370,13 @@ export default function Home() {
             </button>
           )}
         </div>
+
+        {/* Trigger Announcement - Typing animation for active triggers */}
+        {goldenCount > 0 && (
+          <div className="mb-4">
+            <TriggerAnnouncement games={games} />
+          </div>
+        )}
 
         {/* Error Banner */}
         {error && (
@@ -375,25 +410,28 @@ export default function Home() {
 
         {/* Empty States - Terminal Style */}
         {!loading && !error && subTab !== 'picks' && sortedGames.length === 0 && (
-          <div className="border border-green-900 bg-black/30 p-8 text-center animate-fade-in terminal-glow-box">
+          <div className="animate-fade-in">
             {subTab === 'under' ? (
               <>
-                <div className="text-green-600 text-xs mb-4 font-mono">// STATUS: MONITORING</div>
-                <p className="text-lg font-bold text-green-400 mb-2 font-mono">
-                  NO_ACTIVE_TRIGGERS
-                </p>
-                <p className="text-sm text-green-700 max-w-sm mx-auto leading-relaxed font-mono">
-                  Golden Zone: Under triggers with PPM diff 1.0-1.5 and 5+ min remaining.
-                </p>
-                <button
-                  onClick={() => setSubTab('live')}
-                  className="mt-6 px-6 py-2.5 bg-green-900/50 border border-green-700 hover:bg-green-900 text-sm text-green-400 font-medium transition-colors tap-target font-mono"
-                >
-                  VIEW_LIVE_GAMES
-                </button>
+                {/* ASCII Logo with Searching Animation */}
+                <div className="border border-green-900 bg-black/30 p-6 md:p-8 text-center terminal-glow-box mb-6">
+                  <AsciiLogo animate={true} size="large" />
+
+                  {/* Searching Code Animation */}
+                  <div className="mt-6 text-left max-w-lg mx-auto">
+                    <SearchingCode liveCount={liveCount} isSearching={true} />
+                  </div>
+
+                  <button
+                    onClick={() => setSubTab('live')}
+                    className="mt-6 px-6 py-2.5 bg-green-900/50 border border-green-700 hover:bg-green-900 text-sm text-green-400 font-medium transition-colors tap-target font-mono"
+                  >
+                    VIEW_LIVE_GAMES →
+                  </button>
+                </div>
               </>
             ) : subTab === 'live' ? (
-              <>
+              <div className="border border-green-900 bg-black/30 p-8 text-center terminal-glow-box">
                 <div className="text-green-600 text-xs mb-4 font-mono">// STATUS: STANDBY</div>
                 <p className="text-lg font-bold text-green-400 mb-2 font-mono">
                   NO_LIVE_GAMES
@@ -401,9 +439,9 @@ export default function Home() {
                 <p className="text-sm text-green-700 max-w-sm mx-auto font-mono">
                   Check back during NCAA game times for live action and real-time edges.
                 </p>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="border border-green-900 bg-black/30 p-8 text-center terminal-glow-box">
                 <div className="text-green-600 text-xs mb-4 font-mono">// STATUS: QUEUED</div>
                 <p className="text-lg font-bold text-green-400 mb-2 font-mono">
                   NO_UPCOMING_GAMES
@@ -411,7 +449,7 @@ export default function Home() {
                 <p className="text-sm text-green-700 max-w-sm mx-auto font-mono">
                   Check back later for today&apos;s upcoming matchups.
                 </p>
-              </>
+              </div>
             )}
           </div>
         )}
@@ -461,8 +499,10 @@ export default function Home() {
         )}
       </div>
 
-      {/* Trust Footer */}
-      <TrustFooter />
+      {/* Trust Footer - with bottom padding for SystemLog */}
+      <div className="pb-systemlog">
+        <TrustFooter />
+      </div>
 
       {/* Game Detail Modal */}
       {selectedGame && (
@@ -472,6 +512,9 @@ export default function Home() {
           onClose={() => setSelectedGame(null)}
         />
       )}
+
+      {/* System Log - Terminal Style Scanner */}
+      <SystemLog games={games} isScanning={!loading && games.some(g => g.status === 'in')} />
     </main>
   );
 }

@@ -427,3 +427,68 @@ body {
   will-change: transform, opacity;
   transform: translateZ(0);
 }
+
+/* System Log scrollbar */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(34, 197, 94, 0.3);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 197, 94, 0.5);
+}
+
+/* Typewriter effect */
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent; }
+  50% { border-color: var(--terminal-green); }
+}
+
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid var(--terminal-green);
+  animation: typewriter 2s steps(40, end), blink-caret 0.75s step-end infinite;
+}
+
+/* Bottom padding for SystemLog */
+.pb-systemlog {
+  padding-bottom: 120px;
+}
+
+/* Matrix-style text animation */
+@keyframes matrix-fade {
+  0% { opacity: 1; color: #4ade80; }
+  100% { opacity: 0.3; color: #166534; }
+}
+
+.matrix-text {
+  animation: matrix-fade 2s linear infinite;
+}
+
+/* Glow text effect */
+@keyframes text-glow {
+  0%, 100% {
+    text-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
+  }
+  50% {
+    text-shadow: 0 0 8px rgba(34, 197, 94, 0.8), 0 0 12px rgba(34, 197, 94, 0.4);
+  }
+}
+
+.animate-text-glow {
+  animation: text-glow 2s ease-in-out infinite;
+}

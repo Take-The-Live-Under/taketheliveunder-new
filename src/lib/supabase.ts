@@ -43,7 +43,7 @@ export interface TriggerLog {
   period: number;
   clock: string;
   trigger_strength: string;
-  trigger_type: 'under' | 'over';
+  trigger_type: 'under' | 'over' | 'tripleDipper';
 }
 
 export async function logTrigger(trigger: Omit<TriggerLog, 'id' | 'created_at'>): Promise<void> {

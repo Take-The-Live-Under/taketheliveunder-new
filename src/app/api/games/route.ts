@@ -5,13 +5,14 @@ import {
   calculateCurrentPPM,
   calculateRequiredPPM,
   isOvertime,
-  isTriggered,
+  getTriggerType,
   isOverTriggered,
   parseClock,
   isInFoulGame,
   getFoulGameAdjustment,
   couldEnterFoulGame,
   getExpectedFoulGameAdjustment,
+  TriggerType,
 } from '@/lib/calculations';
 import { logTrigger, hasBeenLoggedRecently, logGameSnapshots } from '@/lib/supabase';
 import { analyzeMatchup } from '@/lib/allTeamFoulGameData';
@@ -410,17 +411,13 @@ export async function GET() {
 
       const requiredPPM = calculateRequiredPPM(liveTotal, ouLine, minutesRemainingReg);
 
-      // Calculate triggers with new logic
-      const triggeredFlag = isTriggered(status, minutesRemainingReg, requiredPPM, isOT, currentPPM);
-      const overTriggeredFlag = isOverTriggered(status, minutesRemainingReg, requiredPPM, currentPPM, isOT);
+      // Calculate trigger type using new unified logic
+      const triggerType: TriggerType = getTriggerType(status, minutesRemainingReg, currentPPM, requiredPPM, isOT);
 
-      // Determine trigger type (under takes priority if somehow both trigger)
-      let triggerType: 'under' | 'over' | null = null;
-      if (triggeredFlag) {
-        triggerType = 'under';
-      } else if (overTriggeredFlag) {
-        triggerType = 'over';
-      }
+      // triggeredFlag = true for UNDER or TRIPLE DIPPER (legacy compatibility)
+      const triggeredFlag = triggerType === 'under' || triggerType === 'tripleDipper';
+      // overTriggeredFlag = true for OVER trigger
+      const overTriggeredFlag = triggerType === 'over';
 
       // Calculate foul game adjustment
       const pointDiff = Math.abs(homeScore - awayScore);

@@ -1,6 +1,7 @@
 'use client';
 
 import { Game } from '@/types/game';
+import TriggerBuilder from './TriggerBuilder';
 
 interface GameCardProps {
   game: Game;
@@ -49,8 +50,10 @@ function getUnderTriggerStrength(requiredPPM: number | null): number {
 
 export default function GameCard({ game, onClick }: GameCardProps) {
   const isLive = game.status === 'in';
-  const isUnderTriggered = game.triggeredFlag;
-  const isOverTriggered = game.overTriggeredFlag;
+  const isUnderTriggered = game.triggerType === 'under';
+  const isTripleDipper = game.triggerType === 'tripleDipper';
+  const isOverTriggered = game.triggerType === 'over';
+  const hasAnyTrigger = game.triggerType !== null;
   const triggerStrength = getUnderTriggerStrength(game.requiredPPM);
 
   // Calculate derived metrics
@@ -75,17 +78,32 @@ export default function GameCard({ game, onClick }: GameCardProps) {
 
   // Determine card styling based on trigger type
   const getCardStyle = () => {
-    if (isUnderTriggered) {
+    if (isTripleDipper) {
       return 'border-yellow-500/50 bg-black/60 terminal-glow-box';
     }
     if (isOverTriggered) {
-      return 'border-green-500/50 bg-black/60';
+      return 'border-orange-500/50 bg-black/60 terminal-glow-box';
+    }
+    if (isUnderTriggered) {
+      return 'border-green-500/50 bg-black/60 terminal-glow-box';
     }
     return 'border-green-900 bg-black/40 hover:border-green-700';
   };
 
   // Determine if trigger badge should be shown
-  const showTriggerBadge = isUnderTriggered || isOverTriggered;
+  const showTriggerBadge = hasAnyTrigger;
+
+  // Get trigger badge color and text
+  const getTriggerStyle = () => {
+    if (isTripleDipper) {
+      return { color: 'text-yellow-400', ping: 'bg-yellow-400', dot: 'bg-yellow-500', label: 'TRIPLE_DIPPER 🏆' };
+    }
+    if (isOverTriggered) {
+      return { color: 'text-orange-400', ping: 'bg-orange-400', dot: 'bg-orange-500', label: 'OVER_SIGNAL' };
+    }
+    return { color: 'text-green-400', ping: 'bg-green-400', dot: 'bg-green-500', label: 'GOLDEN_ZONE' };
+  };
+  const triggerStyle = getTriggerStyle();
 
   return (
     <div
@@ -100,23 +118,29 @@ export default function GameCard({ game, onClick }: GameCardProps) {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
-              <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${isUnderTriggered ? 'bg-yellow-400' : 'bg-green-400'} opacity-75`}></span>
-              <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${isUnderTriggered ? 'bg-yellow-500' : 'bg-green-500'}`}></span>
+              <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${triggerStyle.ping} opacity-75`}></span>
+              <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${triggerStyle.dot}`}></span>
             </span>
-            <span className={`text-xs font-bold uppercase tracking-wide ${isUnderTriggered ? 'text-yellow-400' : 'text-green-400'}`}>
-              {isUnderTriggered ? 'GOLDEN_ZONE' : 'OVER_EDGE'}
+            <span className={`text-xs font-bold uppercase tracking-wide ${triggerStyle.color}`}>
+              {triggerStyle.label}
             </span>
           </div>
           {edge !== null && edgeStyle.label && (
-            <span className={`text-[10px] font-bold px-2 py-0.5 border ${isUnderTriggered ? 'border-yellow-700 text-yellow-400' : 'border-green-700 text-green-400'}`}>
+            <span className={`text-[10px] font-bold px-2 py-0.5 border ${
+              isTripleDipper ? 'border-yellow-700 text-yellow-400' :
+              isOverTriggered ? 'border-orange-700 text-orange-400' :
+              'border-green-700 text-green-400'
+            }`}>
               {edgeStyle.label}
             </span>
           )}
         </div>
-        {isUnderTriggered && (
+        {(isUnderTriggered || isTripleDipper) && (
           <div className="mt-2 h-1 w-full bg-green-900/50 overflow-hidden">
             <div
-              className="h-full transition-all duration-500 bg-gradient-to-r from-yellow-500 to-yellow-400"
+              className={`h-full transition-all duration-500 ${
+                isTripleDipper ? 'bg-gradient-to-r from-yellow-500 to-amber-400' : 'bg-gradient-to-r from-green-500 to-green-400'
+              }`}
               style={{ width: `${triggerStrength}%` }}
             />
           </div>
@@ -350,7 +374,32 @@ export default function GameCard({ game, onClick }: GameCardProps) {
         </div>
       )}
 
+      {/* Trigger Builder - Shows code being executed */}
+      {hasAnyTrigger && isLive && (
+        <div className="mb-3">
+          <TriggerBuilder game={game} />
+        </div>
+      )}
+
       {/* CTA for triggered games - smooth transitions */}
+      {/* Triple Dipper CTA */}
+      <div
+        className={`transition-all duration-300 ease-out ${
+          isTripleDipper && game.ouLine !== null
+            ? 'opacity-100 max-h-24'
+            : 'opacity-0 max-h-0 overflow-hidden'
+        }`}
+        aria-hidden={!(isTripleDipper && game.ouLine !== null)}
+      >
+        <div className="border border-yellow-500/50 bg-yellow-900/20 p-3 text-center terminal-glow-box">
+          <div className="text-[10px] text-yellow-500 uppercase tracking-wider mb-1">// TRIPLE_DIPPER_SIGNAL 🏆</div>
+          <div className="text-xl font-bold text-yellow-400">
+            UNDER {game.ouLine?.toFixed(1) ?? '—'}
+          </div>
+        </div>
+      </div>
+
+      {/* Standard Under CTA */}
       <div
         className={`transition-all duration-300 ease-out ${
           isUnderTriggered && game.ouLine !== null
@@ -359,26 +408,26 @@ export default function GameCard({ game, onClick }: GameCardProps) {
         }`}
         aria-hidden={!(isUnderTriggered && game.ouLine !== null)}
       >
-        <div className="border border-yellow-500/50 bg-yellow-900/20 p-3 text-center terminal-glow-box">
-          <div className="text-[10px] text-yellow-500 uppercase tracking-wider mb-1">// GOLDEN_ZONE_SIGNAL</div>
-          <div className="text-xl font-bold text-yellow-400">
+        <div className="border border-green-500/50 bg-green-900/20 p-3 text-center terminal-glow-box">
+          <div className="text-[10px] text-green-500 uppercase tracking-wider mb-1">// GOLDEN_ZONE_SIGNAL</div>
+          <div className="text-xl font-bold text-green-400">
             UNDER {game.ouLine?.toFixed(1) ?? '—'}
           </div>
-          <div className="text-[10px] text-yellow-600 mt-1">WIN_RATE: 69.7%</div>
         </div>
       </div>
 
+      {/* Over CTA */}
       <div
         className={`transition-all duration-300 ease-out ${
           isOverTriggered && game.ouLine !== null
-            ? 'opacity-100 max-h-20'
+            ? 'opacity-100 max-h-24'
             : 'opacity-0 max-h-0 overflow-hidden'
         }`}
         aria-hidden={!(isOverTriggered && game.ouLine !== null)}
       >
-        <div className="border border-green-500/50 bg-green-900/20 p-3 text-center">
-          <div className="text-[10px] text-green-500 uppercase tracking-wider mb-1">// SIGNAL</div>
-          <div className="text-xl font-bold text-green-400">
+        <div className="border border-orange-500/50 bg-orange-900/20 p-3 text-center terminal-glow-box">
+          <div className="text-[10px] text-orange-500 uppercase tracking-wider mb-1">// OVER_SIGNAL 🔥</div>
+          <div className="text-xl font-bold text-orange-400">
             OVER {game.ouLine?.toFixed(1) ?? '—'}
           </div>
         </div>

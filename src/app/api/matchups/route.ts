@@ -406,6 +406,25 @@ async function fetchOddsData(): Promise<Map<string, number | null>> {
   return oddsMap;
 }
 
+// Get current date in US Eastern timezone
+function getUSEasternDate(): Date {
+  const now = new Date();
+  const easternStr = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
+  return new Date(easternStr);
+}
+
+// Format date as YYYYMMDD for ESPN API
+function formatDateForESPN(date: Date): string {
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  };
+  const formatter = new Intl.DateTimeFormat('en-CA', options);
+  return formatter.format(date).replace(/-/g, '');
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const gameId = searchParams.get('gameId');
@@ -418,14 +437,35 @@ export async function GET(request: Request) {
     // Load referee stats cache
     const refCache = await getRefereeStatsCache();
 
-    // Fetch scoreboard data
-    const espnResponse = await fetch(ESPN_SCOREBOARD_URL, { cache: 'no-store' });
+    // Get today and tomorrow dates
+    const today = new Date();
+    const easternToday = getUSEasternDate();
+    const easternTomorrow = new Date(easternToday);
+    easternTomorrow.setDate(easternTomorrow.getDate() + 1);
+
+    const todayStr = formatDateForESPN(today);
+    const tomorrowStr = formatDateForESPN(easternTomorrow);
+
+    // Fetch today's scoreboard data (groups=50 for Division I)
+    const espnResponse = await fetch(`${ESPN_SCOREBOARD_URL}?limit=500&groups=50&dates=${todayStr}`, { cache: 'no-store' });
     if (!espnResponse.ok) {
       throw new Error('Failed to fetch ESPN data');
     }
 
     const espnData = await espnResponse.json();
-    const events: ESPNEvent[] = espnData.events || [];
+    let events: ESPNEvent[] = espnData.events || [];
+
+    // Also fetch tomorrow's games
+    try {
+      const tomorrowResponse = await fetch(`${ESPN_SCOREBOARD_URL}?limit=500&groups=50&dates=${tomorrowStr}`, { cache: 'no-store' });
+      if (tomorrowResponse.ok) {
+        const tomorrowData = await tomorrowResponse.json();
+        const tomorrowEvents: ESPNEvent[] = tomorrowData.events || [];
+        events = [...events, ...tomorrowEvents];
+      }
+    } catch (error) {
+      console.error('Error fetching tomorrow matchups:', error);
+    }
 
     // Fetch odds data
     const oddsMap = await fetchOddsData();
