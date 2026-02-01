@@ -84,40 +84,44 @@ export default function GameCard({ game, onClick }: GameCardProps) {
     return 'border-green-900 bg-black/40 hover:border-green-700';
   };
 
+  // Determine if trigger badge should be shown
+  const showTriggerBadge = isUnderTriggered || isOverTriggered;
+
   return (
     <div
       onClick={onClick}
-      className={`border p-4 transition-all duration-200 card-enter font-mono ${getCardStyle()} ${onClick ? 'cursor-pointer active:scale-[0.99]' : ''}`}
+      className={`border p-4 transition-all duration-200 card-enter font-mono game-card-stable ${getCardStyle()} ${onClick ? 'cursor-pointer active:scale-[0.99]' : ''}`}
     >
-      {/* Trigger Badge */}
-      {(isUnderTriggered || isOverTriggered) && (
-        <div className="mb-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${isUnderTriggered ? 'bg-yellow-400' : 'bg-green-400'} opacity-75`}></span>
-                <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${isUnderTriggered ? 'bg-yellow-500' : 'bg-green-500'}`}></span>
-              </span>
-              <span className={`text-xs font-bold uppercase tracking-wide ${isUnderTriggered ? 'text-yellow-400' : 'text-green-400'}`}>
-                {isUnderTriggered ? 'GOLDEN_ZONE' : 'OVER_EDGE'}
-              </span>
-            </div>
-            {edge !== null && edgeStyle.label && (
-              <span className={`text-[10px] font-bold px-2 py-0.5 border ${isUnderTriggered ? 'border-yellow-700 text-yellow-400' : 'border-green-700 text-green-400'}`}>
-                {edgeStyle.label}
-              </span>
-            )}
+      {/* Trigger Badge - uses opacity for smooth transitions instead of unmounting */}
+      <div
+        className={`mb-3 transition-all duration-300 ${showTriggerBadge ? 'opacity-100 max-h-20' : 'opacity-0 max-h-0 overflow-hidden mb-0'}`}
+        aria-hidden={!showTriggerBadge}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${isUnderTriggered ? 'bg-yellow-400' : 'bg-green-400'} opacity-75`}></span>
+              <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${isUnderTriggered ? 'bg-yellow-500' : 'bg-green-500'}`}></span>
+            </span>
+            <span className={`text-xs font-bold uppercase tracking-wide ${isUnderTriggered ? 'text-yellow-400' : 'text-green-400'}`}>
+              {isUnderTriggered ? 'GOLDEN_ZONE' : 'OVER_EDGE'}
+            </span>
           </div>
-          {isUnderTriggered && (
-            <div className="mt-2 h-1 w-full bg-green-900/50 overflow-hidden">
-              <div
-                className="h-full transition-all duration-500 bg-gradient-to-r from-yellow-500 to-yellow-400"
-                style={{ width: `${triggerStrength}%` }}
-              />
-            </div>
+          {edge !== null && edgeStyle.label && (
+            <span className={`text-[10px] font-bold px-2 py-0.5 border ${isUnderTriggered ? 'border-yellow-700 text-yellow-400' : 'border-green-700 text-green-400'}`}>
+              {edgeStyle.label}
+            </span>
           )}
         </div>
-      )}
+        {isUnderTriggered && (
+          <div className="mt-2 h-1 w-full bg-green-900/50 overflow-hidden">
+            <div
+              className="h-full transition-all duration-500 bg-gradient-to-r from-yellow-500 to-yellow-400"
+              style={{ width: `${triggerStrength}%` }}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Teams & Score */}
       <div className="mb-3">
@@ -193,9 +197,16 @@ export default function GameCard({ game, onClick }: GameCardProps) {
         )}
       </div>
 
-      {/* Foul Game Warning - appears around 4 min mark */}
-      {isLive && game.foulGameWarning && (
-        <div className={`mb-3 border p-3 ${
+      {/* Foul Game Warning - smooth transition instead of conditional mount */}
+      <div
+        className={`transition-all duration-300 ease-out ${
+          isLive && game.foulGameWarning
+            ? 'opacity-100 max-h-32 mb-3'
+            : 'opacity-0 max-h-0 overflow-hidden mb-0'
+        }`}
+        aria-hidden={!(isLive && game.foulGameWarning)}
+      >
+        <div className={`border p-3 ${
           game.foulGameWarningLevel === 'high'
             ? 'bg-red-900/20 border-red-700/50'
             : game.foulGameWarningLevel === 'medium'
@@ -228,7 +239,7 @@ export default function GameCard({ game, onClick }: GameCardProps) {
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Metrics Grid for Live Games */}
       {isLive && (
@@ -339,25 +350,39 @@ export default function GameCard({ game, onClick }: GameCardProps) {
         </div>
       )}
 
-      {/* CTA for triggered games */}
-      {isUnderTriggered && game.ouLine !== null && (
+      {/* CTA for triggered games - smooth transitions */}
+      <div
+        className={`transition-all duration-300 ease-out ${
+          isUnderTriggered && game.ouLine !== null
+            ? 'opacity-100 max-h-24'
+            : 'opacity-0 max-h-0 overflow-hidden'
+        }`}
+        aria-hidden={!(isUnderTriggered && game.ouLine !== null)}
+      >
         <div className="border border-yellow-500/50 bg-yellow-900/20 p-3 text-center terminal-glow-box">
           <div className="text-[10px] text-yellow-500 uppercase tracking-wider mb-1">// GOLDEN_ZONE_SIGNAL</div>
           <div className="text-xl font-bold text-yellow-400">
-            UNDER {game.ouLine.toFixed(1)}
+            UNDER {game.ouLine?.toFixed(1) ?? '—'}
           </div>
           <div className="text-[10px] text-yellow-600 mt-1">WIN_RATE: 69.7%</div>
         </div>
-      )}
+      </div>
 
-      {isOverTriggered && game.ouLine !== null && (
+      <div
+        className={`transition-all duration-300 ease-out ${
+          isOverTriggered && game.ouLine !== null
+            ? 'opacity-100 max-h-20'
+            : 'opacity-0 max-h-0 overflow-hidden'
+        }`}
+        aria-hidden={!(isOverTriggered && game.ouLine !== null)}
+      >
         <div className="border border-green-500/50 bg-green-900/20 p-3 text-center">
           <div className="text-[10px] text-green-500 uppercase tracking-wider mb-1">// SIGNAL</div>
           <div className="text-xl font-bold text-green-400">
-            OVER {game.ouLine.toFixed(1)}
+            OVER {game.ouLine?.toFixed(1) ?? '—'}
           </div>
         </div>
-      )}
+      </div>
 
       {/* Tap indicator */}
       {onClick && (

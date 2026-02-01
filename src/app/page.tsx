@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import GameCard from '@/components/GameCard';
 import SkeletonCard from '@/components/SkeletonCard';
@@ -29,6 +29,7 @@ export default function Home() {
   const [retrying, setRetrying] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const lastFetchRef = useRef<number>(0);
 
   // Analytics tracking
@@ -64,7 +65,46 @@ export default function Home() {
         throw new Error('Failed to fetch games');
       }
       const data = await response.json();
-      setGames(data.games || []);
+      const newGames = data.games || [];
+
+      // Merge games to avoid complete re-render: update existing games in place
+      setGames(prevGames => {
+        if (prevGames.length === 0) return newGames;
+
+        // Create a map of new games by ID for quick lookup
+        const newGamesMap = new Map(newGames.map((g: Game) => [g.id, g]));
+        const prevGamesMap = new Map(prevGames.map(g => [g.id, g]));
+
+        // Check if the game set has changed (additions/removals)
+        const sameGameSet =
+          newGames.length === prevGames.length &&
+          newGames.every((g: Game) => prevGamesMap.has(g.id));
+
+        if (sameGameSet) {
+          // Same games - update in place preserving order
+          return prevGames.map(prevGame => {
+            const newGame = newGamesMap.get(prevGame.id);
+            if (!newGame) return prevGame;
+
+            // Only return new object if data actually changed
+            const hasChanged = JSON.stringify(prevGame) !== JSON.stringify(newGame);
+            return hasChanged ? newGame : prevGame;
+          });
+        }
+
+        // Game set changed - return new array but preserve relative ordering of existing games
+        const existingGamesUpdated = prevGames
+          .filter(g => newGamesMap.has(g.id))
+          .map(g => newGamesMap.get(g.id)!);
+
+        // Add any new games at the end
+        const newGameIds = new Set(newGames.map((g: Game) => g.id));
+        const existingIds = new Set(prevGames.map(g => g.id));
+        const addedGames = newGames.filter((g: Game) => !existingIds.has(g.id));
+
+        return [...existingGamesUpdated, ...addedGames];
+      });
+
       setLastUpdated(data.timestamp);
       setError(null);
       setRetrying(false);
@@ -77,8 +117,12 @@ export default function Home() {
       setLoading(false);
       setRetrying(false);
       setIsRefreshing(false);
+      // Mark initial load complete after first successful fetch
+      if (isInitialLoad) {
+        setTimeout(() => setIsInitialLoad(false), 500);
+      }
     }
-  }, []);
+  }, [isInitialLoad]);
 
   useEffect(() => {
     fetchGames();
@@ -111,32 +155,21 @@ export default function Home() {
     return true;
   });
 
-  // Sort games
-  const sortedGames = [...filteredGames].sort((a, b) => {
-    if (subTab === 'under') {
-      const aPPM = a.requiredPPM ?? 0;
-      const bPPM = b.requiredPPM ?? 0;
-      return bPPM - aPPM;
-    }
+  // Sort by start time for stability - games won't jump around during refreshes
+  const sortedGames = useMemo(() => {
+    return [...filteredGames].sort((a, b) => {
+      // Primary sort: start time (stable, never changes)
+      const timeA = new Date(a.startTime).getTime();
+      const timeB = new Date(b.startTime).getTime();
 
-    if (subTab === 'over') {
-      const aDiff = Math.abs((a.requiredPPM ?? 0) - (a.currentPPM ?? 0));
-      const bDiff = Math.abs((b.requiredPPM ?? 0) - (b.currentPPM ?? 0));
-      return aDiff - bDiff;
-    }
+      if (timeA !== timeB) {
+        return timeA - timeB;
+      }
 
-    if (subTab === 'live') {
-      const aPPM = a.requiredPPM ?? 0;
-      const bPPM = b.requiredPPM ?? 0;
-      return bPPM - aPPM;
-    }
-
-    if (subTab === 'upcoming') {
-      return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-    }
-
-    return 0;
-  });
+      // Tiebreaker: game ID for absolute stability
+      return a.id.localeCompare(b.id);
+    });
+  }, [filteredGames]);
 
   const underCount = games.filter((g) => g.triggeredFlag).length;
   const liveCount = games.filter((g) => g.status === 'in').length;
@@ -398,7 +431,7 @@ export default function Home() {
 
         {/* Games List */}
         {!loading && subTab !== 'picks' && sortedGames.length > 0 && (
-          <div className="space-y-3">
+          <div className={`space-y-3 ${isInitialLoad ? 'cards-initial-load' : ''}`}>
             {subTab === 'upcoming' && sortedGames.every(g => g.isTomorrow) && (
               <div className="flex items-center gap-2 mb-2">
                 <span className="bg-green-900/50 border border-green-700 px-2 py-1 text-xs font-medium text-green-400 font-mono">
