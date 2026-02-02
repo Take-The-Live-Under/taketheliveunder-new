@@ -62,14 +62,20 @@ async function loadRefereeStatsFromCSV(): Promise<Map<string, RefereeStats>> {
   const statsMap = new Map<string, RefereeStats>();
 
   try {
-    const csvPath = path.join(process.cwd(), 'data', 'refmetrics_fouls_2024_25_auth_latest.csv');
+    // Try static-data first (for production), fall back to data (for local dev)
+    let csvPath = path.join(process.cwd(), 'static-data', 'refmetrics_fouls_2024_25_auth_latest.csv');
 
-    // Check if file exists
     try {
       await fs.access(csvPath);
     } catch {
-      console.log('Referee stats CSV not found - referee data unavailable');
-      return statsMap;
+      // Fall back to data directory for local development
+      csvPath = path.join(process.cwd(), 'data', 'refmetrics_fouls_2024_25_auth_latest.csv');
+      try {
+        await fs.access(csvPath);
+      } catch {
+        console.log('Referee stats CSV not found - referee data unavailable');
+        return statsMap;
+      }
     }
 
     const content = await fs.readFile(csvPath, 'utf-8');
@@ -237,30 +243,48 @@ async function loadTeamStatsFromCSV(): Promise<Map<string, TeamStats>> {
   const statsMap = new Map<string, TeamStats>();
 
   try {
-    // Path to basketball-betting cache
-    const cachePath = path.join(process.cwd(), 'cache');
+    // Try static-data first (for production), then fall back to cache (for local dev)
+    let latestFile: string | null = null;
 
-    // Check if cache directory exists
+    // Try static-data directory first
+    const staticDataPath = path.join(process.cwd(), 'static-data');
     try {
-      await fs.access(cachePath);
+      await fs.access(staticDataPath);
+      const staticFiles = await fs.readdir(staticDataPath);
+      const staticEspnFiles = staticFiles
+        .filter(f => f.startsWith('espn_stats_') && f.endsWith('.csv'))
+        .sort()
+        .reverse();
+      if (staticEspnFiles.length > 0) {
+        latestFile = path.join(staticDataPath, staticEspnFiles[0]);
+      }
     } catch {
-      console.log('Cache directory not found - team stats unavailable');
+      // static-data not found, will try cache
+    }
+
+    // Fall back to cache directory
+    if (!latestFile) {
+      const cachePath = path.join(process.cwd(), 'cache');
+      try {
+        await fs.access(cachePath);
+        const cacheFiles = await fs.readdir(cachePath);
+        const cacheEspnFiles = cacheFiles
+          .filter(f => f.startsWith('espn_stats_') && f.endsWith('.csv'))
+          .sort()
+          .reverse();
+        if (cacheEspnFiles.length > 0) {
+          latestFile = path.join(cachePath, cacheEspnFiles[0]);
+        }
+      } catch {
+        // cache not found either
+      }
+    }
+
+    if (!latestFile) {
+      console.log('No ESPN stats CSV found in static-data or cache');
       return statsMap;
     }
 
-    // Find most recent ESPN stats file
-    const files = await fs.readdir(cachePath);
-    const espnFiles = files
-      .filter(f => f.startsWith('espn_stats_') && f.endsWith('.csv'))
-      .sort()
-      .reverse();
-
-    if (espnFiles.length === 0) {
-      console.log('No ESPN stats CSV found');
-      return statsMap;
-    }
-
-    const latestFile = path.join(cachePath, espnFiles[0]);
     console.log(`Loading team stats from: ${latestFile}`);
 
     const content = await fs.readFile(latestFile, 'utf-8');

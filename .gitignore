@@ -33,10 +33,13 @@ wheels/
 ngrok.yml
 
 # Data files
-*.csv
 *.db
 *.sqlite
 *.sqlite3
+
+# CSV files (except static-data which is explicitly tracked)
+*.csv
+!static-data/*.csv
 
 # Logs
 *.log
@@ -64,8 +67,14 @@ node_modules/
 .vercel
 .railway
 
-# Cache and Data
+# Cache and data directories (local dev only)
 .cache/
 team_stats_cache/
 cache/
 data/
+
+# Model outputs and other generated data
+models/
+pj_hmm_kalman_model/
+investor-pipeline/
+odds_snapshots_today/
