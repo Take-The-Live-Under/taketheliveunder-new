@@ -912,7 +912,45 @@ class NCAABettingMonitor:
         logger.warning(f"Breakdown: {confidence_data['breakdown']}")
         logger.warning("=" * 80)
 
-        # TODO: Add alert integrations (SMS, Discord, email, etc.)
+        # Post to Twitter automatically
+        self._post_trigger_to_twitter(log_data)
+
+    def _post_trigger_to_twitter(self, log_data: Dict):
+        """Post trigger alert to Twitter via API"""
+        try:
+            # Only post if PPM >= 4.5 (our core trigger)
+            required_ppm = log_data.get("required_ppm", 0)
+            if required_ppm < 4.5:
+                return
+
+            # Prepare payload for Twitter API
+            payload = {
+                "away_team": log_data.get("away_team"),
+                "home_team": log_data.get("home_team"),
+                "ppm": required_ppm,
+                "minute": 40 - log_data.get("total_time_remaining", 0),  # Minutes elapsed
+                "ou_line": log_data.get("ou_line"),
+                "current_total": log_data.get("total_points"),
+                "confidence": log_data.get("confidence_score")
+            }
+
+            # Call the Twitter API endpoint (Vercel or local)
+            api_url = getattr(config, 'TWITTER_API_URL', 'https://taketheliveunder.com/api/twitter/post-trigger')
+
+            response = requests.post(api_url, json=payload, timeout=10)
+
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("success"):
+                    logger.info(f"🐦 Twitter alert posted for {log_data['away_team']} @ {log_data['home_team']}")
+                else:
+                    logger.warning(f"Twitter post failed: {result.get('error')}")
+            else:
+                logger.warning(f"Twitter API error: {response.status_code}")
+
+        except Exception as e:
+            logger.error(f"Error posting to Twitter: {e}")
+            # Don't raise - let monitoring continue even if Twitter fails
 
     def _get_totals_line(self, game: Dict, preferred_book: str = None) -> Optional[float]:
         """
