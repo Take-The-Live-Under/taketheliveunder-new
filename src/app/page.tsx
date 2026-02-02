@@ -218,7 +218,7 @@ export default function Home() {
       />
 
       {/* Sticky Header */}
-      <div className="sticky top-0 z-10 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-green-900/50">
+      <div className="sticky top-0 z-40 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-green-900/50">
         <div className="mx-auto max-w-2xl px-4 py-3">
           {/* Logo Row */}
           <div className="flex items-center justify-between mb-4">
@@ -241,25 +241,25 @@ export default function Home() {
               </a>
               <Link
                 href="/brief"
-                className="text-xs text-green-600 hover:text-green-400 transition-colors tap-target font-medium"
+                className="text-xs text-green-600 hover:text-green-400 transition-colors tap-target font-medium px-2 py-1"
               >
                 BRIEF
               </Link>
               <Link
                 href="/labs"
-                className="text-xs text-yellow-500 hover:text-yellow-400 transition-colors tap-target font-medium"
+                className="text-xs text-yellow-500 hover:text-yellow-400 transition-colors tap-target font-medium px-2 py-1"
               >
                 LABS
               </Link>
               <Link
                 href="/research"
-                className="text-xs text-green-600 hover:text-green-400 transition-colors tap-target font-medium"
+                className="text-xs text-green-600 hover:text-green-400 transition-colors tap-target font-medium px-2 py-1"
               >
                 RESEARCH
               </Link>
               <button
                 onClick={() => setShowHowItWorks(true)}
-                className="text-xs text-green-600 hover:text-green-400 transition-colors tap-target"
+                className="text-xs text-green-600 hover:text-green-400 transition-colors tap-target px-2 py-1"
               >
                 INFO
               </button>
