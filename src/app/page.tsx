@@ -246,12 +246,6 @@ export default function Home() {
                 BRIEF
               </a>
               <a
-                href="/labs"
-                className="text-xs text-yellow-500 hover:text-yellow-400 transition-colors font-medium px-3 py-2 block"
-              >
-                LABS
-              </a>
-              <a
                 href="/research"
                 className="text-xs text-green-600 hover:text-green-400 transition-colors font-medium px-3 py-2 block"
               >
