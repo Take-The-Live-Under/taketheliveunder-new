@@ -62,7 +62,15 @@ async function loadRefereeStatsFromCSV(): Promise<Map<string, RefereeStats>> {
   const statsMap = new Map<string, RefereeStats>();
 
   try {
-    const csvPath = '/Users/brookssawyer/Desktop/basketball-betting/data/refmetrics_fouls_2024_25_auth_latest.csv';
+    const csvPath = path.join(process.cwd(), 'data', 'refmetrics_fouls_2024_25_auth_latest.csv');
+
+    // Check if file exists
+    try {
+      await fs.access(csvPath);
+    } catch {
+      console.log('Referee stats CSV not found - referee data unavailable');
+      return statsMap;
+    }
 
     const content = await fs.readFile(csvPath, 'utf-8');
     const lines = content.trim().split('\n');
@@ -230,7 +238,15 @@ async function loadTeamStatsFromCSV(): Promise<Map<string, TeamStats>> {
 
   try {
     // Path to basketball-betting cache
-    const cachePath = '/Users/brookssawyer/Desktop/basketball-betting/cache';
+    const cachePath = path.join(process.cwd(), 'cache');
+
+    // Check if cache directory exists
+    try {
+      await fs.access(cachePath);
+    } catch {
+      console.log('Cache directory not found - team stats unavailable');
+      return statsMap;
+    }
 
     // Find most recent ESPN stats file
     const files = await fs.readdir(cachePath);
