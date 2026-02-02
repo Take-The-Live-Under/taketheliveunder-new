@@ -34,6 +34,7 @@ interface GameResult {
   triggerMinutesRemaining: number;
   triggerScore: number;
   triggerStrength: string;
+  triggerType: 'under' | 'over' | 'tripleDipper';
 }
 
 interface DailyReport {
@@ -46,6 +47,12 @@ interface DailyReport {
     winRate: number;
     avgMargin: number;
     biggestWin: GameResult | null;
+    underTriggers: number;
+    overTriggers: number;
+    tripleDipperTriggers: number;
+    underWinRate: number;
+    overWinRate: number;
+    tripleDipperWinRate: number;
   };
   topPerformers: GameResult[];
   allResults: GameResult[];
@@ -265,14 +272,14 @@ export default function ReportPage() {
         ) : (
           <>
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               <div className="border border-green-800 bg-green-900/10 p-4 text-center">
                 <div className="text-2xl font-bold text-green-400">{report.summary.totalTriggered}</div>
-                <div className="text-xs text-green-700 uppercase tracking-wide">TRIGGERS</div>
+                <div className="text-xs text-green-700 uppercase tracking-wide">TOTAL_TRIGGERS</div>
               </div>
               <div className="border border-green-800 bg-green-900/10 p-4 text-center">
                 <div className="text-2xl font-bold text-green-400">{report.summary.totalUnders}</div>
-                <div className="text-xs text-green-700 uppercase tracking-wide">UNDERS</div>
+                <div className="text-xs text-green-700 uppercase tracking-wide">WENT_UNDER</div>
               </div>
               <div className="border border-green-800 bg-green-900/10 p-4 text-center">
                 <div className={`text-2xl font-bold ${report.summary.winRate >= 50 ? 'text-green-400' : 'text-red-400'}`}>
@@ -285,6 +292,45 @@ export default function ReportPage() {
                   {report.summary.avgMargin > 0 ? '+' : ''}{report.summary.avgMargin}
                 </div>
                 <div className="text-xs text-green-700 uppercase tracking-wide">AVG_MARGIN</div>
+              </div>
+            </div>
+
+            {/* Trigger Type Breakdown */}
+            <div className="grid grid-cols-3 gap-3 mb-8">
+              {/* Under Triggers */}
+              <div className="border border-green-600 bg-green-900/20 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-green-400">✓</span>
+                  <span className="text-sm font-bold text-green-400">UNDER</span>
+                </div>
+                <div className="text-2xl font-bold text-green-400">{report.summary.underTriggers}</div>
+                <div className="text-xs text-green-600">
+                  {report.summary.underWinRate}% win rate
+                </div>
+              </div>
+
+              {/* Over Triggers */}
+              <div className="border border-orange-600 bg-orange-900/20 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-orange-400">🔥</span>
+                  <span className="text-sm font-bold text-orange-400">OVER</span>
+                </div>
+                <div className="text-2xl font-bold text-orange-400">{report.summary.overTriggers}</div>
+                <div className="text-xs text-orange-600">
+                  {report.summary.overWinRate}% win rate
+                </div>
+              </div>
+
+              {/* Triple Dipper Triggers */}
+              <div className="border border-yellow-600 bg-yellow-900/20 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-yellow-400">🏆</span>
+                  <span className="text-sm font-bold text-yellow-400">TRIPLE</span>
+                </div>
+                <div className="text-2xl font-bold text-yellow-400">{report.summary.tripleDipperTriggers}</div>
+                <div className="text-xs text-yellow-600">
+                  {report.summary.tripleDipperWinRate}% win rate
+                </div>
               </div>
             </div>
 
@@ -346,6 +392,7 @@ export default function ReportPage() {
                   <thead className="bg-green-900/30 border-b border-green-800">
                     <tr>
                       <th className="text-left p-3 text-green-600">GAME</th>
+                      <th className="text-center p-3 text-green-600">TYPE</th>
                       <th className="text-center p-3 text-green-600">FINAL</th>
                       <th className="text-center p-3 text-green-600">O/U</th>
                       <th className="text-center p-3 text-green-600">RESULT</th>
@@ -353,39 +400,54 @@ export default function ReportPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {report.allResults.map((game) => (
-                      <tr
-                        key={game.gameId}
-                        onClick={() => openGameDetail(game)}
-                        className="border-t border-green-900 hover:bg-green-900/20 cursor-pointer transition-colors"
-                      >
-                        <td className="p-3">
-                          <div className="font-medium text-green-300">{game.awayTeam}</div>
-                          <div className="text-green-600">@ {game.homeTeam}</div>
-                        </td>
-                        <td className="text-center p-3">
-                          <div className="text-green-400">{game.finalAwayScore}-{game.finalHomeScore}</div>
-                          <div className="text-green-600">({game.finalTotal})</div>
-                        </td>
-                        <td className="text-center p-3 text-yellow-500">{game.ouLine}</td>
-                        <td className="text-center p-3">
-                          <span className={`px-2 py-0.5 border text-xs font-bold ${
-                            game.result === 'under'
-                              ? 'border-green-500 text-green-400 bg-green-500/10'
-                              : game.result === 'over'
-                              ? 'border-red-500 text-red-400 bg-red-500/10'
-                              : 'border-green-700 text-green-600'
+                    {report.allResults.map((game) => {
+                      // Determine if this trigger was a "win"
+                      const isWin = (game.triggerType === 'under' && game.result === 'under') ||
+                                    (game.triggerType === 'over' && game.result === 'over') ||
+                                    (game.triggerType === 'tripleDipper' && game.result === 'under');
+                      return (
+                        <tr
+                          key={game.gameId}
+                          onClick={() => openGameDetail(game)}
+                          className="border-t border-green-900 hover:bg-green-900/20 cursor-pointer transition-colors"
+                        >
+                          <td className="p-3">
+                            <div className="font-medium text-green-300">{game.awayTeam}</div>
+                            <div className="text-green-600">@ {game.homeTeam}</div>
+                          </td>
+                          <td className="text-center p-3">
+                            <span className={`px-2 py-0.5 border text-xs font-bold ${
+                              game.triggerType === 'under'
+                                ? 'border-green-600 text-green-400 bg-green-900/30'
+                                : game.triggerType === 'over'
+                                ? 'border-orange-600 text-orange-400 bg-orange-900/30'
+                                : 'border-yellow-600 text-yellow-400 bg-yellow-900/30'
+                            }`}>
+                              {game.triggerType === 'tripleDipper' ? '🏆' : game.triggerType === 'over' ? '🔥' : '✓'}
+                            </span>
+                          </td>
+                          <td className="text-center p-3">
+                            <div className="text-green-400">{game.finalAwayScore}-{game.finalHomeScore}</div>
+                            <div className="text-green-600">({game.finalTotal})</div>
+                          </td>
+                          <td className="text-center p-3 text-yellow-500">{game.ouLine}</td>
+                          <td className="text-center p-3">
+                            <span className={`px-2 py-0.5 border text-xs font-bold ${
+                              isWin
+                                ? 'border-green-500 text-green-400 bg-green-500/10'
+                                : 'border-red-500 text-red-400 bg-red-500/10'
+                            }`}>
+                              {isWin ? 'WIN' : 'LOSS'}
+                            </span>
+                          </td>
+                          <td className={`text-center p-3 font-bold ${
+                            game.margin > 0 ? 'text-green-400' : 'text-red-400'
                           }`}>
-                            {game.result.toUpperCase()}
-                          </span>
-                        </td>
-                        <td className={`text-center p-3 font-bold ${
-                          game.margin > 0 ? 'text-green-400' : 'text-red-400'
-                        }`}>
-                          {game.margin > 0 ? '+' : ''}{game.margin.toFixed(1)}
-                        </td>
-                      </tr>
-                    ))}
+                            {game.margin > 0 ? '+' : ''}{game.margin.toFixed(1)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

@@ -35,6 +35,7 @@ interface GameResult {
   triggerMinutesRemaining: number;
   triggerScore: number;
   triggerStrength: string;
+  triggerType: 'under' | 'over' | 'tripleDipper';
 }
 
 interface DailyReport {
@@ -47,6 +48,14 @@ interface DailyReport {
     winRate: number;
     avgMargin: number;
     biggestWin: GameResult | null;
+    // Trigger type counts
+    underTriggers: number;
+    overTriggers: number;
+    tripleDipperTriggers: number;
+    // Win rates by type
+    underWinRate: number;
+    overWinRate: number;
+    tripleDipperWinRate: number;
   };
   topPerformers: GameResult[]; // Games that went most under
   allResults: GameResult[];
@@ -104,7 +113,7 @@ async function fetchFinalScores(dateStr: string): Promise<Map<string, { home: nu
   return scores;
 }
 
-// Get triggered games for a specific date
+// Get triggered games for a specific date (all trigger types)
 async function getTriggersForDate(dateStr: string): Promise<TriggerLog[]> {
   const client = getSupabase();
   if (!client) return [];
@@ -117,7 +126,6 @@ async function getTriggersForDate(dateStr: string): Promise<TriggerLog[]> {
       .select('*')
       .gte('created_at', start)
       .lt('created_at', end)
-      .eq('trigger_type', 'under') // Focus on under triggers (Golden Zone)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -170,10 +178,16 @@ export async function GET(request: NextRequest) {
           winRate: 0,
           avgMargin: 0,
           biggestWin: null,
+          underTriggers: 0,
+          overTriggers: 0,
+          tripleDipperTriggers: 0,
+          underWinRate: 0,
+          overWinRate: 0,
+          tripleDipperWinRate: 0,
         },
         topPerformers: [],
         allResults: [],
-        message: 'No triggers found for yesterday',
+        message: 'No triggers found for this date',
       });
     }
 
@@ -205,6 +219,7 @@ export async function GET(request: NextRequest) {
         triggerMinutesRemaining: trigger.minutes_remaining,
         triggerScore: trigger.live_total,
         triggerStrength: trigger.trigger_strength,
+        triggerType: trigger.trigger_type,
       });
     }
 
@@ -215,6 +230,24 @@ export async function GET(request: NextRequest) {
     const avgMargin = results.length > 0
       ? results.reduce((sum, r) => sum + r.margin, 0) / results.length
       : 0;
+
+    // Count by trigger type
+    const underTriggers = results.filter(r => r.triggerType === 'under');
+    const overTriggers = results.filter(r => r.triggerType === 'over');
+    const tripleDipperTriggers = results.filter(r => r.triggerType === 'tripleDipper');
+
+    // Win rates by trigger type
+    // Under triggers win when game goes under
+    const underWins = underTriggers.filter(r => r.result === 'under');
+    const underWinRate = underTriggers.length > 0 ? (underWins.length / underTriggers.length) * 100 : 0;
+
+    // Over triggers win when game goes over
+    const overWins = overTriggers.filter(r => r.result === 'over');
+    const overWinRate = overTriggers.length > 0 ? (overWins.length / overTriggers.length) * 100 : 0;
+
+    // Triple dipper triggers win when game goes under
+    const tripleDipperWins = tripleDipperTriggers.filter(r => r.result === 'under');
+    const tripleDipperWinRate = tripleDipperTriggers.length > 0 ? (tripleDipperWins.length / tripleDipperTriggers.length) * 100 : 0;
 
     // Sort by margin descending (biggest unders first)
     const sortedByMargin = [...results].sort((a, b) => b.margin - a.margin);
@@ -231,6 +264,12 @@ export async function GET(request: NextRequest) {
         winRate: Math.round(winRate * 10) / 10,
         avgMargin: Math.round(avgMargin * 10) / 10,
         biggestWin,
+        underTriggers: underTriggers.length,
+        overTriggers: overTriggers.length,
+        tripleDipperTriggers: tripleDipperTriggers.length,
+        underWinRate: Math.round(underWinRate * 10) / 10,
+        overWinRate: Math.round(overWinRate * 10) / 10,
+        tripleDipperWinRate: Math.round(tripleDipperWinRate * 10) / 10,
       },
       topPerformers,
       allResults: sortedByMargin,
