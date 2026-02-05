@@ -20,6 +20,15 @@ function formatDisplayDate(dateStr: string): string {
   });
 }
 
+interface TriggerEntry {
+  triggerTime: string;
+  triggerMinutesRemaining: number;
+  triggerScore: number;
+  triggerStrength: string;
+  triggerType: 'under' | 'over' | 'tripleDipper';
+  ouLine: number;
+}
+
 interface GameResult {
   gameId: string;
   homeTeam: string;
@@ -35,6 +44,8 @@ interface GameResult {
   triggerScore: number;
   triggerStrength: string;
   triggerType: 'under' | 'over' | 'tripleDipper';
+  isWin?: boolean;
+  allTriggers?: TriggerEntry[];
 }
 
 interface DailyReport {
@@ -401,10 +412,12 @@ export default function ReportPage() {
                   </thead>
                   <tbody>
                     {report.allResults.map((game) => {
-                      // Determine if this trigger was a "win"
-                      const isWin = (game.triggerType === 'under' && game.result === 'under') ||
-                                    (game.triggerType === 'over' && game.result === 'over') ||
-                                    (game.triggerType === 'tripleDipper' && game.result === 'under');
+                      // Use the pre-calculated isWin from API, fallback to calculation for backwards compatibility
+                      const isWin = game.isWin ?? (
+                        (game.triggerType === 'under' && game.result === 'under') ||
+                        (game.triggerType === 'over' && game.result === 'over') ||
+                        (game.triggerType === 'tripleDipper' && game.result === 'under')
+                      );
                       return (
                         <tr
                           key={game.gameId}
@@ -521,8 +534,32 @@ export default function ReportPage() {
                       const uniqueLines = Array.from(new Set(gameDetail.timeline.map(t => t.ouLine).filter(l => l !== null)));
                       const hasProgression = uniqueTotals.length > 3;
 
-                      // Find entry point (first trigger)
-                      const entryIdx = gameDetail.timeline.findIndex(t => t.isUnderTriggered);
+                      // Find all trigger entry points from the game result's allTriggers
+                      const allTriggers = selectedGame.allTriggers || [];
+
+                      // Map triggers to timeline indices based on minutes remaining
+                      const triggerPoints = allTriggers.map(trigger => {
+                        // Find closest timeline point by minutes remaining
+                        let closestIdx = 0;
+                        let closestDiff = Infinity;
+                        gameDetail.timeline.forEach((t, idx) => {
+                          const diff = Math.abs(t.minutesRemaining - trigger.triggerMinutesRemaining);
+                          if (diff < closestDiff) {
+                            closestDiff = diff;
+                            closestIdx = idx;
+                          }
+                        });
+                        return {
+                          ...trigger,
+                          timelineIdx: closestIdx,
+                          timelinePoint: gameDetail.timeline[closestIdx]
+                        };
+                      });
+
+                      // Fallback to old method if no allTriggers
+                      const entryIdx = triggerPoints.length > 0
+                        ? triggerPoints[0].timelineIdx
+                        : gameDetail.timeline.findIndex(t => t.isUnderTriggered || t.isOverTriggered);
                       const entryPoint = entryIdx >= 0 ? gameDetail.timeline[entryIdx] : null;
 
                       const getX = (idx: number) => (idx / Math.max(gameDetail.timeline.length - 1, 1)) * 100;
@@ -549,13 +586,22 @@ export default function ReportPage() {
                           {/* Chart 1: Score Progression */}
                           <h3 className="text-sm font-semibold text-green-400 mb-2 border-b border-green-800 pb-1">SCORE_PROGRESSION</h3>
                           <div className="border border-green-800 bg-green-900/10 p-4 mb-4">
-                            <div className="flex items-center gap-4 mb-2 text-xs">
+                            <div className="flex items-center gap-4 mb-2 text-xs flex-wrap">
                               <span className="flex items-center gap-1">
                                 <span className="w-4 h-0.5 bg-green-500"></span> Live Total
                               </span>
                               <span className="flex items-center gap-1">
-                                <span className="w-3 h-3 rounded-full bg-cyan-500"></span> Entry Point
+                                <span className="w-3 h-3 rounded-full bg-green-400"></span> Under
                               </span>
+                              <span className="flex items-center gap-1">
+                                <span className="w-3 h-3 rounded-full bg-orange-400"></span> Over
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <span className="w-3 h-3 rounded-full bg-yellow-400"></span> Triple
+                              </span>
+                              {triggerPoints.length > 1 && (
+                                <span className="text-green-600">({triggerPoints.length} signals)</span>
+                              )}
                             </div>
                             <div className="relative h-40">
                               {(() => {
@@ -581,7 +627,17 @@ export default function ReportPage() {
                                           vectorEffect="non-scaling-stroke"
                                           points={gameDetail.timeline.map((point, i) => `${getX(i)},${getY(point.liveTotal)}`).join(' ')}
                                         />
-                                        {entryPoint && (
+                                        {/* Render all trigger points */}
+                                        {triggerPoints.length > 0 ? triggerPoints.map((tp, idx) => {
+                                          const color = tp.triggerType === 'over' ? '#fb923c' : tp.triggerType === 'tripleDipper' ? '#facc15' : '#4ade80';
+                                          const score = tp.timelinePoint?.liveTotal || tp.triggerScore;
+                                          return (
+                                            <g key={idx}>
+                                              <line x1={getX(tp.timelineIdx)} y1="0" x2={getX(tp.timelineIdx)} y2="100" stroke={color} strokeWidth="0.3" strokeDasharray="1,1" vectorEffect="non-scaling-stroke" />
+                                              <circle cx={getX(tp.timelineIdx)} cy={getY(score)} r="2.5" fill={color} stroke="#fff" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
+                                            </g>
+                                          );
+                                        }) : entryPoint && (
                                           <>
                                             <line x1={getX(entryIdx)} y1="0" x2={getX(entryIdx)} y2="100" stroke="#06b6d4" strokeWidth="0.3" strokeDasharray="1,1" vectorEffect="non-scaling-stroke" />
                                             <circle cx={getX(entryIdx)} cy={getY(entryPoint.liveTotal)} r="2.5" fill="#06b6d4" stroke="#fff" strokeWidth="0.5" vectorEffect="non-scaling-stroke" />
@@ -589,7 +645,22 @@ export default function ReportPage() {
                                         )}
                                         <circle cx="100" cy={getY(selectedGame.finalTotal)} r="2" fill="#22c55e" stroke="#fff" strokeWidth="0.4" vectorEffect="non-scaling-stroke" />
                                       </svg>
-                                      {entryPoint && (
+                                      {/* Labels for trigger points */}
+                                      {triggerPoints.length > 0 ? triggerPoints.map((tp, idx) => {
+                                        const color = tp.triggerType === 'over' ? 'bg-orange-400' : tp.triggerType === 'tripleDipper' ? 'bg-yellow-400' : 'bg-green-400';
+                                        const score = tp.timelinePoint?.liveTotal || tp.triggerScore;
+                                        // Stagger labels vertically if multiple
+                                        const topOffset = -18 - (idx * 16);
+                                        return (
+                                          <div
+                                            key={idx}
+                                            className={`absolute text-xs ${color} text-black px-1 font-bold whitespace-nowrap`}
+                                            style={{ left: `${getX(tp.timelineIdx)}%`, top: `${topOffset}px`, transform: 'translateX(-50%)' }}
+                                          >
+                                            {tp.triggerType === 'over' ? '🔥' : tp.triggerType === 'tripleDipper' ? '🏆' : '✓'} {score}
+                                          </div>
+                                        );
+                                      }) : entryPoint && (
                                         <div className="absolute text-xs bg-cyan-500 text-black px-1 font-bold" style={{ left: `${getX(entryIdx)}%`, top: '-18px', transform: 'translateX(-50%)' }}>
                                           IN @ {entryPoint.liveTotal}
                                         </div>

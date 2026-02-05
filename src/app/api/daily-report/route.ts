@@ -21,6 +21,15 @@ function getDateRange(dateStr: string): { start: string; end: string } {
   };
 }
 
+interface TriggerEntry {
+  triggerTime: string;
+  triggerMinutesRemaining: number;
+  triggerScore: number;
+  triggerStrength: string;
+  triggerType: 'under' | 'over' | 'tripleDipper';
+  ouLine: number;
+}
+
 interface GameResult {
   gameId: string;
   homeTeam: string;
@@ -36,6 +45,8 @@ interface GameResult {
   triggerScore: number;
   triggerStrength: string;
   triggerType: 'under' | 'over' | 'tripleDipper';
+  isWin: boolean; // Whether this trigger was a win based on its type
+  allTriggers: TriggerEntry[]; // All triggers for this game (for graph display)
 }
 
 interface DailyReport {
@@ -140,19 +151,32 @@ async function getTriggersForDate(dateStr: string): Promise<TriggerLog[]> {
   }
 }
 
-// Deduplicate triggers - keep earliest trigger per game
-function deduplicateTriggers(triggers: TriggerLog[]): TriggerLog[] {
-  const gameMap = new Map<string, TriggerLog>();
+// Group triggers by game - returns map of gameId to all triggers for that game
+function groupTriggersByGame(triggers: TriggerLog[]): Map<string, TriggerLog[]> {
+  const gameMap = new Map<string, TriggerLog[]>();
 
   for (const trigger of triggers) {
-    const existing = gameMap.get(trigger.game_id);
-    if (!existing || trigger.minutes_remaining > existing.minutes_remaining) {
-      // Keep the earlier trigger (more minutes remaining)
-      gameMap.set(trigger.game_id, trigger);
-    }
+    const existing = gameMap.get(trigger.game_id) || [];
+    existing.push(trigger);
+    gameMap.set(trigger.game_id, existing);
   }
 
-  return Array.from(gameMap.values());
+  // Sort each game's triggers by minutes remaining (descending - earliest first)
+  Array.from(gameMap.entries()).forEach(([gameId, gameTriggers]) => {
+    gameMap.set(gameId, gameTriggers.sort((a, b) => b.minutes_remaining - a.minutes_remaining));
+  });
+
+  return gameMap;
+}
+
+// Determine if a trigger is a win based on its type and game result
+function isTriggerWin(triggerType: 'under' | 'over' | 'tripleDipper', gameResult: 'under' | 'over' | 'push'): boolean {
+  if (triggerType === 'under' || triggerType === 'tripleDipper') {
+    return gameResult === 'under';
+  } else if (triggerType === 'over') {
+    return gameResult === 'over';
+  }
+  return false;
 }
 
 export async function GET(request: NextRequest) {
@@ -165,9 +189,9 @@ export async function GET(request: NextRequest) {
 
     // Fetch triggered games for the specified date
     const allTriggers = await getTriggersForDate(reportDate);
-    const triggers = deduplicateTriggers(allTriggers);
+    const triggersByGame = groupTriggersByGame(allTriggers);
 
-    if (triggers.length === 0) {
+    if (triggersByGame.size === 0) {
       return NextResponse.json({
         reportDate,
         generatedAt: new Date().toISOString(),
@@ -197,36 +221,55 @@ export async function GET(request: NextRequest) {
     // Match triggers with final scores
     const results: GameResult[] = [];
 
-    for (const trigger of triggers) {
-      const finalScore = finalScores.get(trigger.game_id);
+    for (const [gameId, gameTriggers] of Array.from(triggersByGame.entries())) {
+      const finalScore = finalScores.get(gameId);
       if (!finalScore) continue; // Game not found or not finished
 
+      // Use the first (earliest) trigger as the primary one for display
+      const primaryTrigger = gameTriggers[0];
+
       const finalTotal = finalScore.home + finalScore.away;
-      const margin = trigger.ou_line - finalTotal; // Positive = under
-      const result = margin > 0 ? 'under' : margin < 0 ? 'over' : 'push';
+      const margin = primaryTrigger.ou_line - finalTotal; // Positive = under
+      const gameResult = margin > 0 ? 'under' : margin < 0 ? 'over' : 'push';
+
+      // Build all triggers for this game (for graph display)
+      const allTriggersForGame: TriggerEntry[] = gameTriggers.map(t => ({
+        triggerTime: t.created_at || '',
+        triggerMinutesRemaining: t.minutes_remaining,
+        triggerScore: t.live_total,
+        triggerStrength: t.trigger_strength,
+        triggerType: t.trigger_type,
+        ouLine: t.ou_line,
+      }));
 
       results.push({
-        gameId: trigger.game_id,
-        homeTeam: trigger.home_team,
-        awayTeam: trigger.away_team,
+        gameId: primaryTrigger.game_id,
+        homeTeam: primaryTrigger.home_team,
+        awayTeam: primaryTrigger.away_team,
         finalHomeScore: finalScore.home,
         finalAwayScore: finalScore.away,
         finalTotal,
-        ouLine: trigger.ou_line,
-        result,
+        ouLine: primaryTrigger.ou_line,
+        result: gameResult,
         margin,
-        triggerTime: trigger.created_at || '',
-        triggerMinutesRemaining: trigger.minutes_remaining,
-        triggerScore: trigger.live_total,
-        triggerStrength: trigger.trigger_strength,
-        triggerType: trigger.trigger_type,
+        triggerTime: primaryTrigger.created_at || '',
+        triggerMinutesRemaining: primaryTrigger.minutes_remaining,
+        triggerScore: primaryTrigger.live_total,
+        triggerStrength: primaryTrigger.trigger_strength,
+        triggerType: primaryTrigger.trigger_type,
+        isWin: isTriggerWin(primaryTrigger.trigger_type, gameResult),
+        allTriggers: allTriggersForGame,
       });
     }
 
     // Calculate summary stats
     const unders = results.filter(r => r.result === 'under');
     const overs = results.filter(r => r.result === 'over');
-    const winRate = results.length > 0 ? (unders.length / results.length) * 100 : 0;
+
+    // Overall win rate is based on trigger type (not just unders)
+    const wins = results.filter(r => r.isWin);
+    const winRate = results.length > 0 ? (wins.length / results.length) * 100 : 0;
+
     const avgMargin = results.length > 0
       ? results.reduce((sum, r) => sum + r.margin, 0) / results.length
       : 0;
@@ -236,22 +279,36 @@ export async function GET(request: NextRequest) {
     const overTriggers = results.filter(r => r.triggerType === 'over');
     const tripleDipperTriggers = results.filter(r => r.triggerType === 'tripleDipper');
 
-    // Win rates by trigger type
-    // Under triggers win when game goes under
-    const underWins = underTriggers.filter(r => r.result === 'under');
+    // Win rates by trigger type (using isWin which is already calculated correctly)
+    const underWins = underTriggers.filter(r => r.isWin);
     const underWinRate = underTriggers.length > 0 ? (underWins.length / underTriggers.length) * 100 : 0;
 
-    // Over triggers win when game goes over
-    const overWins = overTriggers.filter(r => r.result === 'over');
+    const overWins = overTriggers.filter(r => r.isWin);
     const overWinRate = overTriggers.length > 0 ? (overWins.length / overTriggers.length) * 100 : 0;
 
-    // Triple dipper triggers win when game goes under
-    const tripleDipperWins = tripleDipperTriggers.filter(r => r.result === 'under');
+    const tripleDipperWins = tripleDipperTriggers.filter(r => r.isWin);
     const tripleDipperWinRate = tripleDipperTriggers.length > 0 ? (tripleDipperWins.length / tripleDipperTriggers.length) * 100 : 0;
 
-    // Sort by margin descending (biggest unders first)
+    // Sort by margin descending (biggest unders first for the main list)
     const sortedByMargin = [...results].sort((a, b) => b.margin - a.margin);
-    const topPerformers = sortedByMargin.filter(r => r.result === 'under').slice(0, 5);
+
+    // Top performers are the biggest wins (positive margin of victory)
+    // For under/triple triggers: higher positive margin = better
+    // For over triggers: higher negative margin (inverted) = better
+    const topPerformers = results
+      .filter(r => r.isWin)
+      .map(r => ({
+        ...r,
+        // For display, show the "margin of victory" as positive
+        displayMargin: r.triggerType === 'over' ? Math.abs(r.margin) : r.margin
+      }))
+      .sort((a, b) => b.displayMargin - a.displayMargin)
+      .slice(0, 5)
+      .map(r => {
+        // Remove the temporary displayMargin field
+        const { displayMargin, ...game } = r;
+        return game;
+      });
     const biggestWin = topPerformers[0] || null;
 
     const report: DailyReport = {
