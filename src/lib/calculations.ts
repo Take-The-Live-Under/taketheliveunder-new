@@ -15,6 +15,108 @@
 const REGULATION_MINUTES = 40.0;
 const HALF_MINUTES = 20.0;
 
+// =============================================================================
+// HALF-BASED SCORING ADJUSTMENT
+// Research shows second half typically has ~8-12% higher scoring than first half
+// Due to: more fouls, faster pace when trailing, intentional fouling, fatigue
+// =============================================================================
+
+// Average PPM by half (based on college basketball analysis)
+// First half: ~3.25 PPM, Second half: ~3.55 PPM
+const FIRST_HALF_PPM_FACTOR = 0.478;  // First half accounts for ~47.8% of total points
+const SECOND_HALF_PPM_FACTOR = 0.522; // Second half accounts for ~52.2% of total points
+
+/**
+ * Get expected scoring multiplier based on which half we're in
+ * First half scoring should be projected to increase in second half
+ * @param period - Current period (1 = first half, 2 = second half)
+ * @returns Multiplier to apply to projections
+ */
+export function getHalfScoringMultiplier(period: number): number {
+  if (period === 1) {
+    // In first half: second half will score ~9% more per minute
+    return SECOND_HALF_PPM_FACTOR / FIRST_HALF_PPM_FACTOR; // ~1.092
+  }
+  return 1.0; // Already in second half, no adjustment needed
+}
+
+/**
+ * Calculate projected final total accounting for half-based scoring differences
+ * @param currentTotal - Current total points
+ * @param minutesRemainingReg - Minutes remaining in regulation
+ * @param period - Current period (1 or 2)
+ * @returns Projected final total with half adjustment
+ */
+export function calculateProjectedTotal(
+  currentTotal: number,
+  minutesRemainingReg: number,
+  period: number
+): number {
+  const minutesElapsed = REGULATION_MINUTES - minutesRemainingReg;
+
+  if (minutesElapsed <= 0) {
+    return currentTotal;
+  }
+
+  const currentPPM = currentTotal / minutesElapsed;
+
+  if (period === 1) {
+    // First half: project remaining first half at current pace,
+    // then project second half at higher pace
+    const firstHalfMinutesRemaining = Math.min(minutesRemainingReg, HALF_MINUTES);
+    const secondHalfMinutesRemaining = Math.max(minutesRemainingReg - HALF_MINUTES, 0);
+
+    // Remaining first half at current pace
+    const firstHalfRemainingPoints = currentPPM * firstHalfMinutesRemaining;
+
+    // Second half at elevated pace (~9% higher)
+    const secondHalfPPM = currentPPM * (SECOND_HALF_PPM_FACTOR / FIRST_HALF_PPM_FACTOR);
+    const secondHalfPoints = secondHalfPPM * secondHalfMinutesRemaining;
+
+    return currentTotal + firstHalfRemainingPoints + secondHalfPoints;
+  } else {
+    // Second half: project at current pace (already elevated)
+    return currentTotal + (currentPPM * minutesRemainingReg);
+  }
+}
+
+/**
+ * Calculate half-adjusted required PPM
+ * Accounts for the fact that second half typically scores more
+ * @param totalPoints - Current total points
+ * @param ouLine - Over/under line
+ * @param minutesRemainingReg - Minutes remaining
+ * @param period - Current period
+ * @returns Adjusted required PPM
+ */
+export function calculateAdjustedRequiredPPM(
+  totalPoints: number,
+  ouLine: number | null,
+  minutesRemainingReg: number,
+  period: number
+): number | null {
+  if (ouLine === null || minutesRemainingReg <= 0) {
+    return null;
+  }
+
+  const pointsNeeded = Math.max(ouLine - totalPoints, 0);
+
+  if (period === 1 && minutesRemainingReg > HALF_MINUTES) {
+    // Still in first half with second half remaining
+    // Discount the required PPM because second half will naturally score more
+    const firstHalfRemaining = minutesRemainingReg - HALF_MINUTES;
+    const secondHalfMinutes = HALF_MINUTES;
+
+    // Weight the minutes by expected scoring rate
+    const effectiveMinutes = firstHalfRemaining + (secondHalfMinutes * (SECOND_HALF_PPM_FACTOR / FIRST_HALF_PPM_FACTOR));
+
+    return pointsNeeded / effectiveMinutes;
+  }
+
+  // In second half or late first half, use standard calculation
+  return pointsNeeded / minutesRemainingReg;
+}
+
 /**
  * Calculate minutes remaining in regulation from ESPN period and clock
  * @param period - Current period (1 = 1st half, 2 = 2nd half, 3+ = OT)

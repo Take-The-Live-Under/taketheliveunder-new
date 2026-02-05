@@ -4,6 +4,7 @@ import {
   calculateMinutesRemainingRegulation,
   calculateCurrentPPM,
   calculateRequiredPPM,
+  calculateProjectedTotal,
   isOvertime,
   getTriggerType,
   isOverTriggered,
@@ -447,10 +448,13 @@ export async function GET() {
       const hasTeamData = matchupAnalysis.homeData !== null || matchupAnalysis.awayData !== null;
       const foulGameWarning = couldEnterFoul && hasTeamData && matchupAnalysis.warningLevel !== 'none';
 
-      // Calculate adjusted projected total - show whenever foul game is possible
+      // Calculate adjusted projected total with half-based scoring adjustment
+      // Second half typically scores ~9% more than first half
       let adjustedProjectedTotal: number | null = null;
       if (currentPPM !== null && minutesRemainingReg > 0) {
-        const baseProjected = liveTotal + (currentPPM * minutesRemainingReg);
+        // Use half-adjusted projection (accounts for higher 2nd half scoring)
+        const baseProjected = calculateProjectedTotal(liveTotal, minutesRemainingReg, period);
+
         if ((inFoulGame || couldEnterFoul) && foulGameAdjustment !== null) {
           adjustedProjectedTotal = baseProjected + foulGameAdjustment;
         } else {
