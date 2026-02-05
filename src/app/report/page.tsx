@@ -102,8 +102,9 @@ interface QuarterScoring {
   ppm: number;
 }
 
-interface LossAnalysis {
+interface GameAnalysis {
   gameId: string;
+  analysisType: 'win' | 'loss';
   wentToOT: boolean;
   otPeriods: number;
   quarterScoring: QuarterScoring[];
@@ -112,11 +113,19 @@ interface LossAnalysis {
     period: number;
     description: string;
   } | null;
+  longestDrought: {
+    duration: number;
+    period: number;
+    description: string;
+  } | null;
   finalMinutePoints: number;
   freeThrowsInFinal2Min: number;
   summary: string;
   factors: string[];
 }
+
+// Legacy alias
+type LossAnalysis = GameAnalysis;
 
 export default function ReportPage() {
   const [report, setReport] = useState<DailyReport | null>(null);
@@ -181,15 +190,21 @@ export default function ReportPage() {
         setGameDetail(data);
       }
 
-      // If it's a loss (went over), fetch analysis
-      if (game.result === 'over') {
-        const analysisRes = await fetch(
-          `/api/game-analysis?gameId=${game.gameId}&ouLine=${game.ouLine}&finalTotal=${game.finalTotal}`
-        );
-        if (analysisRes.ok) {
-          const analysisData = await analysisRes.json();
-          setLossAnalysis(analysisData);
-        }
+      // Determine if this was a win based on trigger type
+      const isWin = game.isWin ?? (
+        (game.triggerType === 'under' && game.result === 'under') ||
+        (game.triggerType === 'over' && game.result === 'over') ||
+        (game.triggerType === 'tripleDipper' && game.result === 'under')
+      );
+
+      // Fetch analysis for both wins and losses
+      const analysisType = isWin ? 'win' : 'loss';
+      const analysisRes = await fetch(
+        `/api/game-analysis?gameId=${game.gameId}&ouLine=${game.ouLine}&finalTotal=${game.finalTotal}&type=${analysisType}`
+      );
+      if (analysisRes.ok) {
+        const analysisData = await analysisRes.json();
+        setLossAnalysis(analysisData);
       }
     } catch (err) {
       console.error('Failed to load game detail:', err);
@@ -774,56 +789,110 @@ export default function ReportPage() {
                       </table>
                     </div>
 
-                    {/* Loss Analysis (only for games that went over) */}
-                    {lossAnalysis && selectedGame.result === 'over' && (
+                    {/* Game Analysis (for both wins and losses) */}
+                    {lossAnalysis && (
                       <div className="mt-6">
-                        <h3 className="text-sm font-semibold text-red-400 mb-3 border-b border-red-800 pb-1">
-                          LOSS_ANALYSIS: WHY_DID_IT_GO_OVER?
-                        </h3>
-                        <div className="border border-red-700 bg-red-900/10 p-4">
-                          {/* Summary */}
-                          <p className="text-green-300 font-medium mb-3">{lossAnalysis.summary}</p>
+                        {lossAnalysis.analysisType === 'win' ? (
+                          <>
+                            <h3 className="text-sm font-semibold text-green-400 mb-3 border-b border-green-600 pb-1">
+                              WIN_ANALYSIS: WHY_DID_IT_STAY_UNDER?
+                            </h3>
+                            <div className="border border-green-600 bg-green-900/10 p-4">
+                              {/* Summary */}
+                              <p className="text-green-300 font-medium mb-3">{lossAnalysis.summary}</p>
 
-                          {/* Factors */}
-                          {lossAnalysis.factors.length > 0 && (
-                            <div className="mb-4">
-                              <p className="text-xs text-green-600 mb-2">Contributing factors:</p>
-                              <ul className="space-y-1">
-                                {lossAnalysis.factors.map((factor, i) => (
-                                  <li key={i} className="text-xs text-red-400 flex items-start gap-2">
-                                    <span className="text-red-500">-</span>
-                                    {factor}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+                              {/* Factors */}
+                              {lossAnalysis.factors.length > 0 && (
+                                <div className="mb-4">
+                                  <p className="text-xs text-green-600 mb-2">Key factors:</p>
+                                  <ul className="space-y-1">
+                                    {lossAnalysis.factors.map((factor, i) => (
+                                      <li key={i} className="text-xs text-green-400 flex items-start gap-2">
+                                        <span className="text-green-500">✓</span>
+                                        {factor}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
 
-                          {/* Quarter Breakdown */}
-                          {lossAnalysis.quarterScoring.length > 0 && (
-                            <div>
-                              <p className="text-xs text-green-600 mb-2">Scoring by period:</p>
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                {lossAnalysis.quarterScoring.map((q) => (
-                                  <div key={q.period} className={`border ${q.ppm > 4.5 ? 'border-red-500 bg-red-900/20' : 'border-green-800 bg-green-900/10'} p-2 text-center`}>
-                                    <div className="text-xs text-green-700">{q.periodName}</div>
-                                    <div className="text-lg font-bold text-green-400">{q.totalPoints}</div>
-                                    <div className={`text-xs ${q.ppm > 4.5 ? 'text-red-400' : 'text-green-600'}`}>
-                                      {q.ppm.toFixed(1)} PPM
-                                    </div>
+                              {/* Quarter Breakdown */}
+                              {lossAnalysis.quarterScoring.length > 0 && (
+                                <div>
+                                  <p className="text-xs text-green-600 mb-2">Scoring by period:</p>
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    {lossAnalysis.quarterScoring.map((q) => (
+                                      <div key={q.period} className={`border ${q.ppm < 3.5 ? 'border-green-500 bg-green-900/20' : 'border-green-800 bg-green-900/10'} p-2 text-center`}>
+                                        <div className="text-xs text-green-700">{q.periodName}</div>
+                                        <div className="text-lg font-bold text-green-400">{q.totalPoints}</div>
+                                        <div className={`text-xs ${q.ppm < 3.5 ? 'text-green-400' : 'text-green-600'}`}>
+                                          {q.ppm.toFixed(1)} PPM
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                                </div>
+                              )}
 
-                          {/* OT Badge */}
-                          {lossAnalysis.wentToOT && (
-                            <div className="mt-3 inline-flex items-center gap-1 border border-red-600 bg-red-900/20 text-red-400 px-2 py-1 text-xs">
-                              [OT] Game went to {lossAnalysis.otPeriods > 1 ? `${lossAnalysis.otPeriods}x ` : ''}OT
+                              {/* Drought Badge */}
+                              {lossAnalysis.longestDrought && lossAnalysis.longestDrought.duration >= 180 && (
+                                <div className="mt-3 inline-flex items-center gap-1 border border-green-600 bg-green-900/20 text-green-400 px-2 py-1 text-xs">
+                                  [DROUGHT] {lossAnalysis.longestDrought.description}
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
+                          </>
+                        ) : (
+                          <>
+                            <h3 className="text-sm font-semibold text-red-400 mb-3 border-b border-red-800 pb-1">
+                              LOSS_ANALYSIS: WHY_DID_IT_GO_OVER?
+                            </h3>
+                            <div className="border border-red-700 bg-red-900/10 p-4">
+                              {/* Summary */}
+                              <p className="text-green-300 font-medium mb-3">{lossAnalysis.summary}</p>
+
+                              {/* Factors */}
+                              {lossAnalysis.factors.length > 0 && (
+                                <div className="mb-4">
+                                  <p className="text-xs text-green-600 mb-2">Contributing factors:</p>
+                                  <ul className="space-y-1">
+                                    {lossAnalysis.factors.map((factor, i) => (
+                                      <li key={i} className="text-xs text-red-400 flex items-start gap-2">
+                                        <span className="text-red-500">-</span>
+                                        {factor}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {/* Quarter Breakdown */}
+                              {lossAnalysis.quarterScoring.length > 0 && (
+                                <div>
+                                  <p className="text-xs text-green-600 mb-2">Scoring by period:</p>
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    {lossAnalysis.quarterScoring.map((q) => (
+                                      <div key={q.period} className={`border ${q.ppm > 4.5 ? 'border-red-500 bg-red-900/20' : 'border-green-800 bg-green-900/10'} p-2 text-center`}>
+                                        <div className="text-xs text-green-700">{q.periodName}</div>
+                                        <div className="text-lg font-bold text-green-400">{q.totalPoints}</div>
+                                        <div className={`text-xs ${q.ppm > 4.5 ? 'text-red-400' : 'text-green-600'}`}>
+                                          {q.ppm.toFixed(1)} PPM
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* OT Badge */}
+                              {lossAnalysis.wentToOT && (
+                                <div className="mt-3 inline-flex items-center gap-1 border border-red-600 bg-red-900/20 text-red-400 px-2 py-1 text-xs">
+                                  [OT] Game went to {lossAnalysis.otPeriods > 1 ? `${lossAnalysis.otPeriods}x ` : ''}OT
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
                     )}
                   </>
