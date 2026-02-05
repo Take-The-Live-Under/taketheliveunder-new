@@ -9,15 +9,21 @@ function getESPNDateStr(dateStr: string): string {
   return dateStr.replace(/-/g, '');
 }
 
-// Get date range for Supabase query from a specific date
+// Get date range for Supabase query from a specific date (US Eastern timezone)
+// Games are played in US timezones, so we need to query based on Eastern time
 function getDateRange(dateStr: string): { start: string; end: string } {
-  const date = new Date(dateStr + 'T00:00:00');
-  const nextDay = new Date(date);
-  nextDay.setDate(nextDay.getDate() + 1);
+  // Parse as US Eastern time - games from "Feb 4" means Feb 4 6am ET to Feb 5 6am ET
+  // This captures evening games that get stored as next day in UTC
+  // 6am ET = 11:00 UTC (standard) or 10:00 UTC (daylight)
+
+  // Create date at 6am Eastern (covers full game day including late night games)
+  const startDate = new Date(`${dateStr}T06:00:00-05:00`); // 6am EST
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + 1); // Next day 6am EST
 
   return {
-    start: date.toISOString(),
-    end: nextDay.toISOString(),
+    start: startDate.toISOString(),
+    end: endDate.toISOString(),
   };
 }
 
