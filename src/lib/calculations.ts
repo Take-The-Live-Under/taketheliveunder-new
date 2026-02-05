@@ -233,12 +233,14 @@ export function isOverTriggered(
 }
 
 /**
- * TRIPLE DIPPER (Strict UNDER - 76.3% win rate)
+ * TRIPLE DIPPER (Strict UNDER)
+ * TIGHTENED based on 40% win rate analysis - was too loose
  * Conditions:
  * - Game is live (in progress)
- * - Game minute between 15-32 (8-25 minutes remaining)
- * - Required PPM >= 4.5 (high pace needed to hit line)
- * - Current PPM <= Required PPM - 1.0 (game running COLD by at least 1 PPM)
+ * - Game minute between 20-32 (8-20 minutes remaining) - narrowed window
+ * - Required PPM >= 4.7 (increased from 4.5)
+ * - Current PPM <= Required PPM - 1.3 (increased from 1.0 - must be running VERY cold)
+ * - Point differential > 8 (avoid foul game risk - close games add extra points)
  * - Exclude overtime games
  */
 export function isTripleDipper(
@@ -246,7 +248,8 @@ export function isTripleDipper(
   minutesRemainingReg: number,
   currentPPM: number | null,
   requiredPPM: number | null,
-  isOT: boolean
+  isOT: boolean,
+  pointDiff?: number
 ): boolean {
   if (status !== 'in') return false;
   if (isOT) return false;
@@ -254,28 +257,33 @@ export function isTripleDipper(
 
   const gameMinute = REGULATION_MINUTES - minutesRemainingReg;
 
-  // Game minute 15-32
-  if (gameMinute < 15 || gameMinute > 32) return false;
+  // Game minute 20-32 (narrowed from 15-32)
+  if (gameMinute < 20 || gameMinute > 32) return false;
 
-  // Required PPM must be high (4.5+)
-  if (requiredPPM < 4.5) return false;
+  // Required PPM must be high (4.7+ - increased from 4.5)
+  if (requiredPPM < 4.7) return false;
 
-  // Current PPM is at least 1.0 below required
+  // Current PPM is at least 1.3 below required (increased from 1.0)
   const ppmGap = currentPPM - requiredPPM;
-  if (ppmGap > -1.0) return false;
+  if (ppmGap > -1.3) return false;
+
+  // Foul game filter: skip if game is close (within 8 points)
+  // Close games often enter foul game territory adding 5-7 extra points
+  if (pointDiff !== undefined && pointDiff <= 8) return false;
 
   return true;
 }
 
 /**
- * Standard UNDER TRIGGER (69.7% win rate - Golden Zone)
- * Original trigger logic
+ * Standard UNDER TRIGGER (Golden Zone)
+ * TIGHTENED based on analysis
  * Conditions:
  * - Game is live (in progress)
  * - At least 4 minutes elapsed
  * - 5+ minutes remaining
- * - Required PPM >= 4.5
- * - PPM diff between 1.0 and 1.5
+ * - Required PPM >= 4.7 (increased from 4.5)
+ * - PPM diff between 1.2 and 1.5 (tightened from 1.0-1.5)
+ * - Point differential > 8 (avoid foul game risk)
  * - Exclude overtime games
  */
 export function isUnderTriggered(
@@ -283,7 +291,8 @@ export function isUnderTriggered(
   minutesRemainingReg: number,
   currentPPM: number | null,
   requiredPPM: number | null,
-  isOT: boolean
+  isOT: boolean,
+  pointDiff?: number
 ): boolean {
   if (status !== 'in') return false;
   if (isOT) return false;
@@ -292,10 +301,13 @@ export function isUnderTriggered(
   const minutesElapsed = REGULATION_MINUTES - minutesRemainingReg;
   if (minutesElapsed < 4.0) return false;
   if (minutesRemainingReg <= 5.0) return false;
-  if (requiredPPM < 4.5) return false;
+  if (requiredPPM < 4.7) return false;  // Increased from 4.5
 
   const ppmDiff = requiredPPM - currentPPM;
-  if (ppmDiff < 1.0 || ppmDiff > 1.5) return false;
+  if (ppmDiff < 1.2 || ppmDiff > 1.5) return false;  // Tightened from 1.0-1.5
+
+  // Foul game filter: skip if game is close (within 8 points)
+  if (pointDiff !== undefined && pointDiff <= 8) return false;
 
   return true;
 }
@@ -310,10 +322,11 @@ export function getTriggerType(
   minutesRemainingReg: number,
   currentPPM: number | null,
   requiredPPM: number | null,
-  isOT: boolean
+  isOT: boolean,
+  pointDiff?: number
 ): TriggerType {
   // Check Triple Dipper first (strict UNDER - highest confidence for UNDER)
-  if (isTripleDipper(status, minutesRemainingReg, currentPPM, requiredPPM, isOT)) {
+  if (isTripleDipper(status, minutesRemainingReg, currentPPM, requiredPPM, isOT, pointDiff)) {
     return 'tripleDipper';
   }
 
@@ -323,7 +336,7 @@ export function getTriggerType(
   }
 
   // Check standard UNDER trigger
-  if (isUnderTriggered(status, minutesRemainingReg, currentPPM, requiredPPM, isOT)) {
+  if (isUnderTriggered(status, minutesRemainingReg, currentPPM, requiredPPM, isOT, pointDiff)) {
     return 'under';
   }
 
@@ -339,9 +352,10 @@ export function isTriggered(
   minutesRemainingReg: number,
   requiredPPM: number | null,
   isOT: boolean,
-  currentPPM: number | null = null
+  currentPPM: number | null = null,
+  pointDiff?: number
 ): boolean {
-  const triggerType = getTriggerType(status, minutesRemainingReg, currentPPM, requiredPPM, isOT);
+  const triggerType = getTriggerType(status, minutesRemainingReg, currentPPM, requiredPPM, isOT, pointDiff);
   return triggerType === 'under' || triggerType === 'tripleDipper';
 }
 

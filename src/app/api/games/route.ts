@@ -412,16 +412,18 @@ export async function GET() {
 
       const requiredPPM = calculateRequiredPPM(liveTotal, ouLine, minutesRemainingReg);
 
-      // Calculate trigger type using new unified logic
-      const triggerType: TriggerType = getTriggerType(status, minutesRemainingReg, currentPPM, requiredPPM, isOT);
+      // Calculate point differential for foul game risk filter
+      const pointDiff = Math.abs(homeScore - awayScore);
+
+      // Calculate trigger type using new unified logic (includes point diff filter)
+      const triggerType: TriggerType = getTriggerType(status, minutesRemainingReg, currentPPM, requiredPPM, isOT, pointDiff);
 
       // triggeredFlag = true for UNDER or TRIPLE DIPPER (legacy compatibility)
       const triggeredFlag = triggerType === 'under' || triggerType === 'tripleDipper';
       // overTriggeredFlag = true for OVER trigger
       const overTriggeredFlag = triggerType === 'over';
 
-      // Calculate foul game adjustment
-      const pointDiff = Math.abs(homeScore - awayScore);
+      // Calculate foul game adjustment (pointDiff already calculated above)
       const inFoulGame = status === 'in' && isInFoulGame(period, clockMinutes, clockSeconds, pointDiff);
       const couldEnterFoul = status === 'in' && couldEnterFoulGame(period, clockMinutes, clockSeconds, pointDiff);
 
