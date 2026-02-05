@@ -53,6 +53,7 @@ interface DailyReport {
   generatedAt: string;
   summary: {
     totalTriggered: number;
+    uniqueGames?: number;
     totalUnders: number;
     totalOvers: number;
     winRate: number;
@@ -301,7 +302,10 @@ export default function ReportPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
               <div className="border border-green-800 bg-green-900/10 p-4 text-center">
                 <div className="text-2xl font-bold text-green-400">{report.summary.totalTriggered}</div>
-                <div className="text-xs text-green-700 uppercase tracking-wide">TOTAL_TRIGGERS</div>
+                <div className="text-xs text-green-700 uppercase tracking-wide">TOTAL_BETS</div>
+                {report.summary.uniqueGames && (
+                  <div className="text-xs text-green-600 mt-1">({report.summary.uniqueGames} games)</div>
+                )}
               </div>
               <div className="border border-green-800 bg-green-900/10 p-4 text-center">
                 <div className="text-2xl font-bold text-green-400">{report.summary.totalUnders}</div>

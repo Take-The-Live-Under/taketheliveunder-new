@@ -59,7 +59,8 @@ interface DailyReport {
   reportDate: string;
   generatedAt: string;
   summary: {
-    totalTriggered: number;
+    totalTriggered: number; // Total individual triggers (bets)
+    uniqueGames: number; // Number of unique games that triggered
     totalUnders: number;
     totalOvers: number;
     winRate: number;
@@ -203,6 +204,7 @@ export async function GET(request: NextRequest) {
         generatedAt: new Date().toISOString(),
         summary: {
           totalTriggered: 0,
+          uniqueGames: 0,
           totalUnders: 0,
           totalOvers: 0,
           winRate: 0,
@@ -224,19 +226,14 @@ export async function GET(request: NextRequest) {
     // Fetch final scores from ESPN
     const finalScores = await fetchFinalScores(espnDateStr);
 
-    // Match triggers with final scores
+    // Match triggers with final scores - COUNT EACH TRIGGER AS A SEPARATE BET
     const results: GameResult[] = [];
 
     for (const [gameId, gameTriggers] of Array.from(triggersByGame.entries())) {
       const finalScore = finalScores.get(gameId);
       if (!finalScore) continue; // Game not found or not finished
 
-      // Use the first (earliest) trigger as the primary one for display
-      const primaryTrigger = gameTriggers[0];
-
       const finalTotal = finalScore.home + finalScore.away;
-      const margin = primaryTrigger.ou_line - finalTotal; // Positive = under
-      const gameResult = margin > 0 ? 'under' : margin < 0 ? 'over' : 'push';
 
       // Build all triggers for this game (for graph display)
       const allTriggersForGame: TriggerEntry[] = gameTriggers.map(t => ({
@@ -248,24 +245,30 @@ export async function GET(request: NextRequest) {
         ouLine: t.ou_line,
       }));
 
-      results.push({
-        gameId: primaryTrigger.game_id,
-        homeTeam: primaryTrigger.home_team,
-        awayTeam: primaryTrigger.away_team,
-        finalHomeScore: finalScore.home,
-        finalAwayScore: finalScore.away,
-        finalTotal,
-        ouLine: primaryTrigger.ou_line,
-        result: gameResult,
-        margin,
-        triggerTime: primaryTrigger.created_at || '',
-        triggerMinutesRemaining: primaryTrigger.minutes_remaining,
-        triggerScore: primaryTrigger.live_total,
-        triggerStrength: primaryTrigger.trigger_strength,
-        triggerType: primaryTrigger.trigger_type,
-        isWin: isTriggerWin(primaryTrigger.trigger_type, gameResult),
-        allTriggers: allTriggersForGame,
-      });
+      // Create a result for EACH trigger (each trigger = one bet)
+      for (const trigger of gameTriggers) {
+        const margin = trigger.ou_line - finalTotal; // Positive = under
+        const gameResult = margin > 0 ? 'under' : margin < 0 ? 'over' : 'push';
+
+        results.push({
+          gameId: trigger.game_id,
+          homeTeam: trigger.home_team,
+          awayTeam: trigger.away_team,
+          finalHomeScore: finalScore.home,
+          finalAwayScore: finalScore.away,
+          finalTotal,
+          ouLine: trigger.ou_line,
+          result: gameResult,
+          margin,
+          triggerTime: trigger.created_at || '',
+          triggerMinutesRemaining: trigger.minutes_remaining,
+          triggerScore: trigger.live_total,
+          triggerStrength: trigger.trigger_strength,
+          triggerType: trigger.trigger_type,
+          isWin: isTriggerWin(trigger.trigger_type, gameResult),
+          allTriggers: allTriggersForGame,
+        });
+      }
     }
 
     // Calculate summary stats
@@ -321,7 +324,8 @@ export async function GET(request: NextRequest) {
       reportDate,
       generatedAt: new Date().toISOString(),
       summary: {
-        totalTriggered: results.length,
+        totalTriggered: results.length, // Each trigger = one bet
+        uniqueGames: triggersByGame.size, // Number of distinct games
         totalUnders: unders.length,
         totalOvers: overs.length,
         winRate: Math.round(winRate * 10) / 10,
