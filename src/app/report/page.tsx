@@ -660,7 +660,7 @@ export default function ReportPage() {
                                         )}
                                         <circle cx="100" cy={getY(selectedGame.finalTotal)} r="2" fill="#22c55e" stroke="#fff" strokeWidth="0.4" vectorEffect="non-scaling-stroke" />
                                       </svg>
-                                      {/* Labels for trigger points - show O/U line at trigger time */}
+                                      {/* Labels for trigger points - show O/U LINE at trigger time (not score) */}
                                       {triggerPoints.length > 0 ? triggerPoints.map((tp, idx) => {
                                         const color = tp.triggerType === 'over' ? 'bg-orange-400' : tp.triggerType === 'tripleDipper' ? 'bg-yellow-400' : 'bg-green-400';
                                         // Show O/U line at trigger time, not the live score
