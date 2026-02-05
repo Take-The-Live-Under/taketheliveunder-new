@@ -660,10 +660,11 @@ export default function ReportPage() {
                                         )}
                                         <circle cx="100" cy={getY(selectedGame.finalTotal)} r="2" fill="#22c55e" stroke="#fff" strokeWidth="0.4" vectorEffect="non-scaling-stroke" />
                                       </svg>
-                                      {/* Labels for trigger points */}
+                                      {/* Labels for trigger points - show O/U line at trigger time */}
                                       {triggerPoints.length > 0 ? triggerPoints.map((tp, idx) => {
                                         const color = tp.triggerType === 'over' ? 'bg-orange-400' : tp.triggerType === 'tripleDipper' ? 'bg-yellow-400' : 'bg-green-400';
-                                        const score = tp.timelinePoint?.liveTotal || tp.triggerScore;
+                                        // Show O/U line at trigger time, not the live score
+                                        const ouLineAtTrigger = tp.ouLine;
                                         // Stagger labels vertically if multiple
                                         const topOffset = -18 - (idx * 16);
                                         return (
@@ -672,12 +673,12 @@ export default function ReportPage() {
                                             className={`absolute text-xs ${color} text-black px-1 font-bold whitespace-nowrap`}
                                             style={{ left: `${getX(tp.timelineIdx)}%`, top: `${topOffset}px`, transform: 'translateX(-50%)' }}
                                           >
-                                            {tp.triggerType === 'over' ? '🔥' : tp.triggerType === 'tripleDipper' ? '🏆' : '✓'} {score}
+                                            {tp.triggerType === 'over' ? '🔥' : tp.triggerType === 'tripleDipper' ? '🏆' : '✓'} {ouLineAtTrigger}
                                           </div>
                                         );
                                       }) : entryPoint && (
                                         <div className="absolute text-xs bg-cyan-500 text-black px-1 font-bold" style={{ left: `${getX(entryIdx)}%`, top: '-18px', transform: 'translateX(-50%)' }}>
-                                          IN @ {entryPoint.liveTotal}
+                                          O/U: {selectedGame.ouLine}
                                         </div>
                                       )}
                                       <div className="absolute text-xs text-green-400 font-bold" style={{ right: '2px', top: `${getY(selectedGame.finalTotal)}%`, transform: 'translateY(-50%)' }}>
