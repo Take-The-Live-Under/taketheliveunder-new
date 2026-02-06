@@ -14,7 +14,9 @@ import SystemLog from '@/components/SystemLog';
 import AsciiLogo from '@/components/AsciiLogo';
 import SearchingCode from '@/components/SearchingCode';
 import TriggerAnnouncement from '@/components/TriggerAnnouncement';
+import UpcomingGameCard from '@/components/UpcomingGameCard';
 import { Game } from '@/types/game';
+import { GamePrediction } from '@/app/api/predictions/route';
 import { usePageView, useAnalytics } from '@/hooks/useAnalytics';
 
 type SubTab = 'under' | 'over' | 'live' | 'upcoming' | 'picks';
@@ -35,6 +37,11 @@ export default function Home() {
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const lastFetchRef = useRef<number>(0);
+
+  // KenPom predictions for upcoming games
+  const [predictions, setPredictions] = useState<GamePrediction[]>([]);
+  const [predictionsLoading, setPredictionsLoading] = useState(false);
+  const [predictionsError, setPredictionsError] = useState<string | null>(null);
 
   // Analytics tracking
   usePageView('home');
@@ -133,6 +140,39 @@ export default function Home() {
     const interval = setInterval(() => fetchGames(false, true), 15000);
     return () => clearInterval(interval);
   }, [fetchGames]);
+
+  // Fetch KenPom predictions when upcoming tab is selected
+  useEffect(() => {
+    if (subTab === 'upcoming' && predictions.length === 0 && !predictionsLoading) {
+      setPredictionsLoading(true);
+      setPredictionsError(null);
+      fetch('/api/predictions')
+        .then(res => {
+          if (!res.ok) throw new Error('Failed to fetch predictions');
+          return res.json();
+        })
+        .then(data => {
+          setPredictions(data.predictions || []);
+        })
+        .catch(err => {
+          console.error('Predictions error:', err);
+          setPredictionsError(err.message);
+        })
+        .finally(() => {
+          setPredictionsLoading(false);
+        });
+    }
+  }, [subTab, predictions.length, predictionsLoading]);
+
+  // Filter predictions based on search
+  const filteredPredictions = predictions.filter((pred) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      pred.homeTeam.toLowerCase().includes(query) ||
+      pred.awayTeam.toLowerCase().includes(query)
+    );
+  });
 
   // Filter games based on tab and search
   const filteredGames = games.filter((game) => {
@@ -403,7 +443,7 @@ export default function Home() {
         )}
 
         {/* Empty States - Terminal Style */}
-        {!loading && !error && subTab !== 'picks' && sortedGames.length === 0 && (
+        {!loading && !error && subTab !== 'picks' && subTab !== 'upcoming' && sortedGames.length === 0 && (
           <div className="animate-fade-in">
             {subTab === 'under' ? (
               <>
@@ -434,17 +474,20 @@ export default function Home() {
                   Check back during NCAA game times for live action and real-time edges.
                 </p>
               </div>
-            ) : (
-              <div className="border border-green-900 bg-black/30 p-8 text-center terminal-glow-box">
-                <div className="text-green-600 text-xs mb-4 font-mono">// STATUS: QUEUED</div>
-                <p className="text-lg font-bold text-green-400 mb-2 font-mono">
-                  NO_UPCOMING_GAMES
-                </p>
-                <p className="text-sm text-green-700 max-w-sm mx-auto font-mono">
-                  Check back later for today&apos;s upcoming matchups.
-                </p>
-              </div>
-            )}
+            ) : null}
+          </div>
+        )}
+
+        {/* Empty state for upcoming tab */}
+        {subTab === 'upcoming' && !predictionsLoading && filteredPredictions.length === 0 && !predictionsError && (
+          <div className="border border-green-900 bg-black/30 p-8 text-center terminal-glow-box animate-fade-in">
+            <div className="text-green-600 text-xs mb-4 font-mono">// STATUS: QUEUED</div>
+            <p className="text-lg font-bold text-green-400 mb-2 font-mono">
+              NO_UPCOMING_GAMES
+            </p>
+            <p className="text-sm text-green-700 max-w-sm mx-auto font-mono">
+              Check back later for today&apos;s KenPom projections.
+            </p>
           </div>
         )}
 
@@ -461,17 +504,48 @@ export default function Home() {
           </div>
         )}
 
-        {/* Games List */}
-        {!loading && subTab !== 'picks' && sortedGames.length > 0 && (
+        {/* Upcoming Games with KenPom Data */}
+        {subTab === 'upcoming' && !predictionsLoading && filteredPredictions.length > 0 && (
           <div className={`space-y-3 ${isInitialLoad ? 'cards-initial-load' : ''}`}>
-            {subTab === 'upcoming' && sortedGames.every(g => g.isTomorrow) && (
-              <div className="flex items-center gap-2 mb-2">
-                <span className="bg-green-900/50 border border-green-700 px-2 py-1 text-xs font-medium text-green-400 font-mono">
-                  TOMORROW
-                </span>
-                <span className="text-sm text-green-700 font-mono">// No more games today</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2 mb-2">
+              <span className="bg-green-900/50 border border-green-700 px-2 py-1 text-xs font-medium text-green-400 font-mono">
+                KENPOM
+              </span>
+              <span className="text-sm text-green-700 font-mono">// PRE-GAME PROJECTIONS</span>
+            </div>
+            {filteredPredictions.map((pred) => (
+              <UpcomingGameCard
+                key={pred.gameId}
+                prediction={pred}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Upcoming loading state */}
+        {subTab === 'upcoming' && predictionsLoading && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-center gap-2 text-green-600 text-sm mb-4 font-mono">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-green-500 border-t-transparent"></div>
+              <span>LOADING_KENPOM_DATA...</span>
+            </div>
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        )}
+
+        {/* Upcoming error state */}
+        {subTab === 'upcoming' && predictionsError && (
+          <div className="border border-yellow-900 bg-yellow-900/20 p-4 text-center">
+            <p className="text-yellow-400 text-sm font-mono">KENPOM_DATA_UNAVAILABLE</p>
+            <p className="text-yellow-700 text-xs mt-1 font-mono">Showing basic game info instead</p>
+          </div>
+        )}
+
+        {/* Games List (non-upcoming tabs) */}
+        {!loading && subTab !== 'picks' && subTab !== 'upcoming' && sortedGames.length > 0 && (
+          <div className={`space-y-3 ${isInitialLoad ? 'cards-initial-load' : ''}`}>
             {sortedGames.map((game) => (
               <GameCard
                 key={game.id}
