@@ -6,7 +6,7 @@
  * and which teams to avoid entirely.
  */
 
-export type TeamDirection = 'over_only' | 'under_only' | 'both' | 'avoid';
+export type TeamDirection = 'over_only' | 'under_only' | 'avoid';
 
 export interface TeamFilter {
   direction: TeamDirection;
@@ -75,29 +75,25 @@ const BLACKLIST_TEAMS: Record<string, { overWR: number; underWR: number; reason:
   'Northern Arizona Lumberjacks': { overWR: 38, underWR: 0, reason: 'Under is poison (0%)' },
 };
 
-// Teams with strong over preference (100% over, but decent under too)
+// Teams with strong over preference (better over win rate)
 const OVER_PREFERRED_TEAMS: Record<string, { overWR: number; underWR: number }> = {
-  'Florida Gators': { overWR: 100, underWR: 82 },  // Prefer over
+  'Florida Gators': { overWR: 100, underWR: 82 },
   'Georgia Tech Yellow Jackets': { overWR: 100, underWR: 88 },
   'Belmont Bruins': { overWR: 100, underWR: 92 },
   'Milwaukee Panthers': { overWR: 100, underWR: 89 },
   'Clemson Tigers': { overWR: 100, underWR: 75 },
   'Akron Zips': { overWR: 100, underWR: 88 },
+  'Memphis Tigers': { overWR: 100, underWR: 100 },  // Good both but slightly favor over
+  'Boise State Broncos': { overWR: 100, underWR: 100 },
 };
 
-// Teams with strong under preference (100% under, but decent over too)
+// Teams with strong under preference (better under win rate)
 const UNDER_PREFERRED_TEAMS: Record<string, { overWR: number; underWR: number }> = {
   'Florida State Seminoles': { overWR: 91, underWR: 100 },
   'Vanderbilt Commodores': { overWR: 71, underWR: 100 },
   'UCLA Bruins': { overWR: 72, underWR: 100 },
-};
-
-// Elite teams - truly good both ways (90%+ both)
-const ELITE_TEAMS: Record<string, { overWR: number; underWR: number }> = {
-  'Memphis Tigers': { overWR: 100, underWR: 100 },
-  'Loyola Chicago Ramblers': { overWR: 100, underWR: 100 },
+  'Loyola Chicago Ramblers': { overWR: 100, underWR: 100 },  // Good both but slightly favor under
   'Sam Houston Bearkats': { overWR: 100, underWR: 100 },
-  'Boise State Broncos': { overWR: 100, underWR: 100 },
 };
 
 /**
@@ -137,36 +133,25 @@ export function getTeamFilter(teamName: string): TeamFilter | null {
     };
   }
 
-  // Check over-preferred teams (good both ways but over is better)
+  // Check over-preferred teams
   if (OVER_PREFERRED_TEAMS[teamName]) {
     const t = OVER_PREFERRED_TEAMS[teamName];
     return {
-      direction: 'both',
+      direction: 'over_only',
       overWinRate: t.overWR,
       underWinRate: t.underWR,
-      warning: `🔥 OVER (${t.overWR}%) > UNDER (${t.underWR}%)`,
+      warning: `🔥 OVER (${t.overWR}%)`,
     };
   }
 
-  // Check under-preferred teams (good both ways but under is better)
+  // Check under-preferred teams
   if (UNDER_PREFERRED_TEAMS[teamName]) {
     const t = UNDER_PREFERRED_TEAMS[teamName];
     return {
-      direction: 'both',
+      direction: 'under_only',
       overWinRate: t.overWR,
       underWinRate: t.underWR,
-      warning: `❄️ UNDER (${t.underWR}%) > OVER (${t.overWR}%)`,
-    };
-  }
-
-  // Check elite teams
-  if (ELITE_TEAMS[teamName]) {
-    const t = ELITE_TEAMS[teamName];
-    return {
-      direction: 'both',
-      overWinRate: t.overWR,
-      underWinRate: t.underWR,
-      warning: `⭐ ELITE (${t.overWR}% over, ${t.underWR}% under)`,
+      warning: `❄️ UNDER (${t.underWR}%)`,
     };
   }
 
@@ -253,15 +238,6 @@ export function getTeamBadge(teamName: string): { text: string; color: string } 
       return { text: '🔥 OVER', color: 'orange' };
     case 'under_only':
       return { text: '❄️ UNDER', color: 'blue' };
-    case 'both':
-      // Check if it's a preferred direction or true elite
-      if (OVER_PREFERRED_TEAMS[teamName]) {
-        return { text: '🔥 OVER', color: 'orange' };
-      }
-      if (UNDER_PREFERRED_TEAMS[teamName]) {
-        return { text: '❄️ UNDER', color: 'blue' };
-      }
-      return { text: '⭐ ELITE', color: 'green' };
     default:
       return null;
   }
