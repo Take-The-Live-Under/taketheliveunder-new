@@ -153,6 +153,17 @@ export default function GameCard({ game, onClick }: GameCardProps) {
           <div className="flex items-center gap-3 min-w-0">
             <span className="text-[10px] text-green-700 font-medium w-8">AWAY</span>
             <span className="text-sm font-semibold text-green-400 truncate">{game.awayTeam}</span>
+            {/* Away team direction badge */}
+            {game.awayTeamBadge && (
+              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold border ${
+                game.awayTeamBadge.color === 'red' ? 'border-red-700 text-red-400 bg-red-900/30' :
+                game.awayTeamBadge.color === 'orange' ? 'border-orange-700 text-orange-400 bg-orange-900/30' :
+                game.awayTeamBadge.color === 'blue' ? 'border-blue-700 text-blue-400 bg-blue-900/30' :
+                'border-green-700 text-green-400 bg-green-900/30'
+              }`}>
+                {game.awayTeamBadge.text}
+              </span>
+            )}
             {/* Away team bonus indicator */}
             {isLive && game.awayBonusStatus && (game.awayBonusStatus.inBonus || game.awayBonusStatus.inDoubleBonus) && (
               <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold border ${
@@ -170,6 +181,17 @@ export default function GameCard({ game, onClick }: GameCardProps) {
           <div className="flex items-center gap-3 min-w-0">
             <span className="text-[10px] text-green-700 font-medium w-8">HOME</span>
             <span className="text-sm font-semibold text-green-400 truncate">{game.homeTeam}</span>
+            {/* Home team direction badge */}
+            {game.homeTeamBadge && (
+              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold border ${
+                game.homeTeamBadge.color === 'red' ? 'border-red-700 text-red-400 bg-red-900/30' :
+                game.homeTeamBadge.color === 'orange' ? 'border-orange-700 text-orange-400 bg-orange-900/30' :
+                game.homeTeamBadge.color === 'blue' ? 'border-blue-700 text-blue-400 bg-blue-900/30' :
+                'border-green-700 text-green-400 bg-green-900/30'
+              }`}>
+                {game.homeTeamBadge.text}
+              </span>
+            )}
             {/* Home team bonus indicator */}
             {isLive && game.homeBonusStatus && (game.homeBonusStatus.inBonus || game.homeBonusStatus.inDoubleBonus) && (
               <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold border ${

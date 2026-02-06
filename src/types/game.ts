@@ -45,6 +45,12 @@ export interface Game {
   // Bonus status - fouls against each team (opponent fouls = your free throws)
   homeBonusStatus?: BonusStatus;  // Based on away team's fouls against home
   awayBonusStatus?: BonusStatus;  // Based on home team's fouls against away
+  // Team directional filters (based on season analysis)
+  homeTeamBadge?: { text: string; color: string } | null;
+  awayTeamBadge?: { text: string; color: string } | null;
+  teamWarnings?: string[];  // Warnings about team direction
+  shouldSkipTrigger?: boolean;  // True if trigger should be filtered out
+  skipReason?: string | null;  // Reason for filtering
 }
 
 export interface ESPNGame {

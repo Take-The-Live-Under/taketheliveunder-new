@@ -17,6 +17,7 @@ import {
 } from '@/lib/calculations';
 import { logTrigger, hasBeenLoggedRecently, logGameSnapshots } from '@/lib/supabase';
 import { analyzeMatchup } from '@/lib/allTeamFoulGameData';
+import { getTeamBadge, getGameWarnings, shouldFilterTrigger } from '@/lib/teamFilters';
 
 const ESPN_URL =
   'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard';
@@ -499,6 +500,11 @@ export async function GET() {
         homeFoulGameInfo: matchupAnalysis.homeInfo,
         awayFoulGameInfo: matchupAnalysis.awayInfo,
         foulGameWarningLevel: matchupAnalysis.warningLevel,
+        // Team directional filters
+        homeTeamBadge: getTeamBadge(homeTeam),
+        awayTeamBadge: getTeamBadge(awayTeam),
+        teamWarnings: getGameWarnings(homeTeam, awayTeam),
+        ...(triggerType ? shouldFilterTrigger(homeTeam, awayTeam, triggerType) : { shouldSkipTrigger: false, skipReason: null }),
       };
     });
 
