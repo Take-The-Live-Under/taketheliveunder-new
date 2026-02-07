@@ -526,3 +526,56 @@ export async function incrementUserActivity(
     console.error('Failed to increment user activity:', err);
   }
 }
+
+// ============ LINE TRACKING ============
+
+export interface LineHistory {
+  game_id: string;
+  opening_line: number;
+  max_line: number;
+  min_line: number;
+  last_updated: string;
+}
+
+// In-memory cache for line tracking (persists within serverless instance)
+const lineCache = new Map<string, LineHistory>();
+
+export function updateLineCache(gameId: string, currentLine: number): LineHistory {
+  const existing = lineCache.get(gameId);
+  const now = new Date().toISOString();
+
+  if (existing) {
+    // Update max/min
+    existing.max_line = Math.max(existing.max_line, currentLine);
+    existing.min_line = Math.min(existing.min_line, currentLine);
+    existing.last_updated = now;
+    return existing;
+  } else {
+    // First time seeing this game
+    const newEntry: LineHistory = {
+      game_id: gameId,
+      opening_line: currentLine,
+      max_line: currentLine,
+      min_line: currentLine,
+      last_updated: now,
+    };
+    lineCache.set(gameId, newEntry);
+    return newEntry;
+  }
+}
+
+export function getLineHistory(gameId: string): LineHistory | null {
+  return lineCache.get(gameId) || null;
+}
+
+// Clear old entries (games that ended) - call periodically
+export function cleanLineCache(activeGameIds: string[]): void {
+  const activeSet = new Set(activeGameIds);
+  const keysToDelete: string[] = [];
+  lineCache.forEach((_, gameId) => {
+    if (!activeSet.has(gameId)) {
+      keysToDelete.push(gameId);
+    }
+  });
+  keysToDelete.forEach(key => lineCache.delete(key));
+}

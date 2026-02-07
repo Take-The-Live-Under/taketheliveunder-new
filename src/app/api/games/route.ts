@@ -15,7 +15,7 @@ import {
   getExpectedFoulGameAdjustment,
   TriggerType,
 } from '@/lib/calculations';
-import { logTrigger, hasBeenLoggedRecently, logGameSnapshots } from '@/lib/supabase';
+import { logTrigger, hasBeenLoggedRecently, logGameSnapshots, updateLineCache, cleanLineCache } from '@/lib/supabase';
 import { analyzeMatchup } from '@/lib/allTeamFoulGameData';
 import { getTeamBadge, getGameWarnings, shouldFilterTrigger } from '@/lib/teamFilters';
 
@@ -466,6 +466,20 @@ export async function GET() {
         adjustedProjectedTotal = Math.round(adjustedProjectedTotal * 10) / 10;
       }
 
+      // Track line movement for live games
+      let openingLine: number | null = null;
+      let maxLine: number | null = null;
+      let minLine: number | null = null;
+      let lineMovement: number | null = null;
+
+      if (ouLine !== null && status === 'in') {
+        const lineHistory = updateLineCache(event.id, ouLine);
+        openingLine = lineHistory.opening_line;
+        maxLine = lineHistory.max_line;
+        minLine = lineHistory.min_line;
+        lineMovement = Math.round((ouLine - openingLine) * 10) / 10;
+      }
+
       return {
         id: event.id,
         startTime: event.date,
@@ -481,6 +495,10 @@ export async function GET() {
         homeScore,
         liveTotal,
         ouLine,
+        openingLine,
+        maxLine,
+        minLine,
+        lineMovement,
         currentPPM: currentPPM !== null ? Math.round(currentPPM * 100) / 100 : null,
         requiredPPM: requiredPPM !== null ? Math.round(requiredPPM * 100) / 100 : null,
         triggeredFlag,
@@ -592,6 +610,10 @@ export async function GET() {
       // Log snapshots without awaiting (fire and forget)
       logGameSnapshots(snapshots);
     }
+
+    // Clean up line cache for games that are no longer active
+    const activeGameIds = games.filter(g => g.status === 'in').map(g => g.id);
+    cleanLineCache(activeGameIds);
 
     return NextResponse.json({ games, timestamp: new Date().toISOString() });
   } catch (error) {

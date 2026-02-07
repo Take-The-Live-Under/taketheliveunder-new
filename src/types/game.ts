@@ -22,6 +22,11 @@ export interface Game {
   homeScore: number;
   liveTotal: number;
   ouLine: number | null;
+  // Line tracking for live games
+  openingLine: number | null;  // First O/U line seen for this game
+  maxLine: number | null;      // Highest O/U line seen
+  minLine: number | null;      // Lowest O/U line seen
+  lineMovement: number | null; // Current line vs opening (positive = line went up)
   currentPPM: number | null;
   requiredPPM: number | null;
   triggeredFlag: boolean;      // Under trigger (legacy, kept for compatibility)
