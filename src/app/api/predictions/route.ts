@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { teamsMatch } from '@/lib/teamNormalization';
 
 const KENPOM_API_URL = 'https://kenpom.com/api.php';
 const ESPN_URL = 'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard';
@@ -51,29 +52,6 @@ export interface GamePrediction {
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
   gameTime: string | null;
   status: 'pre' | 'in' | 'post';
-}
-
-function normalizeTeamName(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/\s+(state|st\.)$/i, ' st')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function teamsMatch(name1: string, name2: string): boolean {
-  const n1 = normalizeTeamName(name1);
-  const n2 = normalizeTeamName(name2);
-
-  if (n1 === n2) return true;
-  if (n1.includes(n2) || n2.includes(n1)) return true;
-
-  // Match on first word
-  const parts1 = n1.split(' ');
-  const parts2 = n2.split(' ');
-  if (parts1[0] === parts2[0] && parts1[0].length > 3) return true;
-
-  return false;
 }
 
 function extractOULine(bookmakers: OddsAPIGame['bookmakers']): number | null {
