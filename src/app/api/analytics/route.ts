@@ -4,7 +4,7 @@ import { logAnalyticsEvent, getAnalyticsSummary } from '@/lib/supabase';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { event_type, page, session_id, metadata } = body;
+    const { event_type, page, user_id, session_id, metadata } = body;
 
     if (!event_type) {
       return NextResponse.json({ error: 'event_type required' }, { status: 400 });
@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
       page,
       user_agent,
       referrer,
+      user_id,
       session_id,
       metadata,
     });

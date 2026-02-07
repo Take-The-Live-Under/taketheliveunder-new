@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { Game } from '@/types/game';
+import GameCharts from './GameCharts';
 
 interface GameDetailModalProps {
   game: Game;
@@ -78,7 +79,7 @@ export default function GameDetailModal({ game, isOpen, onClose }: GameDetailMod
   const [details, setDetails] = useState<GameDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'stats' | 'players' | 'refs'>('stats');
+  const [activeTab, setActiveTab] = useState<'charts' | 'stats' | 'players' | 'refs'>('charts');
 
   const fetchDetails = useCallback(async () => {
     if (!isOpen || !game.id) return;
@@ -126,42 +127,42 @@ export default function GameDetailModal({ game, isOpen, onClose }: GameDetailMod
   const homeTeam = details?.teamStats?.find(t => t.isHome);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center font-mono">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-black/90 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg max-h-[90vh] bg-slate-900 rounded-t-2xl sm:rounded-2xl border border-slate-700 shadow-2xl animate-slide-up overflow-hidden flex flex-col">
+      <div className="relative w-full max-w-lg max-h-[90vh] bg-[#0a0a0a] border border-green-900 terminal-glow-box animate-slide-up overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex-shrink-0 sticky top-0 bg-slate-900/95 backdrop-blur-sm border-b border-slate-700 p-4 z-10">
+        <div className="flex-shrink-0 sticky top-0 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-green-900 p-4 z-10">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               {game.status === 'in' && (
-                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/20 border border-red-500/30">
+                <span className="flex items-center gap-1.5 px-2 py-0.5 border border-green-700 bg-green-900/30">
                   <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
                   </span>
-                  <span className="text-xs font-medium text-red-400">LIVE</span>
+                  <span className="text-xs font-medium text-green-400">LIVE</span>
                 </span>
               )}
               {game.status === 'pre' && (
-                <span className="px-2 py-0.5 rounded-full bg-slate-700 text-xs text-slate-400">
-                  Upcoming
+                <span className="px-2 py-0.5 border border-green-900 text-xs text-green-600">
+                  UPCOMING
                 </span>
               )}
               {game.status === 'post' && (
-                <span className="px-2 py-0.5 rounded-full bg-slate-700 text-xs text-slate-400">
-                  Final
+                <span className="px-2 py-0.5 border border-green-900 text-xs text-green-600">
+                  FINAL
                 </span>
               )}
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors tap-target"
+              className="p-2 text-green-700 hover:text-green-400 hover:bg-green-900/30 transition-colors tap-target"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -172,34 +173,34 @@ export default function GameDetailModal({ game, isOpen, onClose }: GameDetailMod
           {/* Score Display */}
           <div className="flex items-center justify-between">
             <div className="flex-1 text-center">
-              <p className="text-sm text-slate-400 mb-1">{game.awayTeam}</p>
-              <p className="text-3xl font-bold text-white">{game.awayScore}</p>
+              <p className="text-xs text-green-700 mb-1">{game.awayTeam}</p>
+              <p className="text-2xl font-bold text-green-400">{game.awayScore}</p>
               {awayTeam?.bonusStatus.label && (
-                <span className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium ${
+                <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-medium border ${
                   awayTeam.bonusStatus.inDoubleBonus
-                    ? 'bg-red-500/20 text-red-400'
-                    : 'bg-yellow-500/20 text-yellow-400'
+                    ? 'border-red-700 text-red-400'
+                    : 'border-yellow-700 text-yellow-400'
                 }`}>
                   {awayTeam.bonusStatus.label}
                 </span>
               )}
             </div>
             <div className="px-4">
-              <p className="text-slate-500 text-sm">@</p>
+              <p className="text-green-800 text-xs">@</p>
               {game.status === 'in' && (
-                <p className="text-xs text-slate-400 mt-1">
-                  {details?.period === 1 ? '1st' : details?.period === 2 ? '2nd' : `OT${(details?.period || 3) - 2}`} {details?.clock}
+                <p className="text-[10px] text-green-600 mt-1">
+                  {details?.period === 1 ? 'H1' : details?.period === 2 ? 'H2' : `OT${(details?.period || 3) - 2}`} {details?.clock}
                 </p>
               )}
             </div>
             <div className="flex-1 text-center">
-              <p className="text-sm text-slate-400 mb-1">{game.homeTeam}</p>
-              <p className="text-3xl font-bold text-white">{game.homeScore}</p>
+              <p className="text-xs text-green-700 mb-1">{game.homeTeam}</p>
+              <p className="text-2xl font-bold text-green-400">{game.homeScore}</p>
               {homeTeam?.bonusStatus.label && (
-                <span className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium ${
+                <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-medium border ${
                   homeTeam.bonusStatus.inDoubleBonus
-                    ? 'bg-red-500/20 text-red-400'
-                    : 'bg-yellow-500/20 text-yellow-400'
+                    ? 'border-red-700 text-red-400'
+                    : 'border-yellow-700 text-yellow-400'
                 }`}>
                   {homeTeam.bonusStatus.label}
                 </span>
@@ -209,51 +210,61 @@ export default function GameDetailModal({ game, isOpen, onClose }: GameDetailMod
 
           {/* O/U Line */}
           {game.ouLine && (
-            <div className="mt-3 flex items-center justify-center gap-4 text-sm">
-              <span className="text-slate-500">O/U: <span className="text-white">{game.ouLine}</span></span>
-              <span className="text-slate-500">Live Total: <span className="text-white">{game.liveTotal}</span></span>
+            <div className="mt-3 flex items-center justify-center gap-4 text-xs">
+              <span className="text-green-700">O/U: <span className="text-green-400">{game.ouLine}</span></span>
+              <span className="text-green-700">TOTAL: <span className="text-green-400">{game.liveTotal}</span></span>
               {game.requiredPPM && game.currentPPM && (
                 <span className={`${
-                  game.requiredPPM - game.currentPPM > 1 ? 'text-green-400' :
-                  game.requiredPPM - game.currentPPM < -0.5 ? 'text-blue-400' : 'text-slate-400'
+                  game.requiredPPM - game.currentPPM > 1 ? 'text-yellow-400' :
+                  game.requiredPPM - game.currentPPM < -0.5 ? 'text-green-500' : 'text-green-600'
                 }`}>
-                  Edge: {(game.requiredPPM - game.currentPPM).toFixed(2)}
+                  EDGE: {(game.requiredPPM - game.currentPPM).toFixed(2)}
                 </span>
               )}
             </div>
           )}
 
           {/* Tab Navigation */}
-          <div className="flex gap-1 mt-4 bg-slate-800/50 rounded-lg p-1">
+          <div className="flex gap-1 mt-4 border border-green-900 p-1">
             <button
-              onClick={() => setActiveTab('stats')}
-              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                activeTab === 'stats'
-                  ? 'bg-orange-500 text-white'
-                  : 'text-slate-400 hover:text-white'
+              onClick={() => setActiveTab('charts')}
+              className={`flex-1 py-2 px-3 text-xs font-medium transition-colors ${
+                activeTab === 'charts'
+                  ? 'bg-green-500 text-black'
+                  : 'text-green-600 hover:text-green-400'
               }`}
             >
-              Stats
+              CHARTS
+            </button>
+            <button
+              onClick={() => setActiveTab('stats')}
+              className={`flex-1 py-2 px-3 text-xs font-medium transition-colors ${
+                activeTab === 'stats'
+                  ? 'bg-green-500 text-black'
+                  : 'text-green-600 hover:text-green-400'
+              }`}
+            >
+              STATS
             </button>
             <button
               onClick={() => setActiveTab('players')}
-              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-3 text-xs font-medium transition-colors ${
                 activeTab === 'players'
-                  ? 'bg-orange-500 text-white'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-green-500 text-black'
+                  : 'text-green-600 hover:text-green-400'
               }`}
             >
-              Players
+              PLAYERS
             </button>
             <button
               onClick={() => setActiveTab('refs')}
-              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-3 text-xs font-medium transition-colors ${
                 activeTab === 'refs'
-                  ? 'bg-orange-500 text-white'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-green-500 text-black'
+                  : 'text-green-600 hover:text-green-400'
               }`}
             >
-              Referees
+              REFS
             </button>
           </div>
         </div>
@@ -262,20 +273,25 @@ export default function GameDetailModal({ game, isOpen, onClose }: GameDetailMod
         <div className="flex-1 overflow-y-auto p-4">
           {loading && !details && (
             <div className="flex items-center justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-500 border-t-transparent"></div>
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-green-500 border-t-transparent"></div>
             </div>
           )}
 
           {error && (
             <div className="text-center py-8">
-              <p className="text-red-400">{error}</p>
+              <p className="text-red-400 text-xs">// ERROR: {error}</p>
               <button
                 onClick={fetchDetails}
-                className="mt-4 px-4 py-2 rounded-lg bg-slate-700 text-white text-sm hover:bg-slate-600"
+                className="mt-4 px-4 py-2 border border-green-700 text-green-400 text-xs hover:bg-green-900/30"
               >
-                Retry
+                RETRY
               </button>
             </div>
+          )}
+
+          {/* Charts Tab - doesn't depend on details loading */}
+          {activeTab === 'charts' && (
+            <GameCharts gameId={game.id} currentOULine={game.ouLine} game={game} />
           )}
 
           {details && !loading && (
@@ -284,48 +300,43 @@ export default function GameDetailModal({ game, isOpen, onClose }: GameDetailMod
               {activeTab === 'stats' && (
                 <div className="space-y-4">
                   {/* Fouls Section - Highlighted */}
-                  <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700">
-                    <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                      <svg className="w-4 h-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      Team Fouls
-                    </h3>
+                  <div className="bg-green-900/20 border border-green-900 p-4">
+                    <h3 className="text-xs font-semibold text-green-400 mb-3">// TEAM_FOULS</h3>
                     <div className="grid grid-cols-3 gap-4">
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-white">{awayTeam?.stats.fouls || 0}</p>
-                        <p className="text-xs text-slate-400">{awayTeam?.abbreviation}</p>
+                        <p className="text-xl font-bold text-green-400">{awayTeam?.stats.fouls || 0}</p>
+                        <p className="text-[10px] text-green-700">{awayTeam?.abbreviation}</p>
                       </div>
                       <div className="flex items-center justify-center">
-                        <span className="text-slate-600">vs</span>
+                        <span className="text-green-800">vs</span>
                       </div>
                       <div className="text-center">
-                        <p className="text-2xl font-bold text-white">{homeTeam?.stats.fouls || 0}</p>
-                        <p className="text-xs text-slate-400">{homeTeam?.abbreviation}</p>
+                        <p className="text-xl font-bold text-green-400">{homeTeam?.stats.fouls || 0}</p>
+                        <p className="text-[10px] text-green-700">{homeTeam?.abbreviation}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Shooting Stats */}
-                  <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700">
-                    <h3 className="text-sm font-semibold text-white mb-3">Shooting</h3>
+                  <div className="bg-green-900/20 border border-green-900 p-4">
+                    <h3 className="text-xs font-semibold text-green-400 mb-3">// SHOOTING</h3>
                     <div className="space-y-3">
                       <StatRow
-                        label="Field Goals"
+                        label="FG"
                         away={awayTeam?.stats.fieldGoals || '0-0'}
                         home={homeTeam?.stats.fieldGoals || '0-0'}
                         awayPct={awayTeam?.stats.fieldGoalPct || 0}
                         homePct={homeTeam?.stats.fieldGoalPct || 0}
                       />
                       <StatRow
-                        label="3-Pointers"
+                        label="3PT"
                         away={awayTeam?.stats.threePointers || '0-0'}
                         home={homeTeam?.stats.threePointers || '0-0'}
                         awayPct={awayTeam?.stats.threePointPct || 0}
                         homePct={homeTeam?.stats.threePointPct || 0}
                       />
                       <StatRow
-                        label="Free Throws"
+                        label="FT"
                         away={awayTeam?.stats.freeThrows || '0-0'}
                         home={homeTeam?.stats.freeThrows || '0-0'}
                         awayPct={awayTeam?.stats.freeThrowPct || 0}
@@ -335,16 +346,16 @@ export default function GameDetailModal({ game, isOpen, onClose }: GameDetailMod
                   </div>
 
                   {/* Other Stats */}
-                  <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700">
-                    <h3 className="text-sm font-semibold text-white mb-3">Game Stats</h3>
+                  <div className="bg-green-900/20 border border-green-900 p-4">
+                    <h3 className="text-xs font-semibold text-green-400 mb-3">// GAME_STATS</h3>
                     <div className="space-y-2">
-                      <SimpleStatRow label="Rebounds" away={awayTeam?.stats.rebounds || 0} home={homeTeam?.stats.rebounds || 0} />
-                      <SimpleStatRow label="Assists" away={awayTeam?.stats.assists || 0} home={homeTeam?.stats.assists || 0} />
-                      <SimpleStatRow label="Turnovers" away={awayTeam?.stats.turnovers || 0} home={homeTeam?.stats.turnovers || 0} inverted />
-                      <SimpleStatRow label="Steals" away={awayTeam?.stats.steals || 0} home={homeTeam?.stats.steals || 0} />
-                      <SimpleStatRow label="Blocks" away={awayTeam?.stats.blocks || 0} home={homeTeam?.stats.blocks || 0} />
-                      <SimpleStatRow label="Pts in Paint" away={awayTeam?.stats.pointsInPaint || 0} home={homeTeam?.stats.pointsInPaint || 0} />
-                      <SimpleStatRow label="Fast Break Pts" away={awayTeam?.stats.fastBreakPoints || 0} home={homeTeam?.stats.fastBreakPoints || 0} />
+                      <SimpleStatRow label="REB" away={awayTeam?.stats.rebounds || 0} home={homeTeam?.stats.rebounds || 0} />
+                      <SimpleStatRow label="AST" away={awayTeam?.stats.assists || 0} home={homeTeam?.stats.assists || 0} />
+                      <SimpleStatRow label="TOV" away={awayTeam?.stats.turnovers || 0} home={homeTeam?.stats.turnovers || 0} inverted />
+                      <SimpleStatRow label="STL" away={awayTeam?.stats.steals || 0} home={homeTeam?.stats.steals || 0} />
+                      <SimpleStatRow label="BLK" away={awayTeam?.stats.blocks || 0} home={homeTeam?.stats.blocks || 0} />
+                      <SimpleStatRow label="PAINT" away={awayTeam?.stats.pointsInPaint || 0} home={homeTeam?.stats.pointsInPaint || 0} />
+                      <SimpleStatRow label="FSTBRK" away={awayTeam?.stats.fastBreakPoints || 0} home={homeTeam?.stats.fastBreakPoints || 0} />
                     </div>
                   </div>
                 </div>
@@ -354,24 +365,24 @@ export default function GameDetailModal({ game, isOpen, onClose }: GameDetailMod
               {activeTab === 'players' && (
                 <div className="space-y-4">
                   {details.topPlayers.map((team, idx) => (
-                    <div key={idx} className="bg-slate-800/60 rounded-xl p-4 border border-slate-700">
-                      <h3 className="text-sm font-semibold text-white mb-3">{team.teamName}</h3>
+                    <div key={idx} className="bg-green-900/20 border border-green-900 p-4">
+                      <h3 className="text-xs font-semibold text-green-400 mb-3">// {team.teamName.toUpperCase().replace(/ /g, '_')}</h3>
                       <div className="space-y-2">
-                        <div className="grid grid-cols-5 gap-2 text-xs text-slate-500 pb-2 border-b border-slate-700">
-                          <span className="col-span-2">Player</span>
+                        <div className="grid grid-cols-5 gap-2 text-[10px] text-green-700 pb-2 border-b border-green-900/50">
+                          <span className="col-span-2">PLAYER</span>
                           <span className="text-center">PTS</span>
                           <span className="text-center">REB</span>
                           <span className="text-center">PF</span>
                         </div>
                         {team.players.map((player, pIdx) => (
-                          <div key={pIdx} className="grid grid-cols-5 gap-2 text-sm">
-                            <span className="col-span-2 text-slate-300 truncate">
-                              {player.jersey && <span className="text-slate-500 mr-1">#{player.jersey}</span>}
+                          <div key={pIdx} className="grid grid-cols-5 gap-2 text-xs">
+                            <span className="col-span-2 text-green-500 truncate">
+                              {player.jersey && <span className="text-green-800 mr-1">#{player.jersey}</span>}
                               {player.name}
                             </span>
-                            <span className="text-center text-white font-medium">{player.points}</span>
-                            <span className="text-center text-slate-400">{player.rebounds}</span>
-                            <span className={`text-center ${player.fouls >= 4 ? 'text-red-400 font-medium' : 'text-slate-400'}`}>
+                            <span className="text-center text-green-400 font-medium">{player.points}</span>
+                            <span className="text-center text-green-600">{player.rebounds}</span>
+                            <span className={`text-center ${player.fouls >= 4 ? 'text-red-400 font-medium' : 'text-green-600'}`}>
                               {player.fouls}
                             </span>
                           </div>
@@ -387,59 +398,59 @@ export default function GameDetailModal({ game, isOpen, onClose }: GameDetailMod
                 <div className="space-y-4">
                   {/* Crew Summary */}
                   {details.crewAvgFouls !== null && (
-                    <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700">
-                      <h3 className="text-sm font-semibold text-white mb-3">Crew Average</h3>
+                    <div className="bg-green-900/20 border border-green-900 p-4">
+                      <h3 className="text-xs font-semibold text-green-400 mb-3">// CREW_AVG</h3>
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-2xl font-bold text-white">
+                          <p className="text-xl font-bold text-green-400">
                             {details.crewAvgFouls.toFixed(1)}
-                            <span className="text-sm text-slate-400 ml-1">fouls/game</span>
+                            <span className="text-xs text-green-700 ml-1">fouls/game</span>
                           </p>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        <span className={`px-3 py-1 text-xs font-medium border ${
                           details.crewStyle === 'Tight'
-                            ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                            ? 'border-red-700 text-red-400'
                             : details.crewStyle === 'Loose'
-                            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                            : 'bg-slate-700 text-slate-300'
+                            ? 'border-green-700 text-green-400'
+                            : 'border-green-900 text-green-600'
                         }`}>
-                          {details.crewStyle || 'Unknown'}
+                          {details.crewStyle || 'UNKNOWN'}
                         </span>
                       </div>
                     </div>
                   )}
 
                   {/* Individual Refs */}
-                  <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700">
-                    <h3 className="text-sm font-semibold text-white mb-3">Officials</h3>
+                  <div className="bg-green-900/20 border border-green-900 p-4">
+                    <h3 className="text-xs font-semibold text-green-400 mb-3">// OFFICIALS</h3>
                     <div className="space-y-3">
                       {details.officials.length === 0 && (
-                        <p className="text-sm text-slate-500">No referee data available</p>
+                        <p className="text-xs text-green-700">No referee data available</p>
                       )}
                       {details.officials.map((ref, idx) => (
-                        <div key={idx} className="flex items-center justify-between py-2 border-b border-slate-700/50 last:border-0">
+                        <div key={idx} className="flex items-center justify-between py-2 border-b border-green-900/50 last:border-0">
                           <div>
-                            <p className="text-sm text-white">{ref.name}</p>
+                            <p className="text-xs text-green-400">{ref.name}</p>
                             {ref.foulsPerGame !== null && (
-                              <p className="text-xs text-slate-400">
+                              <p className="text-[10px] text-green-700">
                                 {ref.foulsPerGame.toFixed(1)} fouls/game
                                 {ref.homeBias !== null && ref.homeBias !== 0 && (
-                                  <span className={ref.homeBias > 0 ? 'text-orange-400' : 'text-blue-400'}>
-                                    {' '}• {ref.homeBias > 0 ? '+' : ''}{ref.homeBias.toFixed(1)} home bias
+                                  <span className={ref.homeBias > 0 ? 'text-yellow-500' : 'text-green-500'}>
+                                    {' '}| {ref.homeBias > 0 ? '+' : ''}{ref.homeBias.toFixed(1)} HOME_BIAS
                                   </span>
                                 )}
                               </p>
                             )}
                           </div>
                           {ref.style && (
-                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            <span className={`px-2 py-0.5 text-[10px] font-medium border ${
                               ref.style === 'Tight'
-                                ? 'bg-red-500/20 text-red-400'
+                                ? 'border-red-700 text-red-400'
                                 : ref.style === 'Loose'
-                                ? 'bg-green-500/20 text-green-400'
-                                : 'bg-slate-700 text-slate-400'
+                                ? 'border-green-700 text-green-400'
+                                : 'border-green-900 text-green-600'
                             }`}>
-                              {ref.style}
+                              {ref.style.toUpperCase()}
                             </span>
                           )}
                         </div>
@@ -449,12 +460,12 @@ export default function GameDetailModal({ game, isOpen, onClose }: GameDetailMod
 
                   {/* Venue Info */}
                   {details.venue && (
-                    <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700">
-                      <h3 className="text-sm font-semibold text-white mb-2">Venue</h3>
-                      <p className="text-sm text-slate-300">{details.venue}</p>
+                    <div className="bg-green-900/20 border border-green-900 p-4">
+                      <h3 className="text-xs font-semibold text-green-400 mb-2">// VENUE</h3>
+                      <p className="text-xs text-green-500">{details.venue}</p>
                       {details.attendance && (
-                        <p className="text-xs text-slate-500 mt-1">
-                          Attendance: {details.attendance.toLocaleString()}
+                        <p className="text-[10px] text-green-700 mt-1">
+                          ATTENDANCE: {details.attendance.toLocaleString()}
                         </p>
                       )}
                     </div>
@@ -489,17 +500,17 @@ function StatRow({
   return (
     <div className="grid grid-cols-3 items-center">
       <div className="text-right">
-        <span className={`text-sm ${awayBetter ? 'text-green-400 font-medium' : 'text-slate-300'}`}>
+        <span className={`text-xs ${awayBetter ? 'text-green-400 font-medium' : 'text-green-600'}`}>
           {away}
         </span>
-        <span className="text-xs text-slate-500 ml-1">({awayPct}%)</span>
+        <span className="text-[10px] text-green-800 ml-1">({awayPct}%)</span>
       </div>
-      <div className="text-center text-xs text-slate-500">{label}</div>
+      <div className="text-center text-[10px] text-green-700">{label}</div>
       <div className="text-left">
-        <span className={`text-sm ${homeBetter ? 'text-green-400 font-medium' : 'text-slate-300'}`}>
+        <span className={`text-xs ${homeBetter ? 'text-green-400 font-medium' : 'text-green-600'}`}>
           {home}
         </span>
-        <span className="text-xs text-slate-500 ml-1">({homePct}%)</span>
+        <span className="text-[10px] text-green-800 ml-1">({homePct}%)</span>
       </div>
     </div>
   );
@@ -522,13 +533,13 @@ function SimpleStatRow({
   return (
     <div className="grid grid-cols-3 items-center py-1">
       <div className="text-right">
-        <span className={`text-sm ${awayBetter ? 'text-green-400 font-medium' : 'text-slate-300'}`}>
+        <span className={`text-xs ${awayBetter ? 'text-green-400 font-medium' : 'text-green-600'}`}>
           {away}
         </span>
       </div>
-      <div className="text-center text-xs text-slate-500">{label}</div>
+      <div className="text-center text-[10px] text-green-700">{label}</div>
       <div className="text-left">
-        <span className={`text-sm ${homeBetter ? 'text-green-400 font-medium' : 'text-slate-300'}`}>
+        <span className={`text-xs ${homeBetter ? 'text-green-400 font-medium' : 'text-green-600'}`}>
           {home}
         </span>
       </div>

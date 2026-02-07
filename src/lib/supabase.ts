@@ -43,7 +43,7 @@ export interface TriggerLog {
   period: number;
   clock: string;
   trigger_strength: string;
-  trigger_type: 'under' | 'over';
+  trigger_type: 'under' | 'over' | 'tripleDipper';
 }
 
 export async function logTrigger(trigger: Omit<TriggerLog, 'id' | 'created_at'>): Promise<void> {
@@ -170,6 +170,7 @@ export interface SiteAnalytics {
   page?: string;
   user_agent?: string;
   referrer?: string;
+  user_id?: string;
   session_id?: string;
   metadata?: Record<string, unknown>;
 }
@@ -193,26 +194,28 @@ export async function logAnalyticsEvent(event: Omit<SiteAnalytics, 'id' | 'creat
 
 export async function getAnalyticsSummary(days = 7): Promise<{
   totalVisits: number;
+  uniqueUsers: number;
   uniqueSessions: number;
   pageViews: Record<string, number>;
 }> {
   const client = getSupabase();
-  if (!client) return { totalVisits: 0, uniqueSessions: 0, pageViews: {} };
+  if (!client) return { totalVisits: 0, uniqueUsers: 0, uniqueSessions: 0, pageViews: {} };
 
   try {
     const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
     const { data, error } = await client
       .from('site_analytics')
-      .select('event_type, page, session_id')
+      .select('event_type, page, user_id, session_id')
       .gte('created_at', startDate);
 
     if (error) {
       console.error('Error fetching analytics:', error);
-      return { totalVisits: 0, uniqueSessions: 0, pageViews: {} };
+      return { totalVisits: 0, uniqueUsers: 0, uniqueSessions: 0, pageViews: {} };
     }
 
     const visits = data?.filter(e => e.event_type === 'page_view') || [];
+    const uniqueUsers = new Set(data?.map(e => e.user_id).filter(Boolean)).size;
     const uniqueSessions = new Set(data?.map(e => e.session_id).filter(Boolean)).size;
 
     const pageViews: Record<string, number> = {};
@@ -223,11 +226,303 @@ export async function getAnalyticsSummary(days = 7): Promise<{
 
     return {
       totalVisits: visits.length,
+      uniqueUsers,
       uniqueSessions,
       pageViews
     };
   } catch (err) {
     console.error('Failed to fetch analytics:', err);
-    return { totalVisits: 0, uniqueSessions: 0, pageViews: {} };
+    return { totalVisits: 0, uniqueUsers: 0, uniqueSessions: 0, pageViews: {} };
+  }
+}
+
+// ============ USER MANAGEMENT ============
+
+export interface DbUser {
+  id: string;
+  email: string;
+  password_hash: string | null;
+  google_id: string | null;
+  display_name: string | null;
+  created_at: string;
+  email_verified: boolean;
+}
+
+export interface DbSubscription {
+  id: string;
+  user_id: string;
+  status: 'trial' | 'active' | 'past_due' | 'canceled' | 'expired';
+  trial_start: string;
+  trial_end: string;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  plan: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbUserPreferences {
+  id: string;
+  user_id: string;
+  favorite_teams: string[];
+  notifications_enabled: boolean;
+  onboarding_completed: boolean;
+  created_at: string;
+}
+
+export interface DbUserActivity {
+  id: string;
+  user_id: string;
+  triggers_viewed: number;
+  games_tracked: number;
+  alerts_received: number;
+  last_active: string;
+}
+
+export async function createUser(
+  email: string,
+  passwordHash: string,
+  displayName?: string
+): Promise<DbUser | null> {
+  const client = getSupabase();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('users')
+      .insert([{ email, password_hash: passwordHash, display_name: displayName }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating user:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Failed to create user:', err);
+    return null;
+  }
+}
+
+export async function getUserByEmail(email: string): Promise<DbUser | null> {
+  const client = getSupabase();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('users')
+      .select('*')
+      .eq('email', email.toLowerCase())
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching user:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Failed to fetch user:', err);
+    return null;
+  }
+}
+
+export async function getUserById(userId: string): Promise<DbUser | null> {
+  const client = getSupabase();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user by id:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Failed to fetch user by id:', err);
+    return null;
+  }
+}
+
+export async function createSubscription(userId: string): Promise<DbSubscription | null> {
+  const client = getSupabase();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('subscriptions')
+      .insert([{ user_id: userId }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating subscription:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Failed to create subscription:', err);
+    return null;
+  }
+}
+
+export async function getSubscriptionByUserId(userId: string): Promise<DbSubscription | null> {
+  const client = getSupabase();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching subscription:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Failed to fetch subscription:', err);
+    return null;
+  }
+}
+
+export async function updateSubscription(
+  subscriptionId: string,
+  updates: Partial<DbSubscription>
+): Promise<DbSubscription | null> {
+  const client = getSupabase();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('subscriptions')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', subscriptionId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating subscription:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Failed to update subscription:', err);
+    return null;
+  }
+}
+
+export async function createUserPreferences(userId: string): Promise<DbUserPreferences | null> {
+  const client = getSupabase();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('user_preferences')
+      .insert([{ user_id: userId }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating user preferences:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Failed to create user preferences:', err);
+    return null;
+  }
+}
+
+export async function createUserActivity(userId: string): Promise<DbUserActivity | null> {
+  const client = getSupabase();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('user_activity')
+      .insert([{ user_id: userId }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating user activity:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Failed to create user activity:', err);
+    return null;
+  }
+}
+
+export async function getUserActivity(userId: string): Promise<DbUserActivity | null> {
+  const client = getSupabase();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('user_activity')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching user activity:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Failed to fetch user activity:', err);
+    return null;
+  }
+}
+
+export async function incrementUserActivity(
+  userId: string,
+  field: 'triggers_viewed' | 'games_tracked' | 'alerts_received'
+): Promise<void> {
+  const client = getSupabase();
+  if (!client) return;
+
+  try {
+    const { error } = await client.rpc('increment_user_activity', {
+      p_user_id: userId,
+      p_field: field
+    });
+
+    if (error) {
+      // Fallback: get current value and update
+      const activity = await getUserActivity(userId);
+      if (activity) {
+        await client
+          .from('user_activity')
+          .update({
+            [field]: (activity[field] || 0) + 1,
+            last_active: new Date().toISOString()
+          })
+          .eq('user_id', userId);
+      }
+    }
+  } catch (err) {
+    console.error('Failed to increment user activity:', err);
   }
 }

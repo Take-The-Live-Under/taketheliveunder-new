@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HMM/Kalman Model Testing</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        h1 { color: #00d4ff; margin-bottom: 20px; }
+        h2 { color: #ffd700; margin: 20px 0 10px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+        .card {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .stat-box {
+            display: inline-block;
+            background: #0f3460;
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin: 5px;
+            text-align: center;
+        }
+        .stat-value { font-size: 2em; font-weight: bold; color: #00d4ff; }
+        .stat-label { font-size: 0.9em; color: #aaa; }
+        .success { color: #00ff88; }
+        .warning { color: #ffaa00; }
+        .error { color: #ff4444; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #333; }
+        th { background: #0f3460; color: #ffd700; }
+        tr:hover { background: #1f4068; }
+        input, button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            margin: 5px;
+        }
+        input {
+            background: #0f3460;
+            color: #fff;
+            width: 120px;
+        }
+        button {
+            background: #00d4ff;
+            color: #000;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #00a8cc; }
+        .chart-container { height: 300px; margin-top: 20px; }
+        #loading { text-align: center; padding: 40px; color: #aaa; }
+        .target-met { background: #00ff8822; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>HMM/Kalman Basketball Total Predictor</h1>
+        <p style="color:#aaa; margin-bottom: 20px;">Local Testing Server - V2 Model with Possession Blending</p>
+
+        <div id="loading">Loading model... This may take a minute.</div>
+
+        <div id="content" style="display: none;">
+            <!-- Summary Stats -->
+            <div class="grid">
+                <div class="card">
+                    <h2>Model Status</h2>
+                    <div id="status-stats"></div>
+                </div>
+                <div class="card">
+                    <h2>Late Game Performance (Min 35+)</h2>
+                    <div id="late-stats"></div>
+                </div>
+            </div>
+
+            <!-- Accuracy Chart -->
+            <div class="card" style="margin-top: 20px;">
+                <h2>Accuracy by Minute</h2>
+                <div class="chart-container">
+                    <canvas id="accuracyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Prediction Tool -->
+            <div class="card" style="margin-top: 20px;">
+                <h2>Test Prediction</h2>
+                <div>
+                    <label>Minute: <input type="number" id="input-minute" value="35" min="1" max="40"></label>
+                    <label>Points So Far: <input type="number" id="input-points" value="120"></label>
+                    <label>Possessions: <input type="number" id="input-poss" value="63"></label>
+                    <label>Score Diff: <input type="number" id="input-diff" value="5"></label>
+                    <button onclick="makePrediction()">Predict</button>
+                </div>
+                <div id="prediction-result" style="margin-top: 15px;"></div>
+            </div>
+
+            <!-- Accuracy Table -->
+            <div class="card" style="margin-top: 20px;">
+                <h2>Accuracy by Minute (Detail)</h2>
+                <table id="accuracy-table">
+                    <thead>
+                        <tr>
+                            <th>Minute</th>
+                            <th>MAE</th>
+                            <th>Within 5</th>
+                            <th>Within 6</th>
+                            <th>Within 10</th>
+                            <th>Games</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let accuracyData = null;
+
+        async function loadData() {
+            try {
+                const response = await fetch('/api/accuracy');
+                accuracyData = await response.json();
+                displayData();
+            } catch (e) {
+                document.getElementById('loading').innerHTML = 'Error loading data: ' + e;
+            }
+        }
+
+        function displayData() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+
+            const summary = accuracyData.summary;
+
+            // Status stats
+            document.getElementById('status-stats').innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-value">${summary.total_games}</div>
+                    <div class="stat-label">Games Analyzed</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value success">V2</div>
+                    <div class="stat-label">Model Version</div>
+                </div>
+            `;
+
+            // Late game stats
+            const w6Class = summary.avg_late_within6 >= 70 ? 'success' : 'warning';
+            document.getElementById('late-stats').innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-value">${summary.avg_late_mae}</div>
+                    <div class="stat-label">Average MAE</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value ${w6Class}">${summary.avg_late_within6}%</div>
+                    <div class="stat-label">Within 6 Points</div>
+                </div>
+            `;
+
+            // Chart
+            const ctx = document.getElementById('accuracyChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: accuracyData.metrics.map(m => m.minute),
+                    datasets: [
+                        {
+                            label: 'Within 6 Points (%)',
+                            data: accuracyData.metrics.map(m => m.within_6),
+                            borderColor: '#9b59b6',
+                            backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                            borderWidth: 3,
+                            fill: true
+                        },
+                        {
+                            label: 'Within 10 Points (%)',
+                            data: accuracyData.metrics.map(m => m.within_10),
+                            borderColor: '#00d4ff',
+                            borderWidth: 2,
+                            fill: false
+                        },
+                        {
+                            label: 'MAE (points)',
+                            data: accuracyData.metrics.map(m => m.mae),
+                            borderColor: '#ff6b6b',
+                            borderWidth: 2,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: { display: true, text: 'Accuracy (%)' }
+                        },
+                        y1: {
+                            position: 'right',
+                            beginAtZero: true,
+                            title: { display: true, text: 'MAE (points)' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    }
+                }
+            });
+
+            // Table (last 15 minutes)
+            const tbody = document.querySelector('#accuracy-table tbody');
+            tbody.innerHTML = accuracyData.metrics
+                .filter(m => m.minute >= 25)
+                .map(m => {
+                    const rowClass = m.within_6 >= 85 ? 'target-met' : '';
+                    return `<tr class="${rowClass}">
+                        <td>${m.minute}</td>
+                        <td>${m.mae}</td>
+                        <td>${m.within_5}%</td>
+                        <td><strong>${m.within_6}%</strong></td>
+                        <td>${m.within_10}%</td>
+                        <td>${m.n_games}</td>
+                    </tr>`;
+                }).join('');
+        }
+
+        async function makePrediction() {
+            const data = {
+                minute: parseInt(document.getElementById('input-minute').value),
+                points_so_far: parseInt(document.getElementById('input-points').value),
+                poss_so_far: parseInt(document.getElementById('input-poss').value),
+                score_diff: parseInt(document.getElementById('input-diff').value)
+            };
+
+            const response = await fetch('/api/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+            const p = result.projections;
+
+            document.getElementById('prediction-result').innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-value">${p.simple_ppm}</div>
+                    <div class="stat-label">Simple PPM</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${p.possession_based}</div>
+                    <div class="stat-label">Possession-Based</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value success">${p.blended}</div>
+                    <div class="stat-label">Blended (V2)</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value">${p.expected_ppm}</div>
+                    <div class="stat-label">Expected PPM</div>
+                </div>
+            `;
+        }
+
+        // Load data on page load
+        loadData();
+    </script>
+</body>
+</html>

@@ -1,18 +1,28 @@
 import { NextResponse } from 'next/server';
-import { Game } from '@/types/game';
+import { Game, BonusStatus } from '@/types/game';
 import {
   calculateMinutesRemainingRegulation,
   calculateCurrentPPM,
   calculateRequiredPPM,
+  calculateProjectedTotal,
   isOvertime,
-  isTriggered,
+  getTriggerType,
   isOverTriggered,
   parseClock,
+  isInFoulGame,
+  getFoulGameAdjustment,
+  couldEnterFoulGame,
+  getExpectedFoulGameAdjustment,
+  TriggerType,
 } from '@/lib/calculations';
 import { logTrigger, hasBeenLoggedRecently, logGameSnapshots } from '@/lib/supabase';
+import { analyzeMatchup } from '@/lib/allTeamFoulGameData';
+import { getTeamBadge, getGameWarnings, shouldFilterTrigger } from '@/lib/teamFilters';
 
 const ESPN_URL =
   'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard';
+const ESPN_SUMMARY_URL =
+  'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary';
 const ODDS_API_URL = 'https://api.the-odds-api.com/v4/sports/basketball_ncaab/odds/';
 
 interface ESPNEvent {
@@ -30,6 +40,7 @@ interface ESPNEvent {
     competitors: Array<{
       homeAway: 'home' | 'away';
       team: {
+        id: string;
         displayName: string;
         abbreviation: string;
       };
@@ -53,6 +64,123 @@ interface OddsAPIGame {
       }>;
     }>;
   }>;
+}
+
+interface GameBonusData {
+  homeTeamFouls: number;  // Fouls committed BY home team (against away)
+  awayTeamFouls: number;  // Fouls committed BY away team (against home)
+  homeBonusStatus: BonusStatus;
+  awayBonusStatus: BonusStatus;
+}
+
+/**
+ * Calculate bonus status from fouls
+ * NCAA: Bonus at 7 fouls per half, Double bonus at 10
+ */
+function calculateBonusStatus(fouls: number, isEstimated: boolean): BonusStatus {
+  return {
+    fouls,
+    inBonus: fouls >= 7,
+    inDoubleBonus: fouls >= 10,
+    isEstimated,
+  };
+}
+
+/**
+ * Fetch bonus/foul data for a live game from ESPN summary API
+ * Returns null if fetch fails or data unavailable
+ */
+async function fetchGameBonusData(gameId: string, currentPeriod: number): Promise<GameBonusData | null> {
+  try {
+    const response = await fetch(`${ESPN_SUMMARY_URL}?event=${gameId}`, {
+      next: { revalidate: 0 },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const boxscoreTeams = data.boxscore?.teams || [];
+    const plays = data.plays || [];
+
+    // Get home team ID from header
+    const header = data.header;
+    const competition = header?.competitions?.[0];
+    const competitors = competition?.competitors || [];
+    const homeTeamId = competitors.find((c: { homeAway: string }) => c.homeAway === 'home')?.id;
+
+    // Find home and away team data
+    let homeTeamTotalFouls = 0;
+    let awayTeamTotalFouls = 0;
+
+    for (const team of boxscoreTeams) {
+      const stats = team.statistics || [];
+      const foulsStr = stats.find((s: { name: string }) => s.name === 'fouls')?.displayValue || '0';
+      const fouls = parseInt(foulsStr, 10) || 0;
+
+      if (team.team?.id === homeTeamId) {
+        homeTeamTotalFouls = fouls;
+      } else {
+        awayTeamTotalFouls = fouls;
+      }
+    }
+
+    // For first half (period 1), total fouls = first half fouls
+    // For second half (period 2+), we need to count fouls from plays
+    let homeTeamCurrentHalfFouls = homeTeamTotalFouls;
+    let awayTeamCurrentHalfFouls = awayTeamTotalFouls;
+    let isEstimated = false;
+
+    if (currentPeriod >= 2) {
+      // Count fouls from plays for the current half
+      // Foul play types include: Personal Foul, Shooting Foul, Offensive Foul, Technical Foul, etc.
+      const foulPlayTypes = ['foul', 'personalfoul', 'shootingfoul', 'offensivefoul', 'technicalfoul', 'flagrantfoul'];
+
+      let homeSecondHalfFouls = 0;
+      let awaySecondHalfFouls = 0;
+
+      for (const play of plays) {
+        const playPeriod = play.period?.number || 1;
+        if (playPeriod < 2) continue; // Skip first half plays
+
+        const playType = (play.type?.text || '').toLowerCase().replace(/\s+/g, '');
+        const isFoul = foulPlayTypes.some(ft => playType.includes(ft));
+
+        if (isFoul) {
+          // Determine which team committed the foul
+          const teamId = play.team?.id;
+          if (teamId === homeTeamId) {
+            homeSecondHalfFouls++;
+          } else if (teamId) {
+            awaySecondHalfFouls++;
+          }
+        }
+      }
+
+      // If we found plays, use the counted fouls
+      if (plays.length > 0) {
+        homeTeamCurrentHalfFouls = homeSecondHalfFouls;
+        awayTeamCurrentHalfFouls = awaySecondHalfFouls;
+      } else {
+        // Fallback: can't determine accurately, mark as estimated
+        isEstimated = true;
+        // Conservative estimate: assume even distribution between halves
+        homeTeamCurrentHalfFouls = Math.max(0, Math.floor(homeTeamTotalFouls / 2));
+        awayTeamCurrentHalfFouls = Math.max(0, Math.floor(awayTeamTotalFouls / 2));
+      }
+    }
+
+    return {
+      homeTeamFouls: homeTeamCurrentHalfFouls,
+      awayTeamFouls: awayTeamCurrentHalfFouls,
+      // Bonus status is based on OPPONENT's fouls (your team gets free throws when opponent fouls)
+      homeBonusStatus: calculateBonusStatus(awayTeamCurrentHalfFouls, isEstimated),
+      awayBonusStatus: calculateBonusStatus(homeTeamCurrentHalfFouls, isEstimated),
+    };
+  } catch (error) {
+    console.error(`Error fetching bonus data for game ${gameId}:`, error);
+    return null;
+  }
 }
 
 /**
@@ -254,6 +382,8 @@ export async function GET() {
 
       const homeTeam = homeComp?.team?.displayName || 'Unknown';
       const awayTeam = awayComp?.team?.displayName || 'Unknown';
+      const homeTeamId = homeComp?.team?.id || '';
+      const awayTeamId = awayComp?.team?.id || '';
       const homeScore = parseInt(homeComp?.score || '0', 10);
       const awayScore = parseInt(awayComp?.score || '0', 10);
       const liveTotal = homeScore + awayScore;
@@ -283,16 +413,57 @@ export async function GET() {
 
       const requiredPPM = calculateRequiredPPM(liveTotal, ouLine, minutesRemainingReg);
 
-      // Calculate triggers with new logic
-      const triggeredFlag = isTriggered(status, minutesRemainingReg, requiredPPM, isOT, currentPPM);
-      const overTriggeredFlag = isOverTriggered(status, minutesRemainingReg, requiredPPM, currentPPM, isOT);
+      // Calculate point differential for foul game risk filter
+      const pointDiff = Math.abs(homeScore - awayScore);
 
-      // Determine trigger type (under takes priority if somehow both trigger)
-      let triggerType: 'under' | 'over' | null = null;
-      if (triggeredFlag) {
-        triggerType = 'under';
-      } else if (overTriggeredFlag) {
-        triggerType = 'over';
+      // Calculate trigger type using new unified logic (includes point diff filter)
+      const triggerType: TriggerType = getTriggerType(status, minutesRemainingReg, currentPPM, requiredPPM, isOT, pointDiff);
+
+      // triggeredFlag = true for UNDER or TRIPLE DIPPER (legacy compatibility)
+      const triggeredFlag = triggerType === 'under' || triggerType === 'tripleDipper';
+      // overTriggeredFlag = true for OVER trigger
+      const overTriggeredFlag = triggerType === 'over';
+
+      // Calculate foul game adjustment (pointDiff already calculated above)
+      const inFoulGame = status === 'in' && isInFoulGame(period, clockMinutes, clockSeconds, pointDiff);
+      const couldEnterFoul = status === 'in' && couldEnterFoulGame(period, clockMinutes, clockSeconds, pointDiff);
+
+      // Check team-specific foul game tendencies (now with data on 358 teams)
+      const matchupAnalysis = analyzeMatchup(homeTeam, awayTeam);
+
+      // Team-specific extra impact (on top of base adjustment)
+      const teamFoulGameImpact = matchupAnalysis.combinedImpact;
+
+      // Calculate foul game adjustment - show it earlier when game could enter foul territory
+      let foulGameAdjustment: number | null = null;
+      if (inFoulGame) {
+        // Actually in foul game - use exact adjustment
+        const baseAdj = getFoulGameAdjustment(pointDiff);
+        foulGameAdjustment = baseAdj !== null ? baseAdj + teamFoulGameImpact : null;
+      } else if (couldEnterFoul) {
+        // Could enter foul game soon - show expected adjustment
+        const expectedAdj = getExpectedFoulGameAdjustment(pointDiff);
+        foulGameAdjustment = expectedAdj + teamFoulGameImpact;
+      }
+
+      // Foul game warning: show when game could enter foul territory (up to 5 min out)
+      const secondsRemaining = clockMinutes * 60 + clockSeconds;
+      const hasTeamData = matchupAnalysis.homeData !== null || matchupAnalysis.awayData !== null;
+      const foulGameWarning = couldEnterFoul && hasTeamData && matchupAnalysis.warningLevel !== 'none';
+
+      // Calculate adjusted projected total with half-based scoring adjustment
+      // Second half typically scores ~9% more than first half
+      let adjustedProjectedTotal: number | null = null;
+      if (currentPPM !== null && minutesRemainingReg > 0) {
+        // Use half-adjusted projection (accounts for higher 2nd half scoring)
+        const baseProjected = calculateProjectedTotal(liveTotal, minutesRemainingReg, period);
+
+        if ((inFoulGame || couldEnterFoul) && foulGameAdjustment !== null) {
+          adjustedProjectedTotal = baseProjected + foulGameAdjustment;
+        } else {
+          adjustedProjectedTotal = baseProjected;
+        }
+        adjustedProjectedTotal = Math.round(adjustedProjectedTotal * 10) / 10;
       }
 
       return {
@@ -304,6 +475,8 @@ export async function GET() {
         minutesRemainingReg: Math.round(minutesRemainingReg * 100) / 100,
         awayTeam,
         homeTeam,
+        awayTeamId,
+        homeTeamId,
         awayScore,
         homeScore,
         liveTotal,
@@ -315,8 +488,55 @@ export async function GET() {
         triggerType,
         isOvertime: isOT,
         isTomorrow: isTomorrow(event.date),
+        inFoulGame,
+        couldEnterFoulGame: couldEnterFoul,
+        foulGameAdjustment: foulGameAdjustment !== null ? Math.round(foulGameAdjustment * 10) / 10 : null,
+        adjustedProjectedTotal,
+        foulGameWarning,
+        foulGameWarningMessage: foulGameWarning && matchupAnalysis.combinedImpact > 0
+          ? `Expect +${(5.8 + matchupAnalysis.combinedImpact).toFixed(0)}-${(7.3 + matchupAnalysis.combinedImpact).toFixed(0)} extra pts from Free Throw Frenzy`
+          : null,
+        teamFoulGameImpact: Math.round(teamFoulGameImpact * 10) / 10,
+        homeFoulGameInfo: matchupAnalysis.homeInfo,
+        awayFoulGameInfo: matchupAnalysis.awayInfo,
+        foulGameWarningLevel: matchupAnalysis.warningLevel,
+        // Team directional filters
+        homeTeamBadge: getTeamBadge(homeTeam),
+        awayTeamBadge: getTeamBadge(awayTeam),
+        teamWarnings: getGameWarnings(homeTeam, awayTeam),
+        ...(triggerType ? shouldFilterTrigger(homeTeam, awayTeam, triggerType) : { shouldSkipTrigger: false, skipReason: null }),
       };
     });
+
+    // Fetch bonus data for live games in parallel
+    const liveGamesForBonus = games.filter(g => g.status === 'in');
+    if (liveGamesForBonus.length > 0) {
+      const bonusPromises = liveGamesForBonus.map(game =>
+        fetchGameBonusData(game.id, game.period)
+          .then(bonusData => ({ gameId: game.id, bonusData }))
+      );
+
+      try {
+        const bonusResults = await Promise.all(bonusPromises);
+        const bonusMap = new Map(
+          bonusResults
+            .filter(r => r.bonusData !== null)
+            .map(r => [r.gameId, r.bonusData!])
+        );
+
+        // Merge bonus data into games
+        for (const game of games) {
+          const bonus = bonusMap.get(game.id);
+          if (bonus) {
+            game.homeBonusStatus = bonus.homeBonusStatus;
+            game.awayBonusStatus = bonus.awayBonusStatus;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching bonus data:', error);
+        // Continue without bonus data if fetch fails
+      }
+    }
 
     // Log triggered games to Supabase (don't await to avoid slowing response)
     const allTriggeredGames = games.filter(g => (g.triggeredFlag || g.overTriggeredFlag) && g.ouLine !== null);

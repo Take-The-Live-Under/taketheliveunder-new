@@ -62,7 +62,21 @@ async function loadRefereeStatsFromCSV(): Promise<Map<string, RefereeStats>> {
   const statsMap = new Map<string, RefereeStats>();
 
   try {
-    const csvPath = '/Users/brookssawyer/Desktop/basketball-betting/data/refmetrics_fouls_2024_25_auth_latest.csv';
+    // Try static-data first (for production), fall back to data (for local dev)
+    let csvPath = path.join(process.cwd(), 'static-data', 'refmetrics_fouls_2024_25_auth_latest.csv');
+
+    try {
+      await fs.access(csvPath);
+    } catch {
+      // Fall back to data directory for local development
+      csvPath = path.join(process.cwd(), 'data', 'refmetrics_fouls_2024_25_auth_latest.csv');
+      try {
+        await fs.access(csvPath);
+      } catch {
+        console.log('Referee stats CSV not found - referee data unavailable');
+        return statsMap;
+      }
+    }
 
     const content = await fs.readFile(csvPath, 'utf-8');
     const lines = content.trim().split('\n');
@@ -229,22 +243,48 @@ async function loadTeamStatsFromCSV(): Promise<Map<string, TeamStats>> {
   const statsMap = new Map<string, TeamStats>();
 
   try {
-    // Path to basketball-betting cache
-    const cachePath = '/Users/brookssawyer/Desktop/basketball-betting/cache';
+    // Try static-data first (for production), then fall back to cache (for local dev)
+    let latestFile: string | null = null;
 
-    // Find most recent ESPN stats file
-    const files = await fs.readdir(cachePath);
-    const espnFiles = files
-      .filter(f => f.startsWith('espn_stats_') && f.endsWith('.csv'))
-      .sort()
-      .reverse();
+    // Try static-data directory first
+    const staticDataPath = path.join(process.cwd(), 'static-data');
+    try {
+      await fs.access(staticDataPath);
+      const staticFiles = await fs.readdir(staticDataPath);
+      const staticEspnFiles = staticFiles
+        .filter(f => f.startsWith('espn_stats_') && f.endsWith('.csv'))
+        .sort()
+        .reverse();
+      if (staticEspnFiles.length > 0) {
+        latestFile = path.join(staticDataPath, staticEspnFiles[0]);
+      }
+    } catch {
+      // static-data not found, will try cache
+    }
 
-    if (espnFiles.length === 0) {
-      console.log('No ESPN stats CSV found');
+    // Fall back to cache directory
+    if (!latestFile) {
+      const cachePath = path.join(process.cwd(), 'cache');
+      try {
+        await fs.access(cachePath);
+        const cacheFiles = await fs.readdir(cachePath);
+        const cacheEspnFiles = cacheFiles
+          .filter(f => f.startsWith('espn_stats_') && f.endsWith('.csv'))
+          .sort()
+          .reverse();
+        if (cacheEspnFiles.length > 0) {
+          latestFile = path.join(cachePath, cacheEspnFiles[0]);
+        }
+      } catch {
+        // cache not found either
+      }
+    }
+
+    if (!latestFile) {
+      console.log('No ESPN stats CSV found in static-data or cache');
       return statsMap;
     }
 
-    const latestFile = path.join(cachePath, espnFiles[0]);
     console.log(`Loading team stats from: ${latestFile}`);
 
     const content = await fs.readFile(latestFile, 'utf-8');
@@ -406,6 +446,25 @@ async function fetchOddsData(): Promise<Map<string, number | null>> {
   return oddsMap;
 }
 
+// Get current date in US Eastern timezone
+function getUSEasternDate(): Date {
+  const now = new Date();
+  const easternStr = now.toLocaleString('en-US', { timeZone: 'America/New_York' });
+  return new Date(easternStr);
+}
+
+// Format date as YYYYMMDD for ESPN API
+function formatDateForESPN(date: Date): string {
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  };
+  const formatter = new Intl.DateTimeFormat('en-CA', options);
+  return formatter.format(date).replace(/-/g, '');
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const gameId = searchParams.get('gameId');
@@ -418,14 +477,35 @@ export async function GET(request: Request) {
     // Load referee stats cache
     const refCache = await getRefereeStatsCache();
 
-    // Fetch scoreboard data
-    const espnResponse = await fetch(ESPN_SCOREBOARD_URL, { cache: 'no-store' });
+    // Get today and tomorrow dates
+    const today = new Date();
+    const easternToday = getUSEasternDate();
+    const easternTomorrow = new Date(easternToday);
+    easternTomorrow.setDate(easternTomorrow.getDate() + 1);
+
+    const todayStr = formatDateForESPN(today);
+    const tomorrowStr = formatDateForESPN(easternTomorrow);
+
+    // Fetch today's scoreboard data (groups=50 for Division I)
+    const espnResponse = await fetch(`${ESPN_SCOREBOARD_URL}?limit=500&groups=50&dates=${todayStr}`, { cache: 'no-store' });
     if (!espnResponse.ok) {
       throw new Error('Failed to fetch ESPN data');
     }
 
     const espnData = await espnResponse.json();
-    const events: ESPNEvent[] = espnData.events || [];
+    let events: ESPNEvent[] = espnData.events || [];
+
+    // Also fetch tomorrow's games
+    try {
+      const tomorrowResponse = await fetch(`${ESPN_SCOREBOARD_URL}?limit=500&groups=50&dates=${tomorrowStr}`, { cache: 'no-store' });
+      if (tomorrowResponse.ok) {
+        const tomorrowData = await tomorrowResponse.json();
+        const tomorrowEvents: ESPNEvent[] = tomorrowData.events || [];
+        events = [...events, ...tomorrowEvents];
+      }
+    } catch (error) {
+      console.error('Error fetching tomorrow matchups:', error);
+    }
 
     // Fetch odds data
     const oddsMap = await fetchOddsData();

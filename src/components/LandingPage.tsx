@@ -1,123 +1,274 @@
 'use client';
 
-import Image from 'next/image';
+import { useState } from 'react';
 
 interface LandingPageProps {
-  onAccess: () => void;
+  onAccess: (email: string) => void;
 }
 
 export default function LandingPage({ onAccess }: LandingPageProps) {
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !email.includes('@')) {
+      setError('Enter a valid email');
+      return;
+    }
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Save email to database
+      await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+    } catch (err) {
+      // Don't block access if save fails
+      console.error('Failed to save signup:', err);
+    }
+
+    // Pass email up to parent for access
+    onAccess(email);
+  };
+
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col">
+    <div className="min-h-screen bg-[#0a0a0a] text-green-400 font-mono">
       {/* Header */}
-      <div className="text-center pt-10 pb-6 px-4">
-        {/* Logo */}
-        <Image
-          src="/logo.png"
-          alt="TakeTheLiveUnder"
-          width={280}
-          height={112}
-          className="mx-auto h-24 w-auto mb-6"
-          priority
-        />
+      <header className="border-b border-green-900/50 px-4 md:px-6 py-4">
+        <div className="max-w-6xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-base md:text-lg font-bold tracking-tight">TTLU_TERMINAL</span>
+            <span className="text-green-600 text-xs hidden sm:inline">v2.1.0</span>
+          </div>
+          <div className="flex items-center gap-4 md:gap-6 text-xs md:text-sm text-green-600">
+            <span className="hidden sm:inline">NCAAB LIVE</span>
+            <span className="text-green-400 hidden sm:inline">|</span>
+            <span>716 TEAMS</span>
+          </div>
+        </div>
+      </header>
 
-        {/* Hero Text */}
-        <h1 className="text-xl font-bold text-white mb-2">
-          Live Pace-Based Analytics
-        </h1>
-        <p className="text-slate-400 text-sm max-w-xs mx-auto">
-          We monitor live scoring pace vs posted totals and surface statistical edges in real time.
-        </p>
-      </div>
+      {/* Hero */}
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-12 md:py-20">
+        <div className="grid md:grid-cols-2 gap-8 md:gap-12">
+          {/* Left - Text */}
+          <div>
+            <div className="text-green-600 text-xs md:text-sm mb-4 font-mono">// LIVE EDGE DETECTION</div>
+            <h1 className="text-3xl md:text-5xl font-bold text-green-400 leading-tight mb-6">
+              Find the edge<br />
+              <span className="text-green-500">before the market does.</span>
+            </h1>
+            <p className="text-green-600 text-base md:text-lg mb-8 leading-relaxed">
+              We track every NCAA game in real-time and alert you when pace diverges from the posted total. Simple idea. Powerful results.
+            </p>
 
-      {/* Steps */}
-      <div className="flex-1 px-4 pb-6 max-w-md mx-auto w-full">
-        <div className="space-y-4">
-          {/* Step 1 */}
-          <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-500">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-3 gap-3 md:gap-4 mb-8">
+              <div className="border border-green-900 p-3 md:p-4 terminal-glow-box">
+                <div className="text-2xl md:text-3xl font-bold text-green-400">162K+</div>
+                <div className="text-green-700 text-[10px] md:text-xs mt-1">DATA_POINTS</div>
               </div>
-              <div>
-                <h3 className="text-base font-semibold text-white mb-1">
-                  Live Game Monitoring
-                </h3>
-                <p className="text-slate-400 text-sm leading-relaxed">
-                  We track every NCAA basketball game in real-time, pulling live scores and current O/U lines.
-                </p>
+              <div className="border border-green-900 p-3 md:p-4 terminal-glow-box">
+                <div className="text-2xl md:text-3xl font-bold text-green-400">4,026</div>
+                <div className="text-green-700 text-[10px] md:text-xs mt-1">GAMES_TRACKED</div>
               </div>
+              <div className="border border-green-900 p-3 md:p-4 terminal-glow-box">
+                <div className="text-2xl md:text-3xl font-bold text-green-400">716</div>
+                <div className="text-green-700 text-[10px] md:text-xs mt-1">TEAMS</div>
+              </div>
+            </div>
+
+            {/* Email CTA */}
+            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="flex-1 bg-transparent border border-green-700 px-4 py-3 text-green-400 placeholder-green-800 focus:border-green-500 focus:outline-none font-mono"
+                disabled={isLoading}
+              />
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="bg-green-500 text-black px-6 py-3 font-bold hover:bg-green-400 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              >
+                {isLoading ? 'LOADING...' : 'GET_ACCESS'}
+              </button>
+            </form>
+            {error && (
+              <div className="text-red-400 text-xs mt-2 font-mono">// ERROR: {error}</div>
+            )}
+            <div className="text-green-800 text-xs mt-3 font-mono">
+              // No credit card required. Research purposes only.
             </div>
           </div>
 
-          {/* Step 2 */}
-          <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-500">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-white mb-1">
-                  Pace Analysis
-                </h3>
-                <p className="text-slate-400 text-sm leading-relaxed">
-                  We calculate Points Per Minute (PPM) and compare it against the required pace to hit the line.
-                </p>
-              </div>
+          {/* Right - Terminal Preview */}
+          <div className="border border-green-900 bg-black/50 p-3 md:p-4 terminal-glow-box hidden md:block">
+            <div className="flex items-center gap-2 text-green-700 text-xs mb-4 pb-2 border-b border-green-900">
+              <span>LIVE_TRIGGERS</span>
+              <span className="ml-auto">GOLDEN_ZONE: 3</span>
             </div>
-          </div>
 
-          {/* Step 3 */}
-          <div className="bg-slate-800/60 rounded-xl p-4 border border-slate-700/50">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-500">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
+            {/* Mock Games */}
+            <div className="space-y-3">
+              <div className="border border-green-800 p-3 terminal-glow-box">
+                <div className="flex justify-between text-sm mb-2">
+                  <span>DUKE vs UNC</span>
+                  <span className="text-green-500 terminal-glow">UNDER</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2 text-xs text-green-600">
+                  <div>
+                    <div className="text-green-400">145.5</div>
+                    <div className="text-green-800">O/U</div>
+                  </div>
+                  <div>
+                    <div className="text-green-400">5.2</div>
+                    <div className="text-green-800">REQ_PPM</div>
+                  </div>
+                  <div>
+                    <div className="text-green-400">3.8</div>
+                    <div className="text-green-800">CUR_PPM</div>
+                  </div>
+                  <div>
+                    <div className="text-yellow-400">+1.4</div>
+                    <div className="text-green-800">EDGE</div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-semibold text-white mb-1">
-                  Edge Detection
-                </h3>
-                <p className="text-slate-400 text-sm leading-relaxed">
-                  We surface only statistically meaningful gaps where pace diverges significantly from the line.
-                </p>
+
+              <div className="border border-green-800/50 p-3 opacity-60">
+                <div className="flex justify-between text-sm mb-2">
+                  <span>KANSAS vs BAYLOR</span>
+                  <span className="text-green-600">MONITORING</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2 text-xs text-green-700">
+                  <div>
+                    <div className="text-green-500">151.0</div>
+                    <div className="text-green-800">O/U</div>
+                  </div>
+                  <div>
+                    <div className="text-green-500">4.1</div>
+                    <div className="text-green-800">REQ_PPM</div>
+                  </div>
+                  <div>
+                    <div className="text-green-500">4.0</div>
+                    <div className="text-green-800">CUR_PPM</div>
+                  </div>
+                  <div>
+                    <div className="text-green-600">+0.1</div>
+                    <div className="text-green-800">EDGE</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border border-green-800/30 p-3 opacity-40">
+                <div className="flex justify-between text-sm mb-2">
+                  <span>UCLA vs ARIZONA</span>
+                  <span className="text-green-700">WATCHING</span>
+                </div>
+                <div className="h-6 bg-green-900/10"></div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* CTA */}
-      <div className="px-4 pb-8 max-w-md mx-auto w-full">
-        <button
-          onClick={onAccess}
-          className="w-full py-4 rounded-xl bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 text-white font-semibold text-lg transition-all duration-200 shadow-lg shadow-orange-500/20 tap-target"
-        >
-          View Live Triggers
-        </button>
-        <p className="text-center text-xs text-slate-500 mt-4">
-          Free access • No signup required
-        </p>
+      {/* How it works */}
+      <div className="border-t border-green-900/50 py-12 md:py-16">
+        <div className="max-w-6xl mx-auto px-4 md:px-6">
+          <div className="text-green-600 text-xs md:text-sm mb-8 font-mono">// HOW_IT_WORKS</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            <div>
+              <div className="text-green-500 text-3xl md:text-4xl font-bold mb-2">01</div>
+              <div className="text-green-400 font-bold mb-2 text-sm md:text-base">MONITOR</div>
+              <div className="text-green-700 text-xs md:text-sm">Every NCAA game tracked in real-time. Scores update every 30 seconds.</div>
+            </div>
+            <div>
+              <div className="text-green-500 text-3xl md:text-4xl font-bold mb-2">02</div>
+              <div className="text-green-400 font-bold mb-2 text-sm md:text-base">ANALYZE</div>
+              <div className="text-green-700 text-xs md:text-sm">Compare current scoring pace to what&apos;s needed to hit the total.</div>
+            </div>
+            <div>
+              <div className="text-green-500 text-3xl md:text-4xl font-bold mb-2">03</div>
+              <div className="text-green-400 font-bold mb-2 text-sm md:text-base">DETECT</div>
+              <div className="text-green-700 text-xs md:text-sm">Identify when pace significantly diverges from the posted line.</div>
+            </div>
+            <div>
+              <div className="text-green-500 text-3xl md:text-4xl font-bold mb-2">04</div>
+              <div className="text-green-400 font-bold mb-2 text-sm md:text-base">ALERT</div>
+              <div className="text-green-700 text-xs md:text-sm">Get notified instantly when our Golden Zone criteria are met.</div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Trust Footer */}
-      <div className="py-6 px-4 border-t border-slate-800">
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-2 text-slate-500 text-xs">
-            <svg className="w-4 h-4 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-            <span>Built by data scientists using ESPN live data</span>
+      {/* Stats/Social Proof */}
+      <div className="border-t border-green-900/50 py-12 md:py-16">
+        <div className="max-w-6xl mx-auto px-4 md:px-6">
+          <div className="text-green-600 text-xs md:text-sm mb-8 font-mono">// SYSTEM_STATS</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            <div className="border border-green-900 p-4 terminal-glow-box">
+              <div className="text-green-500 text-2xl md:text-3xl font-bold">162K+</div>
+              <div className="text-green-700 text-xs mt-1">OBSERVATIONS</div>
+            </div>
+            <div className="border border-green-900 p-4 terminal-glow-box">
+              <div className="text-green-500 text-2xl md:text-3xl font-bold">716</div>
+              <div className="text-green-700 text-xs mt-1">TEAM_PROFILES</div>
+            </div>
+            <div className="border border-green-900 p-4 terminal-glow-box">
+              <div className="text-green-500 text-2xl md:text-3xl font-bold">4</div>
+              <div className="text-green-700 text-xs mt-1">HMM_STATES</div>
+            </div>
+            <div className="border border-green-900 p-4 terminal-glow-box">
+              <div className="text-green-500 text-2xl md:text-3xl font-bold">30s</div>
+              <div className="text-green-700 text-xs mt-1">POLL_INTERVAL</div>
+            </div>
           </div>
-          <p className="text-xs text-slate-600">
-            For entertainment and research purposes only
+        </div>
+      </div>
+
+      {/* FAQ */}
+      <div className="border-t border-green-900/50 py-12 md:py-16">
+        <div className="max-w-4xl mx-auto px-4 md:px-6">
+          <div className="text-green-600 text-xs md:text-sm mb-8 font-mono">// FAQ</div>
+          <div className="space-y-6">
+            <div className="border-l-2 border-green-800 pl-4">
+              <div className="text-green-400 font-bold mb-2">Is this gambling advice?</div>
+              <div className="text-green-700 text-sm">No. This is a research tool for entertainment purposes. We surface statistical patterns. All decisions are yours. Past performance does not guarantee future results.</div>
+            </div>
+            <div className="border-l-2 border-green-800 pl-4">
+              <div className="text-green-400 font-bold mb-2">What data do you track?</div>
+              <div className="text-green-700 text-sm">We&apos;ve collected 162K+ data points across 4,026 games this season. Every score update, line movement, and pace calculation is logged and analyzed in real-time.</div>
+            </div>
+            <div className="border-l-2 border-green-800 pl-4">
+              <div className="text-green-400 font-bold mb-2">What&apos;s the Golden Zone?</div>
+              <div className="text-green-700 text-sm">It&apos;s our highest-confidence signal. When a game is running significantly slower than the line implies, with enough time left for it to matter.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="border-t border-green-900/50 py-8">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 text-center">
+          <div className="text-green-800 text-xs font-mono mb-2">
+            // DISCLAIMER
+          </div>
+          <p className="text-green-700 text-xs max-w-2xl mx-auto">
+            For entertainment and research purposes only. This is not financial or gambling advice.
+            Past performance does not guarantee future results. Please gamble responsibly.
           </p>
+          <div className="text-green-900 text-xs mt-4 font-mono">
+            TTLU_TERMINAL v2.1.0 | 2025-26 NCAAB SEASON
+          </div>
         </div>
       </div>
     </div>
