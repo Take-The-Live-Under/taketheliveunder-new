@@ -15,6 +15,7 @@ import AsciiLogo from '@/components/AsciiLogo';
 import SearchingCode from '@/components/SearchingCode';
 import TriggerAnnouncement from '@/components/TriggerAnnouncement';
 import UpcomingGameCard from '@/components/UpcomingGameCard';
+import UpcomingGameDetailModal from '@/components/UpcomingGameDetailModal';
 import { Game } from '@/types/game';
 import { GamePrediction } from '@/app/api/predictions/route';
 import { usePageView, useAnalytics } from '@/hooks/useAnalytics';
@@ -42,6 +43,7 @@ export default function Home() {
   const [predictions, setPredictions] = useState<GamePrediction[]>([]);
   const [predictionsLoading, setPredictionsLoading] = useState(false);
   const [predictionsError, setPredictionsError] = useState<string | null>(null);
+  const [selectedPrediction, setSelectedPrediction] = useState<GamePrediction | null>(null);
 
   // Analytics tracking
   usePageView('home');
@@ -517,6 +519,7 @@ export default function Home() {
               <UpcomingGameCard
                 key={pred.gameId}
                 prediction={pred}
+                onClick={() => setSelectedPrediction(pred)}
               />
             ))}
           </div>
@@ -578,6 +581,15 @@ export default function Home() {
           game={games.find(g => g.id === selectedGame.id) || selectedGame}
           isOpen={!!selectedGame}
           onClose={() => setSelectedGame(null)}
+        />
+      )}
+
+      {/* Upcoming Game Detail Modal */}
+      {selectedPrediction && (
+        <UpcomingGameDetailModal
+          prediction={selectedPrediction}
+          isOpen={!!selectedPrediction}
+          onClose={() => setSelectedPrediction(null)}
         />
       )}
 
