@@ -537,18 +537,94 @@ export interface LineHistory {
   last_updated: string;
 }
 
-// In-memory cache for line tracking (persists within serverless instance)
+// In-memory cache for line tracking (synced with Supabase for persistence)
 const lineCache = new Map<string, LineHistory>();
+let lineCacheInitialized = false;
 
-export function updateLineCache(gameId: string, currentLine: number): LineHistory {
+// Load line history from Supabase on first request
+async function initializeLineCache(): Promise<void> {
+  if (lineCacheInitialized) return;
+
+  const client = getSupabase();
+  if (!client) {
+    lineCacheInitialized = true;
+    return;
+  }
+
+  try {
+    // Get today's date for filtering (lines from today only)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString();
+
+    const { data, error } = await client
+      .from('line_history')
+      .select('*')
+      .gte('last_updated', todayStr);
+
+    if (!error && data) {
+      for (const row of data) {
+        lineCache.set(row.game_id, {
+          game_id: row.game_id,
+          opening_line: row.opening_line,
+          max_line: row.max_line,
+          min_line: row.min_line,
+          last_updated: row.last_updated,
+        });
+      }
+      console.log(`Line cache initialized with ${data.length} games from Supabase`);
+    }
+  } catch (err) {
+    console.error('Failed to initialize line cache:', err);
+  }
+
+  lineCacheInitialized = true;
+}
+
+// Save line history to Supabase
+async function persistLineHistory(history: LineHistory): Promise<void> {
+  const client = getSupabase();
+  if (!client) return;
+
+  try {
+    const { error } = await client
+      .from('line_history')
+      .upsert({
+        game_id: history.game_id,
+        opening_line: history.opening_line,
+        max_line: history.max_line,
+        min_line: history.min_line,
+        last_updated: history.last_updated,
+      }, { onConflict: 'game_id' });
+
+    if (error) {
+      console.error('Failed to persist line history:', error);
+    }
+  } catch (err) {
+    console.error('Error persisting line history:', err);
+  }
+}
+
+export async function updateLineCache(gameId: string, currentLine: number): Promise<LineHistory> {
+  // Initialize cache from Supabase on first call
+  await initializeLineCache();
+
   const existing = lineCache.get(gameId);
   const now = new Date().toISOString();
 
   if (existing) {
     // Update max/min
-    existing.max_line = Math.max(existing.max_line, currentLine);
-    existing.min_line = Math.min(existing.min_line, currentLine);
-    existing.last_updated = now;
+    const newMax = Math.max(existing.max_line, currentLine);
+    const newMin = Math.min(existing.min_line, currentLine);
+
+    // Only persist if values changed
+    if (newMax !== existing.max_line || newMin !== existing.min_line) {
+      existing.max_line = newMax;
+      existing.min_line = newMin;
+      existing.last_updated = now;
+      // Persist asynchronously (don't await to avoid blocking)
+      persistLineHistory(existing);
+    }
     return existing;
   } else {
     // First time seeing this game
@@ -560,6 +636,8 @@ export function updateLineCache(gameId: string, currentLine: number): LineHistor
       last_updated: now,
     };
     lineCache.set(gameId, newEntry);
+    // Persist new entry
+    persistLineHistory(newEntry);
     return newEntry;
   }
 }

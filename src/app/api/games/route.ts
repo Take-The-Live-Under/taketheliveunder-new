@@ -466,19 +466,11 @@ export async function GET() {
         adjustedProjectedTotal = Math.round(adjustedProjectedTotal * 10) / 10;
       }
 
-      // Track line movement for live games
-      let openingLine: number | null = null;
-      let maxLine: number | null = null;
-      let minLine: number | null = null;
-      let lineMovement: number | null = null;
-
-      if (ouLine !== null && status === 'in') {
-        const lineHistory = updateLineCache(event.id, ouLine);
-        openingLine = lineHistory.opening_line;
-        maxLine = lineHistory.max_line;
-        minLine = lineHistory.min_line;
-        lineMovement = Math.round((ouLine - openingLine) * 10) / 10;
-      }
+      // Line tracking will be updated after games array is created (async)
+      const openingLine: number | null = null;
+      const maxLine: number | null = null;
+      const minLine: number | null = null;
+      const lineMovement: number | null = null;
 
       return {
         id: event.id,
@@ -525,6 +517,31 @@ export async function GET() {
         ...(triggerType ? shouldFilterTrigger(homeTeam, awayTeam, triggerType) : { shouldSkipTrigger: false, skipReason: null }),
       };
     });
+
+    // Update line tracking for live games (persistent across serverless instances)
+    const liveGamesWithLines = games.filter(g => g.status === 'in' && g.ouLine !== null);
+    if (liveGamesWithLines.length > 0) {
+      try {
+        const linePromises = liveGamesWithLines.map(game =>
+          updateLineCache(game.id, game.ouLine!)
+            .then(lineHistory => ({ gameId: game.id, lineHistory }))
+        );
+        const lineResults = await Promise.all(linePromises);
+
+        // Merge line data into games
+        for (const result of lineResults) {
+          const game = games.find(g => g.id === result.gameId);
+          if (game && result.lineHistory) {
+            game.openingLine = result.lineHistory.opening_line;
+            game.maxLine = result.lineHistory.max_line;
+            game.minLine = result.lineHistory.min_line;
+            game.lineMovement = Math.round((game.ouLine! - result.lineHistory.opening_line) * 10) / 10;
+          }
+        }
+      } catch (error) {
+        console.error('Error updating line cache:', error);
+      }
+    }
 
     // Fetch bonus data for live games in parallel
     const liveGamesForBonus = games.filter(g => g.status === 'in');
