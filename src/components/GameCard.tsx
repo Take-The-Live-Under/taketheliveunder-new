@@ -322,6 +322,38 @@ export default function GameCard({ game, onClick }: GameCardProps) {
         </div>
       )}
 
+      {/* Line Movement Tracking for Live Games */}
+      {isLive && game.openingLine !== null && (
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
+            <div className="text-[10px] text-green-700 uppercase tracking-wide">OPEN</div>
+            <div className="text-sm font-bold text-green-500 tabular-nums">{game.openingLine.toFixed(1)}</div>
+          </div>
+          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
+            <div className="text-[10px] text-green-700 uppercase tracking-wide">HIGH</div>
+            <div className="text-sm font-bold text-green-500 tabular-nums">
+              {game.maxLine !== null ? game.maxLine.toFixed(1) : '—'}
+            </div>
+          </div>
+          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
+            <div className="text-[10px] text-green-700 uppercase tracking-wide">LOW</div>
+            <div className="text-sm font-bold text-green-500 tabular-nums">
+              {game.minLine !== null ? game.minLine.toFixed(1) : '—'}
+            </div>
+          </div>
+          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
+            <div className="text-[10px] text-green-700 uppercase tracking-wide">MOVE</div>
+            <div className={`text-sm font-bold tabular-nums ${
+              game.lineMovement === null ? 'text-green-500' :
+              game.lineMovement > 0 ? 'text-orange-400' :
+              game.lineMovement < 0 ? 'text-blue-400' : 'text-green-500'
+            }`}>
+              {game.lineMovement !== null ? (game.lineMovement > 0 ? '+' : '') + game.lineMovement.toFixed(1) : '—'}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edge Display */}
       {isLive && edge !== null && (
         <div className={`border p-2 mb-3 ${edgeStyle.bg} ${isUnderTriggered ? 'border-yellow-700/50' : 'border-green-900/50'}`}>
