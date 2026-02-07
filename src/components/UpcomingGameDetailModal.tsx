@@ -10,15 +10,37 @@ interface UpcomingGameDetailModalProps {
   onClose: () => void;
 }
 
-interface TeamStats {
+interface KenPomTeamStats {
   teamName: string;
   rank: number | null;
   adjEM: number | null;
   adjO: number | null;
+  adjORank: number | null;
   adjD: number | null;
+  adjDRank: number | null;
   adjT: number | null;
+  adjTRank: number | null;
   luck: number | null;
-  sos: number | null;
+  luckRank: number | null;
+  sosEM: number | null;
+  sosRank: number | null;
+  ncSosEM: number | null;
+  // Four Factors offense
+  offEfg: number | null;
+  offTO: number | null;
+  offOR: number | null;
+  offFTR: number | null;
+  // Four Factors defense
+  defEfg: number | null;
+  defTO: number | null;
+  defOR: number | null;
+  defFTR: number | null;
+  // Record
+  wins: number | null;
+  losses: number | null;
+  confWins: number | null;
+  confLosses: number | null;
+  conference: string | null;
 }
 
 function formatGameTime(dateStr: string | null): string {
@@ -43,8 +65,8 @@ function formatGameDate(dateStr: string | null): string {
 }
 
 export default function UpcomingGameDetailModal({ prediction, isOpen, onClose }: UpcomingGameDetailModalProps) {
-  const [homeStats, setHomeStats] = useState<TeamStats | null>(null);
-  const [awayStats, setAwayStats] = useState<TeamStats | null>(null);
+  const [homeStats, setHomeStats] = useState<KenPomTeamStats | null>(null);
+  const [awayStats, setAwayStats] = useState<KenPomTeamStats | null>(null);
   const [loading, setLoading] = useState(false);
 
   const {
@@ -66,7 +88,7 @@ export default function UpcomingGameDetailModal({ prediction, isOpen, onClose }:
   const homeBadge = getTeamBadge(homeTeam);
   const awayBadge = getTeamBadge(awayTeam);
 
-  // Fetch team stats
+  // Fetch KenPom team stats
   useEffect(() => {
     if (!isOpen) return;
 
@@ -74,20 +96,20 @@ export default function UpcomingGameDetailModal({ prediction, isOpen, onClose }:
       setLoading(true);
       try {
         const [homeRes, awayRes] = await Promise.all([
-          fetch(`/api/team-stats?team=${encodeURIComponent(homeTeam)}`),
-          fetch(`/api/team-stats?team=${encodeURIComponent(awayTeam)}`),
+          fetch(`/api/kenpom-team?team=${encodeURIComponent(homeTeam)}`),
+          fetch(`/api/kenpom-team?team=${encodeURIComponent(awayTeam)}`),
         ]);
 
         if (homeRes.ok) {
           const data = await homeRes.json();
-          setHomeStats(data);
+          if (!data.error) setHomeStats(data);
         }
         if (awayRes.ok) {
           const data = await awayRes.json();
-          setAwayStats(data);
+          if (!data.error) setAwayStats(data);
         }
       } catch (err) {
-        console.error('Error fetching team stats:', err);
+        console.error('Error fetching KenPom stats:', err);
       } finally {
         setLoading(false);
       }
@@ -271,7 +293,7 @@ export default function UpcomingGameDetailModal({ prediction, isOpen, onClose }:
             </div>
           </div>
 
-          {/* KenPom Team Stats */}
+          {/* KenPom Team Ratings */}
           {(homeStats || awayStats || loading) && (
             <div className="bg-green-900/20 border border-green-900 p-4">
               <h3 className="text-xs font-semibold text-green-400 mb-3">// KENPOM_RATINGS</h3>
@@ -285,46 +307,206 @@ export default function UpcomingGameDetailModal({ prediction, isOpen, onClose }:
               {!loading && (
                 <div className="space-y-2">
                   {/* Header */}
-                  <div className="grid grid-cols-5 gap-2 text-[10px] text-green-700 pb-2 border-b border-green-900/50">
+                  <div className="grid grid-cols-6 gap-2 text-[10px] text-green-700 pb-2 border-b border-green-900/50">
                     <span className="col-span-2">TEAM</span>
+                    <span className="text-center">RK</span>
                     <span className="text-center">OFF</span>
                     <span className="text-center">DEF</span>
-                    <span className="text-center">NET</span>
+                    <span className="text-center">TEMPO</span>
                   </div>
 
                   {/* Away Team */}
-                  <div className="grid grid-cols-5 gap-2 text-xs py-1">
-                    <span className="col-span-2 text-green-500 truncate">{awayTeam}</span>
+                  <div className="grid grid-cols-6 gap-2 text-xs py-1">
+                    <div className="col-span-2 truncate">
+                      <span className="text-green-500">{awayTeam}</span>
+                      {awayStats?.wins !== null && (
+                        <span className="text-green-700 ml-1 text-[10px]">
+                          ({awayStats?.wins}-{awayStats?.losses})
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-center text-yellow-500 font-bold">
+                      {awayStats?.rank || '—'}
+                    </span>
                     <span className="text-center text-green-400">
                       {awayStats?.adjO?.toFixed(1) || '—'}
+                      {awayStats?.adjORank && <span className="text-[9px] text-green-700"> #{awayStats.adjORank}</span>}
                     </span>
                     <span className="text-center text-green-400">
                       {awayStats?.adjD?.toFixed(1) || '—'}
+                      {awayStats?.adjDRank && <span className="text-[9px] text-green-700"> #{awayStats.adjDRank}</span>}
                     </span>
-                    <span className="text-center font-medium text-green-400">
-                      {awayStats?.adjEM?.toFixed(1) || '—'}
+                    <span className="text-center text-green-400">
+                      {awayStats?.adjT?.toFixed(1) || '—'}
                     </span>
                   </div>
 
                   {/* Home Team */}
-                  <div className="grid grid-cols-5 gap-2 text-xs py-1 border-t border-green-900/30">
-                    <span className="col-span-2 text-green-500 truncate">{homeTeam}</span>
+                  <div className="grid grid-cols-6 gap-2 text-xs py-1 border-t border-green-900/30">
+                    <div className="col-span-2 truncate">
+                      <span className="text-green-500">{homeTeam}</span>
+                      {homeStats?.wins !== null && (
+                        <span className="text-green-700 ml-1 text-[10px]">
+                          ({homeStats?.wins}-{homeStats?.losses})
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-center text-yellow-500 font-bold">
+                      {homeStats?.rank || '—'}
+                    </span>
                     <span className="text-center text-green-400">
                       {homeStats?.adjO?.toFixed(1) || '—'}
+                      {homeStats?.adjORank && <span className="text-[9px] text-green-700"> #{homeStats.adjORank}</span>}
                     </span>
                     <span className="text-center text-green-400">
                       {homeStats?.adjD?.toFixed(1) || '—'}
+                      {homeStats?.adjDRank && <span className="text-[9px] text-green-700"> #{homeStats.adjDRank}</span>}
                     </span>
-                    <span className="text-center font-medium text-green-400">
-                      {homeStats?.adjEM?.toFixed(1) || '—'}
+                    <span className="text-center text-green-400">
+                      {homeStats?.adjT?.toFixed(1) || '—'}
                     </span>
                   </div>
-
-                  <p className="text-[10px] text-green-800 pt-2">
-                    OFF = Adj. Offensive Efficiency | DEF = Adj. Defensive Efficiency | NET = Adj. Efficiency Margin
-                  </p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Four Factors */}
+          {!loading && (homeStats || awayStats) && (
+            <div className="bg-green-900/20 border border-green-900 p-4">
+              <h3 className="text-xs font-semibold text-green-400 mb-3">// FOUR_FACTORS</h3>
+              <div className="space-y-3">
+                {/* Offense Header */}
+                <div>
+                  <p className="text-[10px] text-green-600 mb-2">OFFENSE</p>
+                  <div className="grid grid-cols-5 gap-2 text-[10px] text-green-700 pb-1 border-b border-green-900/30">
+                    <span className="col-span-1">TEAM</span>
+                    <span className="text-center">eFG%</span>
+                    <span className="text-center">TO%</span>
+                    <span className="text-center">OR%</span>
+                    <span className="text-center">FTR</span>
+                  </div>
+                  {/* Away Offense */}
+                  <div className="grid grid-cols-5 gap-2 text-xs py-1">
+                    <span className="col-span-1 text-green-500 truncate">{awayTeam.split(' ').pop()}</span>
+                    <span className="text-center text-green-400">{awayStats?.offEfg?.toFixed(1) || '—'}</span>
+                    <span className="text-center text-green-400">{awayStats?.offTO?.toFixed(1) || '—'}</span>
+                    <span className="text-center text-green-400">{awayStats?.offOR?.toFixed(1) || '—'}</span>
+                    <span className="text-center text-green-400">{awayStats?.offFTR?.toFixed(1) || '—'}</span>
+                  </div>
+                  {/* Home Offense */}
+                  <div className="grid grid-cols-5 gap-2 text-xs py-1">
+                    <span className="col-span-1 text-green-500 truncate">{homeTeam.split(' ').pop()}</span>
+                    <span className="text-center text-green-400">{homeStats?.offEfg?.toFixed(1) || '—'}</span>
+                    <span className="text-center text-green-400">{homeStats?.offTO?.toFixed(1) || '—'}</span>
+                    <span className="text-center text-green-400">{homeStats?.offOR?.toFixed(1) || '—'}</span>
+                    <span className="text-center text-green-400">{homeStats?.offFTR?.toFixed(1) || '—'}</span>
+                  </div>
+                </div>
+
+                {/* Defense Header */}
+                <div>
+                  <p className="text-[10px] text-green-600 mb-2">DEFENSE (opp values)</p>
+                  <div className="grid grid-cols-5 gap-2 text-[10px] text-green-700 pb-1 border-b border-green-900/30">
+                    <span className="col-span-1">TEAM</span>
+                    <span className="text-center">eFG%</span>
+                    <span className="text-center">TO%</span>
+                    <span className="text-center">OR%</span>
+                    <span className="text-center">FTR</span>
+                  </div>
+                  {/* Away Defense */}
+                  <div className="grid grid-cols-5 gap-2 text-xs py-1">
+                    <span className="col-span-1 text-green-500 truncate">{awayTeam.split(' ').pop()}</span>
+                    <span className="text-center text-green-400">{awayStats?.defEfg?.toFixed(1) || '—'}</span>
+                    <span className="text-center text-green-400">{awayStats?.defTO?.toFixed(1) || '—'}</span>
+                    <span className="text-center text-green-400">{awayStats?.defOR?.toFixed(1) || '—'}</span>
+                    <span className="text-center text-green-400">{awayStats?.defFTR?.toFixed(1) || '—'}</span>
+                  </div>
+                  {/* Home Defense */}
+                  <div className="grid grid-cols-5 gap-2 text-xs py-1">
+                    <span className="col-span-1 text-green-500 truncate">{homeTeam.split(' ').pop()}</span>
+                    <span className="text-center text-green-400">{homeStats?.defEfg?.toFixed(1) || '—'}</span>
+                    <span className="text-center text-green-400">{homeStats?.defTO?.toFixed(1) || '—'}</span>
+                    <span className="text-center text-green-400">{homeStats?.defOR?.toFixed(1) || '—'}</span>
+                    <span className="text-center text-green-400">{homeStats?.defFTR?.toFixed(1) || '—'}</span>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-green-800 pt-1">
+                  eFG% = Effective FG% | TO% = Turnover Rate | OR% = Off Rebound Rate | FTR = FT Rate
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Luck & Schedule Strength */}
+          {!loading && (homeStats || awayStats) && (
+            <div className="bg-green-900/20 border border-green-900 p-4">
+              <h3 className="text-xs font-semibold text-green-400 mb-3">// LUCK_AND_SCHEDULE</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Away Team */}
+                <div className="space-y-2">
+                  <p className="text-xs text-green-500 font-medium">{awayTeam.split(' ').pop()}</p>
+                  <div className="space-y-1 text-[11px]">
+                    <div className="flex justify-between">
+                      <span className="text-green-700">Luck:</span>
+                      <span className={`font-medium ${
+                        (awayStats?.luck ?? 0) > 0.03 ? 'text-green-400' :
+                        (awayStats?.luck ?? 0) < -0.03 ? 'text-red-400' : 'text-green-500'
+                      }`}>
+                        {awayStats?.luck != null ? ((awayStats.luck > 0 ? '+' : '') + awayStats.luck.toFixed(3)) : '—'}
+                        {awayStats?.luckRank && <span className="text-green-700"> #{awayStats.luckRank}</span>}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-700">SoS:</span>
+                      <span className="text-green-400">
+                        {awayStats?.sosEM != null ? ((awayStats.sosEM > 0 ? '+' : '') + awayStats.sosEM.toFixed(2)) : '—'}
+                        {awayStats?.sosRank && <span className="text-green-700"> #{awayStats.sosRank}</span>}
+                      </span>
+                    </div>
+                    {awayStats?.conference && (
+                      <div className="flex justify-between">
+                        <span className="text-green-700">Conf:</span>
+                        <span className="text-green-400">{awayStats.conference}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Home Team */}
+                <div className="space-y-2">
+                  <p className="text-xs text-green-500 font-medium">{homeTeam.split(' ').pop()}</p>
+                  <div className="space-y-1 text-[11px]">
+                    <div className="flex justify-between">
+                      <span className="text-green-700">Luck:</span>
+                      <span className={`font-medium ${
+                        (homeStats?.luck ?? 0) > 0.03 ? 'text-green-400' :
+                        (homeStats?.luck ?? 0) < -0.03 ? 'text-red-400' : 'text-green-500'
+                      }`}>
+                        {homeStats?.luck != null ? ((homeStats.luck > 0 ? '+' : '') + homeStats.luck.toFixed(3)) : '—'}
+                        {homeStats?.luckRank && <span className="text-green-700"> #{homeStats.luckRank}</span>}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-700">SoS:</span>
+                      <span className="text-green-400">
+                        {homeStats?.sosEM != null ? ((homeStats.sosEM > 0 ? '+' : '') + homeStats.sosEM.toFixed(2)) : '—'}
+                        {homeStats?.sosRank && <span className="text-green-700"> #{homeStats.sosRank}</span>}
+                      </span>
+                    </div>
+                    {homeStats?.conference && (
+                      <div className="flex justify-between">
+                        <span className="text-green-700">Conf:</span>
+                        <span className="text-green-400">{homeStats.conference}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <p className="text-[10px] text-green-800 pt-3">
+                Luck = record vs expected | SoS = Strength of Schedule (efficiency margin)
+              </p>
             </div>
           )}
 
