@@ -518,11 +518,12 @@ export async function GET() {
       };
     });
 
-    // Update line tracking for live games (persistent across serverless instances)
-    const liveGamesWithLines = games.filter(g => g.status === 'in' && g.ouLine !== null);
-    if (liveGamesWithLines.length > 0) {
+    // Update line tracking for ALL games with lines (pre-game + live)
+    // This ensures we capture the true opening line before games start
+    const gamesWithLines = games.filter(g => (g.status === 'in' || g.status === 'pre') && g.ouLine !== null);
+    if (gamesWithLines.length > 0) {
       try {
-        const linePromises = liveGamesWithLines.map(game =>
+        const linePromises = gamesWithLines.map(game =>
           updateLineCache(game.id, game.ouLine!)
             .then(lineHistory => ({ gameId: game.id, lineHistory }))
         );
