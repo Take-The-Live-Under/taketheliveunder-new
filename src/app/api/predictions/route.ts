@@ -95,6 +95,18 @@ function formatDateForKenPom(date: Date): string {
   return formatter.format(date);
 }
 
+interface ESPNEvent {
+  id: string;
+  date: string;
+  status: { type: { state: string } };
+  competitions: Array<{
+    competitors: Array<{
+      homeAway: string;
+      team: { displayName: string };
+    }>;
+  }>;
+}
+
 export async function GET() {
   try {
     const kenpomApiKey = process.env.KENPOM_API_KEY;
@@ -112,17 +124,24 @@ export async function GET() {
     const todayStr = formatDateForKenPom(today);
     const espnDateStr = formatDateForESPN(today);
 
-    // Fetch KenPom fanmatch predictions
-    const kenpomResponse = await fetch(
-      `${KENPOM_API_URL}?endpoint=fanmatch&d=${todayStr}`,
-      {
+    // Fetch all data sources in parallel for speed
+    const [kenpomResponse, espnResponse, oddsResponse] = await Promise.all([
+      fetch(`${KENPOM_API_URL}?endpoint=fanmatch&d=${todayStr}`, {
         headers: {
           'Authorization': `Bearer ${kenpomApiKey}`,
           'Accept': 'application/json',
         },
         cache: 'no-store',
-      }
-    );
+      }),
+      fetch(`${ESPN_URL}?limit=500&groups=50&dates=${espnDateStr}`, {
+        cache: 'no-store',
+      }),
+      oddsApiKey
+        ? fetch(`${ODDS_API_URL}?apiKey=${oddsApiKey}&regions=us&markets=totals&oddsFormat=american`, {
+            cache: 'no-store',
+          })
+        : Promise.resolve(null),
+    ]);
 
     if (!kenpomResponse.ok) {
       console.error('KenPom API error:', kenpomResponse.status);
@@ -134,41 +153,16 @@ export async function GET() {
 
     const kenpomData: KenPomPrediction[] = await kenpomResponse.json();
 
-    // Fetch ESPN games for game times and status
-    const espnResponse = await fetch(
-      `${ESPN_URL}?limit=500&groups=50&dates=${espnDateStr}`,
-      { cache: 'no-store' }
-    );
-
-    interface ESPNEvent {
-      id: string;
-      date: string;
-      status: { type: { state: string } };
-      competitions: Array<{
-        competitors: Array<{
-          homeAway: string;
-          team: { displayName: string };
-        }>;
-      }>;
-    }
-
     let espnEvents: ESPNEvent[] = [];
     if (espnResponse.ok) {
       const espnData = await espnResponse.json();
       espnEvents = espnData.events || [];
     }
 
-    // Fetch odds for Vegas lines
     let oddsGames: OddsAPIGame[] = [];
-    if (oddsApiKey) {
+    if (oddsResponse?.ok) {
       try {
-        const oddsResponse = await fetch(
-          `${ODDS_API_URL}?apiKey=${oddsApiKey}&regions=us&markets=totals&oddsFormat=american`,
-          { cache: 'no-store' }
-        );
-        if (oddsResponse.ok) {
-          oddsGames = await oddsResponse.json();
-        }
+        oddsGames = await oddsResponse.json();
       } catch (e) {
         console.error('Odds API error:', e);
       }
