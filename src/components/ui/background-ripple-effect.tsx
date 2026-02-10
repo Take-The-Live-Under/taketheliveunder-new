@@ -16,13 +16,13 @@ export const BackgroundCells = ({
   return (
     <div
       className={cn(
-        "relative h-screen flex justify-center overflow-hidden bg-black w-full",
+        "relative h-screen flex justify-center items-center bg-black w-full cursor-default overflow-hidden",
         className,
       )}
     >
       <BackgroundCellCore />
       {children && (
-        <div className="relative z-50 mt-40 pointer-events-none select-none">
+        <div className="relative z-10 pointer-events-auto select-auto w-full flex flex-col items-center justify-center">
           {children}
         </div>
       )}
@@ -30,7 +30,7 @@ export const BackgroundCells = ({
   );
 };
 
-const BackgroundCellCore = () => {
+export const BackgroundCellCore = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const ref = useRef<HTMLDivElement>(null);
 
@@ -52,9 +52,9 @@ const BackgroundCellCore = () => {
       className="h-full absolute inset-0"
     >
       <div className="absolute h-full inset-y-0 overflow-hidden">
-        <div className="absolute h-full w-full pointer-events-none -bottom-2 z-40 bg-black [mask-image:linear-gradient(to_bottom,transparent,black)]" />
+        <div className="absolute h-full w-full pointer-events-none -bottom-2 z-2 bg-black [mask-image:linear-gradient(to_bottom,transparent,black)]" />
         <div
-          className="absolute inset-0 z-20 bg-transparent"
+          className="absolute inset-0 z-2 bg-transparent"
           style={{
             maskImage: `radial-gradient(${size / 4}px circle at center, white, transparent)`,
             WebkitMaskImage: `radial-gradient(${size / 4}px circle at center, white, transparent)`,
@@ -68,12 +68,9 @@ const BackgroundCellCore = () => {
             WebkitMaskRepeat: "no-repeat",
           }}
         >
-          <Pattern cellClassName="border-blue-600 relative z-[100]" />
+          <Pattern cellClassName="border-blue-600 relative z-1" />
         </div>
-        <Pattern
-          className="opacity-[0.15]"
-          cellClassName="border-neutral-700"
-        />
+        <Pattern className="opacity-[0.2]" cellClassName="border-neutral-700" />
       </div>
     </div>
   );
@@ -91,7 +88,7 @@ const Pattern = ({ className, cellClassName }: PatternProps) => {
   const [clickedCell, setClickedCell] = useState<[number, number] | null>(null);
 
   return (
-    <div className={cn("flex flex-row relative z-30", className)}>
+    <div className={cn("flex flex-row relative z-0", className)}>
       {matrix.map((row, rowIdx) => (
         <div
           key={`matrix-row-${rowIdx}`}
