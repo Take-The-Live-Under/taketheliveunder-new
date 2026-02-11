@@ -57,7 +57,7 @@ export function StatsSection() {
               description: "Always on during games.",
             },
             {
-              title: "100+",
+              title: "10,000+",
               subtitle: "Active Users",
               description: "Trust the system.",
             },

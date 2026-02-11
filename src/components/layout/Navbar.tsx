@@ -34,18 +34,16 @@ export function Navbar() {
 
   return (
     <div
-      className={`flex fixed px-4 py-12 z-50 top-0 w-full items-center h-16 justify-between transition-all duration-300 dark ${
-        scrolled
-          ? "bg-transparent backdrop-blur-none border-transparent"
-          : "bg-transparent border-transparent"
+      className={`absolute lg:fixed px-4 py-8 z-50 top-0 w-full transition-all duration-300 dark ${
+        scrolled ? "pt-4" : "pt-8"
       }`}
     >
-      {" "}
-      <div className="flex items-center justify-between w-full  mx-auto max-w-7xl">
-        <div className="flex h-14 justify-center items-center">
+      <div className="flex items-center justify-between w-full mx-auto max-w-7xl">
+        {/* Left Side: Logo & Navigation */}
+        <div className="flex h-16 items-center px-0 lg:px-6 lg:bg-neutral-900/50 lg:border lg:border-neutral-800 lg:backdrop-blur-sm lg:rounded-2xl lg:shadow-sm">
           <Link
             href="/"
-            className="flex items-center gap-2 font-bold text-xl mr-4 text-foreground"
+            className="flex items-center gap-2 font-bold text-xl mr-2 lg:mr-6 text-foreground"
           >
             {/* <Activity className="h-6 w-6" /> Icon */}
             <span>
@@ -58,7 +56,7 @@ export function Navbar() {
               <span className="text-neon-orange font-marker">LiveUnder</span>
             </span>
           </Link>
-          <nav className="ml-8 hidden lg:flex gap-8">
+          <nav className="hidden lg:flex gap-6 border-l border-neutral-800 pl-6 h-8 items-center">
             <Link
               href="#live-dashboard"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -79,7 +77,9 @@ export function Navbar() {
             </Link>
           </nav>
         </div>
-        <div className="flex gap-2">
+
+        {/* Right Side: CTA & User Profile */}
+        <div className="flex h-16 items-center gap-2 px-0 lg:px-4 lg:bg-neutral-900/50 lg:border lg:border-neutral-800 lg:backdrop-blur-sm lg:rounded-2xl lg:shadow-sm">
           <Button
             asChild
             className="rounded-full bg-neon-pink text-black font-bold text-sm hover:bg-white hover:text-neon-pink transition-all hover:scale-105 shadow-[0_0_15px_rgba(255,0,255,0.5)] hover:shadow-[0_0_20px_rgba(255,0,255,0.7)]"
@@ -95,7 +95,7 @@ export function Navbar() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Avatar className="cursor-pointer border h-8 w-8">
+              <Avatar className="cursor-pointer border h-9 w-9 ring-2 ring-transparent hover:ring-neon-purple/50 transition-all">
                 <AvatarImage
                   src="https://github.com/shadcn.png"
                   alt="@shadcn"
@@ -103,34 +103,41 @@ export function Navbar() {
                 <AvatarFallback>CN</AvatarFallback>
               </Avatar>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-70 p-3 rounded-xl" align="end">
+            <DropdownMenuContent
+              className="w-70 p-3 rounded-xl bg-neutral-900 border-neutral-800 text-white"
+              align="end"
+            >
               <div className="p-2">
                 <h1 className="font-semibold">User Name</h1>
-                <p className="text-sm text-muted-foreground">
-                  user@example.com
-                </p>
+                <p className="text-sm text-neutral-400">user@example.com</p>
               </div>
               <DropdownMenuGroup>
-                <DropdownMenuItem className="py-3">Dashboard</DropdownMenuItem>
-                <DropdownMenuItem className="py-3">
+                <DropdownMenuItem className="py-3 focus:bg-neutral-800 focus:text-white cursor-pointer">
+                  Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem className="py-3 focus:bg-neutral-800 focus:text-white cursor-pointer">
                   Account Settings
                 </DropdownMenuItem>
               </DropdownMenuGroup>
-              <DropdownMenuSeparator className="-mx-3" />
+              <DropdownMenuSeparator className="-mx-3 bg-neutral-800" />
               <DropdownMenuGroup>
-                <DropdownMenuItem className="py-3 justify-between">
+                <DropdownMenuItem className="py-3 justify-between focus:bg-neutral-800 focus:text-white cursor-pointer">
                   Theme <ThemeSwitcher />
                 </DropdownMenuItem>
               </DropdownMenuGroup>
-              <DropdownMenuSeparator className="-mx-3" />
-              <DropdownMenuItem className="py-3 justify-between">
+              <DropdownMenuSeparator className="-mx-3 bg-neutral-800" />
+              <DropdownMenuItem className="py-3 justify-between focus:bg-neutral-800 focus:text-white cursor-pointer">
                 Logout <LogOut className="w-4 h-4" />
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           {/* Mobile Menu Placeholder */}
-          <Button variant="ghost" size="icon" className="lg:hidden">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden text-white hover:bg-neutral-800 hover:text-white"
+          >
             <LayoutGrid className="h-5 w-5" />
           </Button>
         </div>

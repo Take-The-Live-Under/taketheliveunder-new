@@ -16,11 +16,11 @@ export function LiveDashboardSection() {
         </p>
 
         {/* Mock Dashboard UI */}
-        <div className="relative mx-auto w-full">
-          <div className="absolute -top-6 -left-8 text-neon-purple text-6xl font-marker -rotate-12 select-none z-0 drop-shadow-[0_0_10px_rgba(255,0,255,0.8)]">
+        <div className="relative mx-auto w-full px-2 md:px-0">
+          <div className="absolute -top-12 -left-10 text-neon-purple text-8xl font-marker -rotate-12 select-none z-0 drop-shadow-[0_0_10px_rgba(255,0,255,0.8)]">
             X
           </div>
-          <div className="relative overflow-hidden rounded-3xl border-2 border-neon-blue bg-black/50 backdrop-blur-sm shadow-[0_0_15px_rgba(0,243,255,0.5),inset_0_0_10px_rgba(0,243,255,0.2)] z-10 transition-all duration-300">
+          <div className="relative overflow-hidden rounded-3xl border-2 border-neon-blue bg-black/50 backdrop-blur-sm shadow-[0_0_10px_#00f3ff,0_0_20px_#00f3ff,0_0_40px_#00f3ff,inset_0_0_10px_rgba(0,243,255,0.2)] z-10 transition-all duration-300">
             <div className="flex items-center gap-4 border-b border-white/10 bg-black/80 px-4 py-3">
               <div className="flex gap-2">
                 <div className="h-3 w-3 rounded-full bg-red-500/80"></div>
@@ -48,15 +48,15 @@ export function LiveDashboardSection() {
               <div className="w-16"></div> {/* Spacer to center the URL bar */}
             </div>
             <div className="p-6 text-left">
-              <div className="grid grid-cols-10 gap-16 border-b-2 border-white/20 pb-4 text-sm font-bold text-white">
+              <div className="grid grid-cols-5 md:grid-cols-10 gap-4 md:gap-16 border-b-2 border-white/20 pb-4 text-sm font-bold text-white px-4">
                 <div className="col-span-2">Game</div>
                 <div>O/U</div>
-                <div>Curr</div>
+                <div>Score</div>
                 <div>Conf</div>
-                <div>Q</div>
-                <div>Req</div>
-                <div>Left</div>
-                <div className="col-span-2">Status</div>
+                <div className="hidden md:block">Quarter</div>
+                <div className="hidden md:block">R.PPM</div>
+                <div className="hidden md:block">T.Left</div>
+                <div className="col-span-2 hidden md:block">Status</div>
               </div>
               {[
                 {
@@ -102,7 +102,7 @@ export function LiveDashboardSection() {
               ].map((row, i) => (
                 <div
                   key={i}
-                  className="grid grid-cols-10 gap-12 py-4 text-sm border-b border-white/20 text-neutral-200 last:border-0 hover:bg-white/10 transition-colors items-center"
+                  className="grid grid-cols-5 md:grid-cols-10 gap-4 md:gap-16 py-4 text-sm border-b border-white/20 text-neutral-200 last:border-0 hover:bg-white/10 transition-colors items-center px-4"
                 >
                   <div className="col-span-2 font-medium text-white break-words">
                     {row.game}
@@ -110,10 +110,10 @@ export function LiveDashboardSection() {
                   <div>{row.line}</div>
                   <div>{row.curr}</div>
                   <div>{row.conf}</div>
-                  <div>{row.q}</div>
-                  <div>{row.ReqPPM}</div>
-                  <div>{row.minLeft}</div>
-                  <div className="col-span-2 flex justify-start">
+                  <div className="hidden md:block">{row.q}</div>
+                  <div className="hidden md:block">{row.ReqPPM}</div>
+                  <div className="hidden md:block">{row.minLeft}</div>
+                  <div className="col-span-2 hidden md:flex justify-start">
                     {row.Status === "Golden Zone" ? (
                       <span className="rounded-full border border-orange-500/50 bg-orange-500/10 px-3 py-1 text-xs font-bold text-orange-400 backdrop-blur-md">
                         Golden Zone
