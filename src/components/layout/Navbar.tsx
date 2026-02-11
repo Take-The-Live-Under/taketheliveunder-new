@@ -2,18 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import type { ReactElement } from "react";
+
 import { useTheme } from "next-themes";
 
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
-} from "@/components/ui/navigation-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -23,116 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import { cn } from "@/lib/utils";
-import {
-  Activity,
-  BarChart,
-  Bot,
-  Box,
-  Calendar,
-  CheckCircle2,
-  Code2,
-  Component,
-  Cpu,
-  Globe,
-  LayoutGrid,
-  LineChart,
-  LogOut,
-  Mail,
-  MessageSquare,
-  Search,
-  Settings,
-  Shield,
-  Smartphone,
-  Sparkles,
-  Users,
-  Zap,
-  Monitor,
-  Moon,
-  Sun,
-  CirclePlus,
-} from "lucide-react";
+import { LogOut, LayoutGrid, Monitor, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useCallback, useEffect } from "react";
-
-// Data adapted for TakeTheLiveUnder
-const features: {
-  title: string;
-  icon: ReactElement;
-  href: string;
-  description: string;
-}[] = [
-  {
-    title: "Live Dashboard",
-    href: "#",
-    icon: <Activity className="w-4 h-4" />,
-    description: "Real-time game tracking",
-  },
-  {
-    title: "PPM Analysis",
-    href: "#",
-    icon: <LineChart className="w-4 h-4" />,
-    description: "Points Per Minute metrics",
-  },
-  {
-    title: "Trigger Alerts",
-    href: "#",
-    icon: <Zap className="w-4 h-4" />,
-    description: "Instant betting opportunities",
-  },
-];
-
-const analysis: {
-  title: string;
-  icon: ReactElement;
-  href: string;
-  description: string;
-}[] = [
-  {
-    title: "Projections",
-    href: "#",
-    icon: <BarChart className="w-4 h-4" />,
-    description: "Final score predictions",
-  },
-  {
-    title: "Historical Data",
-    href: "#",
-    icon: <Calendar className="w-4 h-4" />,
-    description: "Past performance trends",
-  },
-  {
-    title: "Team Stats",
-    href: "#",
-    icon: <Users className="w-4 h-4" />,
-    description: "Compare team efficiencies",
-  },
-];
-
-const resources: {
-  title: string;
-  icon: ReactElement;
-  href: string;
-  description: string;
-}[] = [
-  {
-    title: "Documentation",
-    href: "#",
-    icon: <Code2 className="w-4 h-4" />,
-    description: "How to use the platform",
-  },
-  {
-    title: "Betting Guide",
-    href: "#",
-    icon: <CheckCircle2 className="w-4 h-4" />,
-    description: "Understanding the strategy",
-  },
-  {
-    title: "Support",
-    href: "#",
-    icon: <MessageSquare className="w-4 h-4" />,
-    description: "Get help from our team",
-  },
-];
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -150,7 +36,7 @@ export function Navbar() {
     <div
       className={`flex fixed px-4 py-12 z-50 top-0 w-full items-center h-16 justify-between transition-all duration-300 dark ${
         scrolled
-          ? "bg-black/50 backdrop-blur-md border-b border-white/10"
+          ? "bg-transparent backdrop-blur-none border-transparent"
           : "bg-transparent border-transparent"
       }`}
     >
@@ -161,105 +47,52 @@ export function Navbar() {
             href="/"
             className="flex items-center gap-2 font-bold text-xl mr-4 text-foreground"
           >
-            <Activity className="h-6 w-6" />
-            <span>TakeTheLiveUnder</span>
+            {/* <Activity className="h-6 w-6" /> Icon */}
+            <span>
+              <span
+                className="text-neon-blue"
+                style={{ fontFamily: "'Rock Salt', cursive" }}
+              >
+                TakeThe
+              </span>
+              <span className="text-neon-orange font-marker">LiveUnder</span>
+            </span>
           </Link>
-          <NavigationMenu className="ml-8 hidden lg:flex">
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger
-                  className={cn(
-                    navigationMenuTriggerStyle(),
-                    "rounded-full h-7.5 font-normal text-muted-foreground",
-                  )}
-                >
-                  Products
-                </NavigationMenuTrigger>
-                <NavigationMenuContent className="bg-background">
-                  <ul className="grid w-[400px] pt-2 grid-cols-2 md:w-[600px]">
-                    <div>
-                      <span className="p-4 text-muted-foreground">
-                        Features
-                      </span>
-                      {features.map((component) => (
-                        <ListItem
-                          key={component.title}
-                          title={component.title}
-                          icon={component.icon}
-                          href={component.href}
-                        >
-                          {component.description}
-                        </ListItem>
-                      ))}
-                    </div>
-                    <div>
-                      <span className="p-4 text-muted-foreground">
-                        Analysis
-                      </span>
-                      {analysis.map((component) => (
-                        <ListItem
-                          key={component.title}
-                          title={component.title}
-                          icon={component.icon}
-                          href={component.href}
-                        >
-                          {component.description}
-                        </ListItem>
-                      ))}
-                    </div>
-                  </ul>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger
-                  className={cn(
-                    navigationMenuTriggerStyle(),
-                    "rounded-full h-7.5 font-normal text-muted-foreground",
-                  )}
-                >
-                  Resources
-                </NavigationMenuTrigger>
-                <NavigationMenuContent className="bg-background">
-                  <ul className="grid w-[400px] pt-2 grid-cols-1 md:w-[350px]">
-                    <div>
-                      <span className="p-4 text-muted-foreground">
-                        Help & Guides
-                      </span>
-                      {resources.map((component) => (
-                        <ListItem
-                          key={component.title}
-                          title={component.title}
-                          icon={component.icon}
-                          href={component.href}
-                        >
-                          {component.description}
-                        </ListItem>
-                      ))}
-                    </div>
-                  </ul>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuLink
-                  asChild
-                  className={cn(
-                    navigationMenuTriggerStyle(),
-                    "rounded-full h-7.5 font-normal text-muted-foreground",
-                  )}
-                >
-                  <Link href="#">Pricing</Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-            </NavigationMenuList>
-          </NavigationMenu>
+          <nav className="ml-8 hidden lg:flex gap-8">
+            <Link
+              href="#live-dashboard"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Product
+            </Link>
+            <Link
+              href="#access"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Methodology
+            </Link>
+            <Link
+              href="#access"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Pricing
+            </Link>
+          </nav>
         </div>
         <div className="flex gap-2">
-          <Button variant={"outline"} size={"sm"}>
-            Log in
+          <Button
+            asChild
+            className="rounded-full bg-neon-pink text-black font-bold text-sm hover:bg-white hover:text-neon-pink transition-all hover:scale-105 shadow-[0_0_15px_rgba(255,0,255,0.5)] hover:shadow-[0_0_20px_rgba(255,0,255,0.7)]"
+          >
+            <a
+              href="https://app.taketheliveunder.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Get Started
+            </a>
           </Button>
-          <Button variant={"outline"} size={"sm"}>
-            Sign up
-          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Avatar className="cursor-pointer border h-8 w-8">
@@ -295,6 +128,7 @@ export function Navbar() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
           {/* Mobile Menu Placeholder */}
           <Button variant="ghost" size="icon" className="lg:hidden">
             <LayoutGrid className="h-5 w-5" />
@@ -302,54 +136,6 @@ export function Navbar() {
         </div>
       </div>
     </div>
-  );
-}
-
-function ListItem({
-  title,
-  icon,
-  children,
-  href,
-  ...props
-}: React.ComponentPropsWithoutRef<"li"> & {
-  href: string;
-  icon: ReactElement;
-}) {
-  return (
-    <li {...props}>
-      <NavigationMenuLink asChild className="hover:bg-transparent">
-        <Link href={href}>
-          <div className="flex gap-3 items-start rounded-md p-2">
-            <div className="border rounded-sm p-2 icon-container">{icon}</div>
-            <div className="text-container">
-              <div className="text-sm font-medium leading-none">{title}</div>
-              <p className="text-muted-foreground line-clamp-2 pt-1 text-xs leading-snug">
-                {children}
-              </p>
-            </div>
-          </div>
-        </Link>
-      </NavigationMenuLink>
-
-      <style jsx>{`
-        li:hover .icon-container {
-          background-color: var(--foreground);
-          color: var(--background);
-          transform: scale(1.05);
-          transition: all 0.2s ease;
-        }
-
-        li:hover .text-container .text-sm {
-          color: var(--foreground); /* Change title color on hover */
-          transition: color 0.2s ease;
-        }
-
-        li:hover .text-container p {
-          color: var(--foreground); /* Change description color on hover */
-          transition: color 0.2s ease;
-        }
-      `}</style>
-    </li>
   );
 }
 
