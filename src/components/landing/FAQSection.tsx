@@ -69,7 +69,7 @@ export function FAQSection() {
           {faqItems.map((item, index) => (
             <details
               key={index}
-              className="group border border-neutral-800/60 rounded-lg bg-neutral-900/20 hover:bg-neutral-900/40 transition-colors pointer-events-auto"
+              className="group border border-neutral-800/60 rounded-lg bg-neutral-900/50 hover:bg-neutral-900/60 transition-colors pointer-events-auto backdrop-blur-sm"
             >
               <summary className="flex items-center justify-between cursor-pointer px-6 py-5 text-base font-medium text-white hover:text-orange-300 transition-colors list-none">
                 <span className="text-left">{item.question}</span>
