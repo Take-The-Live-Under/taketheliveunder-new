@@ -35,8 +35,8 @@ export function Navbar() {
 
   return (
     <div
-      className={`absolute lg:fixed px-4 py-8 z-50 top-0 w-full transition-all duration-300 dark ${
-        scrolled ? "pt-4" : "pt-8"
+      className={`absolute lg:fixed px-4 py-4 lg:py-8 z-50 top-0 w-full transition-all duration-300 dark ${
+        scrolled ? "pt-4" : "pt-4 lg:pt-8"
       }`}
     >
       <div className="flex items-center justify-between w-full mx-auto max-w-7xl">
