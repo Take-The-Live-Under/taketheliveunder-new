@@ -45,7 +45,7 @@ export function HowItWorksSection() {
     <section className="max-w-7xl mx-auto px-6 py-24" id="how-it-works">
       <div className="grid lg:grid-cols-2 gap-16 items-center">
         {/* Left Column: Text Content */}
-        <div className="order-2 lg:order-1">
+        <div className="">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -111,7 +111,7 @@ export function HowItWorksSection() {
         </div>
 
         {/* Right Column: Visual */}
-        <div className="order-1 lg:order-2">
+        <div className="">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, rotateY: 10 }}
             whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}

@@ -67,7 +67,7 @@ export function BenefitsSection() {
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white text-balance">
+          <h2 className="text-4xl font-bold md:text-5xl text-white text-balance">
             Built for fans who{" "}
             <span className="text-orange-400">play to win</span>
           </h2>

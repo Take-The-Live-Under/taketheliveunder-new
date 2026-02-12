@@ -13,7 +13,7 @@ export function FadeOutBasketball() {
   return (
     <motion.div
       style={{ opacity, y }}
-      className="fixed bottom-[-30vh] md:bottom-[-60vh] left-1/2 w-[140vw] max-w-[1200px] -translate-x-1/2 pointer-events-none -z-10"
+      className="fixed bottom-[-25vh] md:bottom-[-55vh] lg:bottom-[-65vh] xl:bottom-[-40vh] left-1/2 w-[140vw] max-w-[1200px] -translate-x-1/2 pointer-events-none -z-10"
     >
       <Image
         src="/sketched-basketball.png"

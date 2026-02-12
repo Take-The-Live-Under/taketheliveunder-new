@@ -35,7 +35,7 @@ export function CTASection() {
 
           {/* Content */}
           <div className="relative z-10 flex flex-col items-center text-center">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 tracking-tight">
+            <h2 className="text-4xl font-bold md:text-5xl text-white mb-6">
               Ready to join the{" "}
               <span className="text-neon-blue font-marker rotate-2 inline-block ml-2 drop-shadow-[0_0_5px_rgba(0,255,255,0.8)]">
                 Winning Team?
