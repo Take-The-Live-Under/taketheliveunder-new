@@ -48,12 +48,18 @@ export function Navbar() {
             {/* <Activity className="h-6 w-6" /> Icon */}
             <span>
               <span
-                className="text-neon-blue"
+                // className="text-neon-blue"
+                className="text-neon-blue drop-shadow-[0_0_5px_rgba(0,255,255,0.8)]"
                 style={{ fontFamily: "'Rock Salt', cursive" }}
               >
                 TakeThe
               </span>
-              <span className="text-neon-orange font-marker">LiveUnder</span>
+              <span
+                // className="text-neon-orange font-marker"
+                className="text-neon-orange font-marker drop-shadow-[0_0_5px_rgba(255,165,0,0.8)]"
+              >
+                LiveUnder
+              </span>
             </span>
           </Link>
           <nav className="hidden lg:flex gap-6 border-l border-neutral-800 pl-6 h-8 items-center">
