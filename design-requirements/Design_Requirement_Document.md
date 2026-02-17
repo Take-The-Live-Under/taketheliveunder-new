@@ -1,7 +1,9 @@
 # TakeTheLiveUnder -- Master Design Requirement Document (DRD)
 
 **Date:** February 16, 2026
+
 **Source:** TTLU Marketing Site (`ttlu-marketing-site`)
+
 **Purpose:** The single source of truth for the TakeTheLiveUnder visual identity. This document combines high-level design philosophy with strict technical specifications for implementation.
 
 ---
