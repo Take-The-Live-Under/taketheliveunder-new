@@ -1,0 +1,14 @@
+{
+  "name": "data-pipeline",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "setup": "bash -c 'python3.11 -m venv venv && source venv/bin/activate && pip install -r requirements.txt'",
+    "dev": "npm run setup && concurrently -n \"api,monitor\" -c \"blue,magenta\" \"npm run dev:api\" \"npm run dev:monitor\"",
+    "dev:api": "bash -c 'source venv/bin/activate && python api/main.py'",
+    "dev:monitor": "bash -c 'source venv/bin/activate && python monitor.py'"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
