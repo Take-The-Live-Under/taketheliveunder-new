@@ -47,8 +47,8 @@ export function StatsSection() {
         <div className="grid gap-8 md:grid-cols-3">
           {[
             {
-              title: "15s",
-              subtitle: "Polling Rate",
+              title: "5.0s",
+              subtitle: "Sync Frequency",
               description: "Updates every 15 seconds.",
             },
             {
@@ -57,9 +57,9 @@ export function StatsSection() {
               description: "Always on during games.",
             },
             {
-              title: "10,000+",
-              subtitle: "Active Users",
-              description: "Trust the system.",
+              title: "15,000,000",
+              subtitle: "Live Data Points",
+              description: "Analyzed per game.",
             },
           ].map((feature, i) => (
             <FeatureCard key={i} {...feature} />

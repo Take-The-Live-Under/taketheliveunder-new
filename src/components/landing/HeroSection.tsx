@@ -34,9 +34,9 @@ export function HeroSection() {
             </span>
           </h1>
           <p className="px-6 text-center text-xs text-white/60 md:text-sm lg:text-lg">
-            Real-time game monitoring for clear signals. Golden Zone alerts when
-            the numbers are in your favor. Updated every 15 seconds, so you
-            never miss the moment..
+            Real-time game monitoring and live over/under signals. We do the
+            math so you don't have to. Data updates instantly so you never miss
+            a moment.
           </p>
           <div className="my-8 flex items-center justify-center gap-1">
             <span className="relative flex h-3 w-3 items-center justify-center">
