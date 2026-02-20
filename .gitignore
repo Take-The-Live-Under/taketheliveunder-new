@@ -78,3 +78,6 @@ models/
 pj_hmm_kalman_model/
 investor-pipeline/
 odds_snapshots_today/
+
+# Raw ideas
+docs/ideas/
