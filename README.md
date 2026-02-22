@@ -4,16 +4,18 @@ An intelligent, real-time NCAA basketball betting monitoring system with smart c
 
 ## Project Structure
 
-This project has been migrated to a **Turborepo** monorepo setup to manage multiple applications gracefully. 
+This project is structured as a **Turborepo** monorepo to gracefully manage multiple applications from a single codebase.
 
 ```
 taketheliveunder/
 ├── apps/
-│   ├── api/          # Python FastAPI Backend (Port: 8000)
-│   ├── monitor/      # Python Background Tracker/Monitor
-│   └── web/          # Next.js 14 Frontend / Dashboard (Port: 3000)
-├── turbo.json        # Turborepo configuration
-└── package.json      # Root package file for workspace management
+│   ├── api/             # Python FastAPI Backend (Port: 8000)
+│   ├── monitor/         # Python Background Tracker/Monitor
+│   ├── marketing-site/  # Next.js 16 Marketing Frontend (Port: 3001)
+│   └── product-site/    # Next.js 14 Main Dashboard Frontend (Port: 3000)
+├── turbo.json           # Turborepo configuration
+├── package.json         # Root package file for workspace management
+└── .gitignore           # Root gitignore rules applied recursively to all apps
 ```
 
 ## Features
@@ -44,7 +46,8 @@ taketheliveunder/
 ## Tech Stack
 
 - **Backend (API + Monitor)**: Python 3.13, FastAPI
-- **Frontend (Web)**: Next.js 14, TailwindCSS, TypeScript, Supabase
+- **Frontend (Product App)**: Next.js 14, TailwindCSS, TypeScript, Supabase
+- **Frontend (Marketing Site)**: Next.js 16, Tailwind v4, Framer Motion, Three.js
 - **Monorepo Management**: Turborepo, npm workspaces
 - **Data Sources**: The Odds API (live games & odds), KenPom or ESPN (team stats)
 
@@ -63,7 +66,7 @@ taketheliveunder/
 
 ### Installation & Running
 
-Thanks to **Turborepo**, setting up and running all three applications is streamlined into root-level commands.
+Thanks to **Turborepo**, setting up and running all applications is streamlined into root-level commands.
 
 1. **Clone the repository**:
 ```bash
@@ -77,8 +80,8 @@ npm install
 ```
 
 3. **Configure Environment Variables**:
-   - For `apps/web`: Create `apps/web/.env.local` using `apps/web/.env.example` as a template and provide your Supabase details.
-   - For `apps/api`: Create `apps/api/.env.local` with your Odds API key, KenPom credentials, etc.
+   - For `apps/product-site`: Create `.env.local` using `.env.example` as a template and provide your Supabase details.
+   - For `apps/api`: Create `.env.local` with your Odds API key, KenPom credentials, etc.
 
 4. **Start the Monorepo Development Environment**:
 ```bash
@@ -87,9 +90,10 @@ npm run dev
 turbo run dev
 ```
 *This command will automatically:*
-- Set up the Python virtual environments (`venv`) for both the `api` and `monitor` apps.
+- Set up the Python virtual environments (`venv`) for the `api` and `monitor` apps.
 - Install the required Python packages (`requirements.txt`).
-- Spin up the Next.js frontend (`apps/web` on http://localhost:3000).
+- Spin up the Next.js product dashboard (`apps/product-site` on http://localhost:3000).
+- Spin up the Next.js marketing site (`apps/marketing-site` on http://localhost:3001).
 - Spin up the FastAPI backend (`apps/api` on http://localhost:8000).
 - Start the live monitoring script (`apps/monitor`).
 
@@ -130,8 +134,9 @@ Final score capped at 0-100.
 
 ## Support & Usage
 
-- **Dashboard**: Access via `http://localhost:3000` to see real-time triggers, confidence scores, and live pipelines.
+- **Product Dashboard**: Access via `http://localhost:3000` to see real-time triggers, confidence scores, and live pipelines.
 - **Admin**: Access via `http://localhost:3000/admin` to view historical trigger logs, export CSVs, and more.
+- **Marketing Site**: Access via `http://localhost:3001` to view your marketing landing pages.
 
 ## License
 
