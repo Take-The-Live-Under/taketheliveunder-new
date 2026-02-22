@@ -4,8 +4,8 @@ FastAPI Backend for NCAA Basketball Betting Monitor
 import sys
 from pathlib import Path
 
-# Add parent directory to path so we can import config and utils modules
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add monitor directory to path so we can import shared config and utils modules
+sys.path.insert(0, str(Path(__file__).parent.parent / "monitor"))
 
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,7 +19,7 @@ import pandas as pd
 import numpy as np
 import config
 
-from api.auth import (
+from auth import (
     authenticate_user,
     create_access_token,
     create_user,
@@ -39,7 +39,7 @@ from utils.ai_summary import get_ai_summary_generator
 from utils.pregame_analyzer import get_pregame_analyzer
 from utils.espn_live_fetcher import get_espn_live_fetcher
 from utils.referee_stats import get_referee_stats_manager
-from api.websocket_manager import manager as ws_manager
+from websocket_manager import manager as ws_manager
 
 # Configure logging
 logger = logging.getLogger(__name__)
