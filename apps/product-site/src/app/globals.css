@@ -1,0 +1,494 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Quant Terminal Theme */
+  --background: #0a0a0a;
+  --foreground: #22c55e;
+  --terminal-black: #0a0a0a;
+  --terminal-green: #22c55e;
+  --terminal-green-dim: #166534;
+  --terminal-green-bright: #4ade80;
+  --terminal-yellow: #facc15;
+  --terminal-red: #ef4444;
+  --terminal-border: #14532d;
+
+  /* Legacy - kept for compatibility */
+  --navy: #0a0a0a;
+  --navy-light: #111111;
+  --burnt-orange: #22c55e;
+  --burnt-orange-light: #4ade80;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'GeistMono', 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+}
+
+/* Quant Terminal Utilities */
+.terminal-text {
+  color: var(--terminal-green);
+  font-family: 'GeistMono', monospace;
+}
+
+.terminal-text-dim {
+  color: var(--terminal-green-dim);
+}
+
+.terminal-text-bright {
+  color: var(--terminal-green-bright);
+}
+
+.terminal-border {
+  border-color: var(--terminal-border);
+}
+
+.terminal-bg {
+  background-color: var(--terminal-black);
+}
+
+/* Scanline effect for extra terminal feel */
+.scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Terminal cursor blink */
+@keyframes cursor-blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.terminal-cursor::after {
+  content: '_';
+  animation: cursor-blink 1s infinite;
+}
+
+/* Green glow effect */
+.terminal-glow {
+  text-shadow: 0 0 5px rgba(34, 197, 94, 0.5), 0 0 10px rgba(34, 197, 94, 0.3);
+}
+
+.terminal-glow-box {
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.2), inset 0 0 20px rgba(34, 197, 94, 0.05);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Custom animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(234, 88, 12, 0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+.animate-fade-out {
+  animation: fade-out 0.3s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out forwards;
+}
+
+/* Staggered animations for cards - only on initial load */
+.card-enter {
+  /* No animation by default - prevents layout shift on updates */
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Only animate cards on initial page load when parent has loading state */
+.cards-initial-load .card-enter {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+.cards-initial-load .card-enter:nth-child(1) { animation-delay: 0ms; }
+.cards-initial-load .card-enter:nth-child(2) { animation-delay: 50ms; }
+.cards-initial-load .card-enter:nth-child(3) { animation-delay: 100ms; }
+.cards-initial-load .card-enter:nth-child(4) { animation-delay: 150ms; }
+.cards-initial-load .card-enter:nth-child(5) { animation-delay: 200ms; }
+
+/* CSS containment to prevent cards from affecting siblings */
+.game-card-stable {
+  contain: layout style;
+}
+
+/* Smooth timestamp transitions */
+.timestamp-update {
+  transition: all 0.3s ease-out;
+}
+
+/* Mobile tap targets */
+@media (max-width: 640px) {
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Score Predictor Game Animations */
+@keyframes spin-slot {
+  0% { transform: translateY(0); }
+  25% { transform: translateY(-25%); }
+  50% { transform: translateY(-50%); }
+  75% { transform: translateY(-75%); }
+  100% { transform: translateY(-100%); }
+}
+
+@keyframes rocket-flame {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scaleY(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1.2);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(251, 191, 36, 0.3),
+                0 0 10px rgba(251, 191, 36, 0.2),
+                0 0 15px rgba(251, 191, 36, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 10px rgba(251, 191, 36, 0.5),
+                0 0 20px rgba(251, 191, 36, 0.3),
+                0 0 30px rgba(251, 191, 36, 0.2);
+  }
+}
+
+@keyframes score-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes tile-select {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-spin-slot {
+  animation: spin-slot 0.1s linear infinite;
+}
+
+.animate-rocket-flame {
+  animation: rocket-flame 0.3s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.animate-score-pop {
+  animation: score-pop 0.3s ease-out;
+}
+
+.animate-tile-select {
+  animation: tile-select 0.15s ease-out forwards;
+}
+
+/* Custom scrollbar for game grid */
+.game-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.game-scrollbar::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 3px;
+}
+
+.game-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.8);
+  border-radius: 3px;
+}
+
+.game-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.8);
+}
+
+/* Hover scale utility */
+.hover\:scale-102:hover {
+  transform: scale(1.02);
+}
+
+/* Glass shard animation */
+@keyframes shard-fly {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--shard-x)), calc(-50% + var(--shard-y))) rotate(180deg) scale(0);
+    opacity: 0;
+  }
+}
+
+.animate-shard {
+  animation: shard-fly 0.6s ease-out forwards;
+}
+
+/* Money explosion animation */
+@keyframes money-explode {
+  0% {
+    transform: translate(-50%, -50%) scale(0) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(calc(-50% + var(--money-x) * 0.5), calc(-50% + var(--money-y) * 0.5)) scale(1.5) rotate(180deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--money-x)), calc(-50% + var(--money-y))) scale(0.5) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-money-explode {
+  animation: money-explode 0.8s ease-out forwards;
+}
+
+/* Crack appear animation */
+@keyframes crack-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+.animate-crack-appear {
+  animation: crack-appear 0.5s ease-out forwards;
+}
+
+/* Flash animation */
+@keyframes flash {
+  0% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-flash {
+  animation: flash 0.3s ease-out forwards;
+}
+
+/* Shake animation */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px) rotate(-1deg); }
+  75% { transform: translateX(4px) rotate(1deg); }
+}
+
+.animate-shake {
+  animation: shake 0.2s ease-in-out 2;
+}
+
+/* Floating animation for tiles */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.animate-float {
+  animation: float 2s ease-in-out infinite;
+}
+
+/* Money rain falling animation */
+@keyframes fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(600px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-fall {
+  animation: fall 2s ease-in forwards;
+}
+
+/* GPU acceleration for animated elements */
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-opacity {
+  will-change: opacity;
+}
+
+/* Apply to common animated elements */
+.animate-pulse,
+.animate-ping,
+.animate-bounce,
+.animate-shake {
+  will-change: transform, opacity;
+}
+
+/* Optimize rocket and trail */
+.rocket-element {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Optimize tiles */
+.tile-element {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
+/* System Log scrollbar */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(34, 197, 94, 0.3);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 197, 94, 0.5);
+}
+
+/* Typewriter effect */
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blink-caret {
+  from, to { border-color: transparent; }
+  50% { border-color: var(--terminal-green); }
+}
+
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid var(--terminal-green);
+  animation: typewriter 2s steps(40, end), blink-caret 0.75s step-end infinite;
+}
+
+/* Bottom padding for SystemLog */
+.pb-systemlog {
+  padding-bottom: 120px;
+}
+
+/* Matrix-style text animation */
+@keyframes matrix-fade {
+  0% { opacity: 1; color: #4ade80; }
+  100% { opacity: 0.3; color: #166534; }
+}
+
+.matrix-text {
+  animation: matrix-fade 2s linear infinite;
+}
+
+/* Glow text effect */
+@keyframes text-glow {
+  0%, 100% {
+    text-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
+  }
+  50% {
+    text-shadow: 0 0 8px rgba(34, 197, 94, 0.8), 0 0 12px rgba(34, 197, 94, 0.4);
+  }
+}
+
+.animate-text-glow {
+  animation: text-glow 2s ease-in-out infinite;
+}
