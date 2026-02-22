@@ -1,18 +1,28 @@
-# Core API framework
+# Core dependencies
 fastapi==0.115.0
 uvicorn[standard]==0.32.0
 python-dotenv==1.0.1
 pydantic==2.10.2
 pydantic-settings==2.6.1
 
-# HTTP clients
+# Data fetching
 requests==2.31.0
 aiohttp==3.9.1
 websockets==12.0
+setuptools<70.0.0
+kenpompy==0.3.4
+sportsdataverse==0.0.39
+fuzzywuzzy==0.18.0
+Levenshtein>=0.26.1
 
-# Data processing (used by utils/)
+# Data processing
 pandas==2.2.3
 numpy==1.26.4
+xgboost<3.1
+openpyxl==3.0.9  # For Excel export in referee analyzer
+
+# Database
+sqlalchemy==2.0.23
 
 # Authentication
 python-jose[cryptography]==3.3.0
@@ -20,7 +30,10 @@ passlib==1.7.4
 bcrypt==4.0.1
 python-multipart==0.0.6
 
-# Timezone
+# Scheduling
+apscheduler==3.10.4
+
+# Timezone handling
 pytz==2024.1
 
 # Logging

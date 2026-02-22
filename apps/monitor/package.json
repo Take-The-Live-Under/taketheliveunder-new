@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "setup": "bash -c 'python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt'",
+    "setup": "bash -c 'python3.13 -m venv venv && source venv/bin/activate && pip install \"setuptools<70.0.0\" wheel && pip install -r requirements.txt'",
     "dev": "npm run setup && bash -c 'source venv/bin/activate && python monitor.py'"
   }
 }

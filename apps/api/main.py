@@ -163,7 +163,7 @@ def map_game_data(game: dict) -> dict:
         "spread_book": game.get("Spread Book") or game.get("spread_book", ""),
         "home_fouls": game.get("Home Fouls") or game.get("home_fouls"),
         "away_fouls": game.get("Away Fouls") or game.get("away_fouls"),
-        "referees": [ref.strip() for ref in (game.get("Referees") or game.get("referees", "")).split(";") if ref.strip()],
+        "referees": game.get("referees") if isinstance(game.get("referees"), list) else [ref.strip() for ref in str(game.get("Referees") or game.get("referees") or "").split(";") if ref.strip()],
         # Live shooting stats - Home
         "home_fg_made": game.get("Home FGM") or game.get("home_fg_made"),
         "home_fg_attempted": game.get("Home FGA") or game.get("home_fg_attempted"),
@@ -1286,7 +1286,7 @@ async def root():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        "api.main:app",
+        "main:app",
         host=config.API_HOST,
         port=config.API_PORT,
         reload=not config.IS_PRODUCTION
