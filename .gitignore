@@ -81,3 +81,6 @@ odds_snapshots_today/
 
 # Raw ideas
 docs/ideas/
+
+# Agent workflows
+.agent/
