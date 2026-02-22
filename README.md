@@ -1,6 +1,20 @@
-# NCAA Basketball Live Betting Monitor 🏀
+# Take The Live Under - Monorepo 🏀
 
-An intelligent, real-time NCAA basketball betting monitoring system with smart confidence scoring.
+An intelligent, real-time NCAA basketball betting monitoring system with smart confidence scoring, built as a Turborepo monorepo.
+
+## Project Structure
+
+This project has been migrated to a **Turborepo** monorepo setup to manage multiple applications gracefully. 
+
+```
+taketheliveunder/
+├── apps/
+│   ├── api/          # Python FastAPI Backend (Port: 8000)
+│   ├── monitor/      # Python Background Tracker/Monitor
+│   └── web/          # Next.js 14 Frontend / Dashboard (Port: 3000)
+├── turbo.json        # Turborepo configuration
+└── package.json      # Root package file for workspace management
+```
 
 ## Features
 
@@ -23,149 +37,71 @@ An intelligent, real-time NCAA basketball betting monitoring system with smart c
 - Easy config toggle between sources
 
 ### 📝 Comprehensive Logging
-- CSV logging of every 30-second poll
-- End-of-game result tracking
-- Performance analytics by confidence tier
-- Win rate, ROI, and unit profit tracking
-
-### 🎨 Modern Dashboard
-- Real-time game cards with confidence display
-- Color-coded by confidence level (red/yellow/green)
-- Sort and filter options
-- Mobile-responsive dark theme
+- CSV and Database logging of every 30-second poll
 - Historical accuracy tracking
-
-### 🔐 Admin Panel
-- User management (add/remove users)
-- Manual team stats refresh
-- Adjustable confidence formula weights
-- System status monitoring
-- CSV data exports
+- Trigger logging with Admin panel export capability
 
 ## Tech Stack
 
-- **Backend**: Python, FastAPI
-- **Frontend**: Next.js 14, TailwindCSS, TypeScript
+- **Backend (API + Monitor)**: Python 3.13, FastAPI
+- **Frontend (Web)**: Next.js 14, TailwindCSS, TypeScript, Supabase
+- **Monorepo Management**: Turborepo, npm workspaces
 - **Data Sources**: The Odds API (live games & odds), KenPom or ESPN (team stats)
-- **Storage**: CSV files (portable and simple)
-- **Deployment**: Railway (backend 24/7) + Vercel (frontend)
 
-## Quick Start
+## Quick Start (Local Development)
 
 ### Prerequisites
-
-1. **The Odds API Key** (required)
+1. **Node.js** (v18+)
+2. **Python 3.13** (required for `api` and `monitor` compatibilities)
+3. **The Odds API Key** (required)
    - Sign up at https://the-odds-api.com
-   - Free tier: 500 requests/month
-   - Get your API key from dashboard
-
-2. **KenPom Subscription** (optional but recommended)
-   - Subscribe at https://kenpom.com (~$20/year)
+4. **KenPom Subscription** (optional but recommended)
+   - Subscribe at https://kenpom.com
    - Or use free ESPN data source
+5. **Supabase Database** (required for new logging structure)
+   - Set up project at https://supabase.com
 
-### Installation
+### Installation & Running
 
-1. **Clone and setup backend**:
+Thanks to **Turborepo**, setting up and running all three applications is streamlined into root-level commands.
+
+1. **Clone the repository**:
 ```bash
-cd basketball-betting
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your API keys
+git clone git@github.com:Take-The-Live-Under/taketheliveunder-new.git
+cd taketheliveunder
 ```
 
-2. **Configure data source**:
+2. **Install node dependencies (this links the workspaces)**:
 ```bash
-# In .env file:
-USE_KENPOM=true  # or false for ESPN
-KENPOM_EMAIL=your-email@example.com  # if using KenPom
-KENPOM_PASSWORD=your-password
-ODDS_API_KEY=your-odds-api-key
-```
-
-3. **Install frontend**:
-```bash
-cd frontend
 npm install
-cp .env.local.example .env.local
-# Edit .env.local if needed
 ```
 
-### Running Locally
+3. **Configure Environment Variables**:
+   - For `apps/web`: Create `apps/web/.env.local` using `apps/web/.env.example` as a template and provide your Supabase details.
+   - For `apps/api`: Create `apps/api/.env.local` with your Odds API key, KenPom credentials, etc.
 
-1. **Start backend** (in one terminal):
+4. **Start the Monorepo Development Environment**:
 ```bash
-# From project root
-python api/main.py
-# API runs on http://localhost:8000
-```
-
-2. **Start monitor** (in another terminal):
-```bash
-# From project root
-python monitor.py
-```
-
-3. **Start frontend** (in third terminal):
-```bash
-cd frontend
 npm run dev
-# Dashboard runs on http://localhost:3000
+# or
+turbo run dev
 ```
+*This command will automatically:*
+- Set up the Python virtual environments (`venv`) for both the `api` and `monitor` apps.
+- Install the required Python packages (`requirements.txt`).
+- Spin up the Next.js frontend (`apps/web` on http://localhost:3000).
+- Spin up the FastAPI backend (`apps/api` on http://localhost:8000).
+- Start the live monitoring script (`apps/monitor`).
 
-4. **Login**:
-- Default credentials: `admin` / `changeme`
-- Change password immediately in admin panel
+## Building for Production
 
-## Deployment
+To build all applications in the monorepo:
 
-### Backend (Railway)
-
-1. Create new project on Railway
-2. Connect GitHub repository
-3. Set environment variables:
-   ```
-   USE_KENPOM=true
-   KENPOM_EMAIL=your-email
-   KENPOM_PASSWORD=your-password
-   ODDS_API_KEY=your-key
-   ENVIRONMENT=production
-   SECRET_KEY=generate-random-secret
-   ```
-4. Deploy automatically runs both API and monitor
-
-### Frontend (Vercel)
-
-1. Import project from GitHub
-2. Set environment variable:
-   ```
-   NEXT_PUBLIC_API_URL=https://your-app.railway.app
-   ```
-3. Deploy
-
-## Usage
-
-### Dashboard
-
-- **Triggered Games**: Shows only games with confidence > 40
-- **All Games**: Shows all live games
-- **Sort by Confidence**: Best bets first
-- **Game Cards**: Click for detailed breakdown
-
-### Admin Panel
-
-Access at `/admin` (admin users only):
-- **Users**: Add/remove dashboard users
-- **Team Stats**: Refresh statistics manually
-- **Weights**: Adjust confidence scoring formula
-- **Export**: Download CSV logs
+```bash
+npm run build
+# or
+turbo run build
+```
 
 ## Confidence Scoring Logic
 
@@ -192,95 +128,10 @@ Base score starts at 50 (trigger met), then:
 
 Final score capped at 0-100.
 
-## Data Files
+## Support & Usage
 
-All data stored in `/data/` directory:
-- `team_stats.csv`: Cached team statistics
-- `ncaa_live_log.csv`: Every 30-second poll logged
-- `ncaa_results.csv`: Final game results
-- `users.json`: User accounts
-
-## Customization
-
-### Adjust Confidence Weights
-
-Edit `config.py` or use admin panel:
-```python
-CONFIDENCE_WEIGHTS = {
-    "slow_pace_threshold": 67,
-    "slow_pace_bonus": 12,
-    # ... adjust as needed
-}
-```
-
-### Change Polling Interval
-
-In `config.py`:
-```python
-POLL_INTERVAL = 30  # seconds
-```
-
-### Modify Unit Sizes
-
-In `config.py`:
-```python
-UNIT_SIZES = {
-    "no_bet": (0, 40),
-    "low": (41, 60),      # 0.5 units
-    "medium": (61, 75),   # 1 unit
-    "high": (76, 85),     # 2 units
-    "max": (86, 100),     # 3 units
-}
-```
-
-## File Structure
-
-```
-basketball-betting/
-├── api/                    # FastAPI backend
-│   ├── main.py            # API endpoints
-│   └── auth.py            # Authentication
-├── utils/                 # Core utilities
-│   ├── team_stats.py      # Unified stats manager
-│   ├── team_stats_kenpom.py
-│   ├── team_stats_espn.py
-│   ├── confidence_scorer.py
-│   └── csv_logger.py
-├── frontend/              # Next.js dashboard
-│   ├── src/
-│   │   ├── app/          # Pages
-│   │   ├── components/   # React components
-│   │   └── lib/          # API client
-│   └── package.json
-├── monitor.py             # Main monitoring script
-├── config.py              # Configuration
-├── requirements.txt       # Python dependencies
-└── data/                  # CSV logs and cache
-```
-
-## Troubleshooting
-
-### Team stats not loading
-```bash
-# Manually refresh
-python -c "from utils.team_stats import get_stats_manager; get_stats_manager().fetch_all_stats(force_refresh=True)"
-```
-
-### KenPom login failing
-- Check credentials in `.env`
-- Verify subscription is active
-- Switch to ESPN: `USE_KENPOM=false`
-
-### No live games showing
-- Check The Odds API key
-- Verify API quota not exceeded (500/month on free tier)
-- Check if games are actually live
-- NCAA basketball season runs November-April
-
-## Support
-
-- Issues: Create GitHub issue
-- Questions: Check CLAUDE.md for development guide
+- **Dashboard**: Access via `http://localhost:3000` to see real-time triggers, confidence scores, and live pipelines.
+- **Admin**: Access via `http://localhost:3000/admin` to view historical trigger logs, export CSVs, and more.
 
 ## License
 
