@@ -1,5 +1,8 @@
 "use client";
 
+import { motion } from "framer-motion";
+import { fadeUp, fadeUpDelayed, scaleIn, viewport } from "@/lib/motion";
+
 export function LiveDashboardSection() {
   return (
     <section
@@ -7,16 +10,34 @@ export function LiveDashboardSection() {
       className="relative w-full py-24 text-white pointer-events-auto"
     >
       <div className="mx-auto max-w-7xl px-6 text-center">
-        <h2 className="mb-12 text-4xl font-bold md:text-5xl">
+        <motion.h2
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          className="mb-4 text-4xl font-bold md:text-5xl"
+        >
           Monitor games in real-time
-        </h2>
-        <p className="mb-12 text-lg text-neutral-400">
+        </motion.h2>
+        <motion.p
+          variants={fadeUpDelayed(0.1)}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          className="mb-12 text-lg text-neutral-400"
+        >
           See live PPM calculations, confidence scores, and Golden Zone triggers
           at a glance.
-        </p>
+        </motion.p>
 
         {/* Mock Dashboard UI */}
-        <div className="relative mx-auto w-full px-2 md:px-0">
+        <motion.div
+          variants={scaleIn}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          className="relative mx-auto w-full px-2 md:px-0"
+        >
           <div className="absolute -top-12 -left-10 text-neon-purple text-8xl font-marker -rotate-12 select-none z-0 drop-shadow-[0_0_10px_rgba(255,0,255,0.8)]">
             X
           </div>
@@ -100,8 +121,12 @@ export function LiveDashboardSection() {
                   Status: "Monitoring",
                 },
               ].map((row, i) => (
-                <div
+                <motion.div
                   key={i}
+                  variants={fadeUpDelayed(i * 0.07)}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={viewport}
                   className="grid grid-cols-5 md:grid-cols-10 gap-4 md:gap-16 py-4 text-sm border-b border-white/20 text-neutral-200 last:border-0 hover:bg-white/10 transition-colors items-center px-4"
                 >
                   <div className="col-span-2 font-medium text-white break-words">
@@ -124,7 +149,7 @@ export function LiveDashboardSection() {
                       </span>
                     )}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
             <div className="flex items-center justify-between border-t border-white/10 bg-white/5 px-6 py-3 text-xs text-neutral-500">
@@ -135,7 +160,7 @@ export function LiveDashboardSection() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

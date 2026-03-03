@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { cn } from "@/lib/utils";
 import { Calendar, Clock, Activity, BarChart3 } from "lucide-react";
+import { fadeUpDelayed, viewport } from "@/lib/motion";
 
 interface GridItemProps {
   area: string;
@@ -12,9 +13,25 @@ interface GridItemProps {
   description: React.ReactNode;
 }
 
-const GridItem = ({ area, icon, title, description }: GridItemProps) => {
+interface GridItemWithDelayProps extends GridItemProps {
+  delay?: number;
+}
+
+const GridItem = ({
+  area,
+  icon,
+  title,
+  description,
+  delay = 0,
+}: GridItemWithDelayProps) => {
   return (
-    <li className={cn("min-h-[14rem] list-none", area)}>
+    <motion.li
+      variants={fadeUpDelayed(delay)}
+      initial="hidden"
+      whileInView="visible"
+      viewport={viewport}
+      className={cn("min-h-[14rem] list-none", area)}
+    >
       <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-neutral-800 p-2 md:rounded-[1.5rem] md:p-3">
         <GlowingEffect
           spread={40}
@@ -40,7 +57,7 @@ const GridItem = ({ area, icon, title, description }: GridItemProps) => {
           </div>
         </div>
       </div>
-    </li>
+    </motion.li>
   );
 };
 
@@ -83,24 +100,28 @@ export function BenefitsSection() {
             icon={<Calendar className="h-5 w-5" />}
             title="Never miss a game"
             description="Covers every NCAA Division I basketball game — regular season, conference tourneys, and March Madness."
+            delay={0}
           />
           <GridItem
             area="md:[grid-area:1/7/2/13] xl:[grid-area:1/5/2/9]"
             icon={<Clock className="h-5 w-5" />}
             title="Lightning fast updates"
             description="While other tools give you stale numbers, our dashboard refreshes constantly so you see what's happening right now."
+            delay={0.1}
           />
           <GridItem
             area="md:[grid-area:2/1/3/7] xl:[grid-area:1/9/2/13]"
             icon={<Activity className="h-5 w-5" />}
             title="Golden Zone alerts"
             description="Our signature feature. When the stars align and the under looks strong, the Golden Zone lights up — bright and unmistakable."
+            delay={0.2}
           />
           <GridItem
             area="md:[grid-area:2/7/3/13] xl:[grid-area:2/1/3/13]"
             icon={<BarChart3 className="h-5 w-5" />}
             title="Simple confidence scores"
             description="No confusing charts or jargon. Just a clear score that tells you how confident the signal is — from warm to on fire."
+            delay={0.3}
           />
         </ul>
       </div>

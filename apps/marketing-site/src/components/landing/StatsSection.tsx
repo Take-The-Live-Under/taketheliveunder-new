@@ -1,17 +1,36 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { GlowingEffect } from "@/components/ui/glowing-effect";
 import { cn } from "@/lib/utils";
+import {
+  fadeUp,
+  fadeUpDelayed,
+  staggerContainer,
+  viewport,
+} from "@/lib/motion";
 
 interface FeatureCardProps {
   title: string;
   subtitle: string;
   description: string;
+  delay?: number;
 }
 
-const FeatureCard = ({ title, subtitle, description }: FeatureCardProps) => {
+const FeatureCard = ({
+  title,
+  subtitle,
+  description,
+  delay = 0,
+}: FeatureCardProps) => {
   return (
-    <div className="relative h-full rounded-[1.25rem] border-[0.75px] border-neutral-800 p-2 md:rounded-[1.5rem] md:p-3">
+    <motion.div
+      variants={fadeUpDelayed(delay)}
+      initial="hidden"
+      whileInView="visible"
+      viewport={viewport}
+      className="relative h-full rounded-[1.25rem] border-[0.75px] border-neutral-800 p-2 md:rounded-[1.5rem] md:p-3"
+    >
       <GlowingEffect
         spread={40}
         glow={true}
@@ -33,9 +52,27 @@ const FeatureCard = ({ title, subtitle, description }: FeatureCardProps) => {
           </p>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
+
+const stats = [
+  {
+    title: "5.0s",
+    subtitle: "Sync Frequency",
+    description: "Updates every 15 seconds.",
+  },
+  {
+    title: "99%",
+    subtitle: "Uptime",
+    description: "Always on during games.",
+  },
+  {
+    title: "15,000,000",
+    subtitle: "Live Data Points",
+    description: "Analyzed per game.",
+  },
+];
 
 export function StatsSection() {
   return (
@@ -44,25 +81,23 @@ export function StatsSection() {
       className="relative w-full border-y border-[#27272a] bg-black py-24 pointer-events-auto"
     >
       <div className="mx-auto max-w-6xl px-6">
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          className="text-center mb-12"
+        >
+          <p className="text-xs uppercase tracking-widest text-neon-blue/60 mb-2">
+            By the numbers
+          </p>
+          <h2 className="text-3xl font-bold text-white md:text-4xl">
+            Built for speed. Designed to win.
+          </h2>
+        </motion.div>
         <div className="grid gap-8 md:grid-cols-3">
-          {[
-            {
-              title: "5.0s",
-              subtitle: "Sync Frequency",
-              description: "Updates every 15 seconds.",
-            },
-            {
-              title: "99%",
-              subtitle: "Uptime",
-              description: "Always on during games.",
-            },
-            {
-              title: "15,000,000",
-              subtitle: "Live Data Points",
-              description: "Analyzed per game.",
-            },
-          ].map((feature, i) => (
-            <FeatureCard key={i} {...feature} />
+          {stats.map((feature, i) => (
+            <FeatureCard key={i} {...feature} delay={i * 0.1} />
           ))}
         </div>
       </div>
