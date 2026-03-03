@@ -7,12 +7,14 @@ import { BenefitsSection } from "@/components/landing/BenefitsSection";
 import { PricingSection } from "@/components/landing/PricingSection";
 import { FAQSection } from "@/components/landing/FAQSection";
 import { CTASection } from "@/components/landing/CTASection";
+import { LandingIntro } from "@/components/ui/LandingIntro";
 
 import { SimpleStepsSection } from "@/components/landing/SimpleStepsSection";
 
 export default function Home() {
   return (
     <div className="relative min-h-screen w-full bg-black selection:bg-green-500/30">
+      <LandingIntro />
       {/* Fixed Background */}
       <div className="fixed inset-0 z-0">
         <BackgroundCells />
