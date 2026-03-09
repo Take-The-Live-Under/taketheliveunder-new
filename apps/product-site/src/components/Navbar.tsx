@@ -42,12 +42,20 @@ export function Navbar({
             <div className="hidden sm:flex items-center gap-3 border-l border-neutral-800 pl-4">
               <Link
                 href="/brief"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.href = "/brief";
+                }}
                 className="text-xs font-medium text-neutral-500 hover:text-white transition-colors"
               >
                 Brief
               </Link>
               <Link
                 href="/research"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.href = "/research";
+                }}
                 className="text-xs font-medium text-neutral-500 hover:text-white transition-colors"
               >
                 Research
