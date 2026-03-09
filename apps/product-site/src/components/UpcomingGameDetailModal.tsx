@@ -342,6 +342,77 @@ export default function UpcomingGameDetailModal({
             </div>
           </div>
 
+          {/* BETTING INSIGHT — desktop left panel */}
+          {lineDiff !== null && vegasLine !== null && (
+            <div className="hidden lg:block mx-4 mb-3">
+              <div
+                className={`relative rounded-xl border p-3 ${
+                  lineDiffAbs && lineDiffAbs >= 5
+                    ? favorsUnder
+                      ? "border-[#00ffff]/50"
+                      : "border-[#ff6b00]/50"
+                    : lineDiffAbs && lineDiffAbs >= 3
+                      ? favorsUnder
+                        ? "border-[#00ffff]/30"
+                        : "border-[#ff6b00]/30"
+                      : "border-neutral-700/50"
+                }`}
+                style={{
+                  background:
+                    lineDiffAbs && lineDiffAbs >= 3
+                      ? favorsUnder
+                        ? "rgba(0,255,255,0.04)"
+                        : "rgba(255,107,0,0.04)"
+                      : "rgba(255,255,255,0.02)",
+                }}
+              >
+                {/* Left accent bar */}
+                <div
+                  className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-full ${
+                    lineDiffAbs && lineDiffAbs >= 3
+                      ? favorsUnder
+                        ? "bg-[#00ffff]"
+                        : "bg-[#ff6b00]"
+                      : "bg-neutral-600"
+                  }`}
+                />
+                <p className="text-[10px] font-bold font-mono tracking-widest text-neutral-600 mb-1.5 pl-3">
+                  // BETTING_INSIGHT
+                </p>
+                <p
+                  className={`text-xs leading-relaxed pl-3 italic ${
+                    lineDiffAbs && lineDiffAbs >= 3
+                      ? favorsUnder
+                        ? "text-[#00ffff]/80"
+                        : "text-[#ff6b00]/80"
+                      : "text-neutral-400"
+                  }`}
+                >
+                  {lineDiffAbs && lineDiffAbs >= 5 ? (
+                    <>
+                      Strong {favorsUnder ? "UNDER" : "OVER"} edge — KenPom{" "}
+                      {lineDiffAbs.toFixed(1)} pts{" "}
+                      {favorsUnder ? "below" : "above"} Vegas{" "}
+                      {vegasLine.toFixed(1)}.
+                    </>
+                  ) : lineDiffAbs && lineDiffAbs >= 3 ? (
+                    <>
+                      Moderate {favorsUnder ? "UNDER" : "OVER"} edge —{" "}
+                      {lineDiffAbs.toFixed(1)} pts{" "}
+                      {favorsUnder ? "below" : "above"} the line. Monitor
+                      movement.
+                    </>
+                  ) : (
+                    <>
+                      No clear edge. KenPom within{" "}
+                      {lineDiffAbs?.toFixed(1) || 0} pts of Vegas line.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="flex-1" />
         </div>
 
@@ -459,7 +530,81 @@ export default function UpcomingGameDetailModal({
             </div>
           </SectionCard>
 
-          {/* KenPom Ratings */}
+          {/* BETTING INSIGHT — mobile only (desktop has it in left panel) */}
+          {lineDiff !== null && vegasLine !== null && (
+            <div className="lg:hidden">
+              <div
+                className={`relative rounded-xl border p-4 ${
+                  lineDiffAbs && lineDiffAbs >= 5
+                    ? favorsUnder
+                      ? "border-[#00ffff]/50"
+                      : "border-[#ff6b00]/50"
+                    : lineDiffAbs && lineDiffAbs >= 3
+                      ? favorsUnder
+                        ? "border-[#00ffff]/30"
+                        : "border-[#ff6b00]/30"
+                      : "border-neutral-700/50"
+                }`}
+                style={{
+                  background:
+                    lineDiffAbs && lineDiffAbs >= 3
+                      ? favorsUnder
+                        ? "rgba(0,255,255,0.04)"
+                        : "rgba(255,107,0,0.04)"
+                      : "rgba(255,255,255,0.02)",
+                }}
+              >
+                <div
+                  className={`absolute left-0 top-4 bottom-4 w-[3px] rounded-full ${
+                    lineDiffAbs && lineDiffAbs >= 3
+                      ? favorsUnder
+                        ? "bg-[#00ffff]"
+                        : "bg-[#ff6b00]"
+                      : "bg-neutral-600"
+                  }`}
+                />
+                <p className="text-[10px] font-bold font-mono tracking-widest text-neutral-600 mb-1.5 pl-4">
+                  // BETTING_INSIGHT
+                </p>
+                <p
+                  className={`text-xs leading-relaxed pl-4 italic ${
+                    lineDiffAbs && lineDiffAbs >= 3
+                      ? favorsUnder
+                        ? "text-[#00ffff]/80"
+                        : "text-[#ff6b00]/80"
+                      : "text-neutral-400"
+                  }`}
+                >
+                  {lineDiffAbs && lineDiffAbs >= 5 ? (
+                    <>
+                      Strong {favorsUnder ? "UNDER" : "OVER"} edge — KenPom
+                      projects {kenpomTotal.toFixed(1)} total,{" "}
+                      {lineDiffAbs.toFixed(1)} pts{" "}
+                      {favorsUnder ? "below" : "above"} the Vegas line of{" "}
+                      {vegasLine.toFixed(1)}. Consider the{" "}
+                      {favorsUnder ? "UNDER" : "OVER"} if line movement
+                      confirms.
+                    </>
+                  ) : lineDiffAbs && lineDiffAbs >= 3 ? (
+                    <>
+                      Moderate {favorsUnder ? "UNDER" : "OVER"} edge — KenPom
+                      projects {kenpomTotal.toFixed(1)},{" "}
+                      {lineDiffAbs.toFixed(1)} pts{" "}
+                      {favorsUnder ? "below" : "above"} the Vegas line. Monitor
+                      for line movement.
+                    </>
+                  ) : (
+                    <>
+                      No significant edge. KenPom and Vegas are within{" "}
+                      {lineDiffAbs?.toFixed(1) || 0} pts. Look for other factors
+                      before betting.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
+
           {(homeStats || awayStats || loading) && (
             <SectionCard title="// KENPOM_RATINGS">
               {loading && (
@@ -760,50 +905,6 @@ export default function UpcomingGameDetailModal({
               </div>
             </div>
           </SectionCard>
-
-          {/* Betting Insight */}
-          {lineDiff !== null && vegasLine !== null && (
-            <SectionCard title="// BETTING_INSIGHT">
-              <p className="text-xs text-neutral-500 leading-relaxed">
-                {lineDiffAbs && lineDiffAbs >= 5 ? (
-                  <>
-                    <span
-                      className={
-                        favorsUnder ? "text-[#00ffff]" : "text-[#ff6b00]"
-                      }
-                    >
-                      Strong edge detected.
-                    </span>{" "}
-                    KenPom projects {kenpomTotal.toFixed(1)} total,{" "}
-                    {lineDiffAbs.toFixed(1)} points{" "}
-                    {favorsUnder ? "below" : "above"} the Vegas line of{" "}
-                    {vegasLine.toFixed(1)}. Consider the{" "}
-                    {favorsUnder ? "UNDER" : "OVER"} if line movement confirms.
-                  </>
-                ) : lineDiffAbs && lineDiffAbs >= 3 ? (
-                  <>
-                    <span
-                      className={
-                        favorsUnder ? "text-[#00ffff]" : "text-[#ff6b00]"
-                      }
-                    >
-                      Moderate edge detected.
-                    </span>{" "}
-                    KenPom projects {kenpomTotal.toFixed(1)} total,{" "}
-                    {lineDiffAbs.toFixed(1)} points{" "}
-                    {favorsUnder ? "below" : "above"} the Vegas line. Monitor
-                    for line movement.
-                  </>
-                ) : (
-                  <>
-                    No significant edge. KenPom and Vegas are within{" "}
-                    {lineDiffAbs?.toFixed(1) || 0} points. Look for other
-                    factors before betting.
-                  </>
-                )}
-              </p>
-            </SectionCard>
-          )}
         </div>
       </div>
     </div>
