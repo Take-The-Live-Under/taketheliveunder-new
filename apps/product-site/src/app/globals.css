@@ -3,42 +3,60 @@
 @tailwind utilities;
 
 :root {
-  /* Quant Terminal Theme */
+  /* Base */
   --background: #0a0a0a;
-  --foreground: #22c55e;
+  --foreground: #ededed;
+
+  /* Neon palette (matches marketing site) */
+  --neon-blue: #00ffff;
+  --neon-pink: #ff00ff;
+  --neon-lime: #ccff00;
+  --neon-orange: #ff6b00;
+  --neon-purple: #b026ff;
+
+  /* Terminal data colors (kept for data display) */
   --terminal-black: #0a0a0a;
   --terminal-green: #22c55e;
   --terminal-green-dim: #166534;
   --terminal-green-bright: #4ade80;
   --terminal-yellow: #facc15;
   --terminal-red: #ef4444;
-  --terminal-border: #14532d;
-
-  /* Legacy - kept for compatibility */
-  --navy: #0a0a0a;
-  --navy-light: #111111;
-  --burnt-orange: #22c55e;
-  --burnt-orange-light: #4ade80;
+  --terminal-border: #262626;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'GeistMono', 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', monospace;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-/* Quant Terminal Utilities */
+/* Glassmorphism utilities */
+.glass-panel {
+  background: rgba(23, 23, 23, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-card {
+  background: rgba(23, 23, 23, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Terminal Utilities (kept for data display) */
 .terminal-text {
-  color: var(--terminal-green);
-  font-family: 'GeistMono', monospace;
+  color: var(--neon-blue);
+  font-family: var(--font-geist-mono), monospace;
 }
 
 .terminal-text-dim {
-  color: var(--terminal-green-dim);
+  color: rgba(0, 255, 255, 0.4);
 }
 
 .terminal-text-bright {
-  color: var(--terminal-green-bright);
+  color: #ffffff;
 }
 
 .terminal-border {
@@ -49,9 +67,9 @@ body {
   background-color: var(--terminal-black);
 }
 
-/* Scanline effect for extra terminal feel */
+/* Scanline effect */
 .scanlines::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(
@@ -67,22 +85,45 @@ body {
 
 /* Terminal cursor blink */
 @keyframes cursor-blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
 }
 
 .terminal-cursor::after {
-  content: '_';
+  content: "_";
   animation: cursor-blink 1s infinite;
 }
 
-/* Green glow effect */
+/* Neon glow effects */
+.neon-glow-blue {
+  text-shadow:
+    0 0 5px rgba(0, 255, 255, 0.7),
+    0 0 10px rgba(0, 255, 255, 0.4);
+}
+
+.neon-glow-orange {
+  text-shadow:
+    0 0 5px rgba(255, 107, 0, 0.7),
+    0 0 10px rgba(255, 107, 0, 0.4);
+}
+
+/* Legacy terminal glow (kept for components not yet migrated) */
 .terminal-glow {
-  text-shadow: 0 0 5px rgba(34, 197, 94, 0.5), 0 0 10px rgba(34, 197, 94, 0.3);
+  text-shadow:
+    0 0 5px rgba(0, 255, 255, 0.4),
+    0 0 10px rgba(0, 255, 255, 0.2);
 }
 
 .terminal-glow-box {
-  box-shadow: 0 0 10px rgba(34, 197, 94, 0.2), inset 0 0 20px rgba(34, 197, 94, 0.05);
+  box-shadow:
+    0 0 10px rgba(0, 255, 255, 0.1),
+    inset 0 0 20px rgba(0, 255, 255, 0.03);
 }
 
 @layer utilities {
@@ -115,7 +156,8 @@ body {
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.4);
   }
   50% {
@@ -162,11 +204,21 @@ body {
   animation: fade-in 0.3s ease-out forwards;
 }
 
-.cards-initial-load .card-enter:nth-child(1) { animation-delay: 0ms; }
-.cards-initial-load .card-enter:nth-child(2) { animation-delay: 50ms; }
-.cards-initial-load .card-enter:nth-child(3) { animation-delay: 100ms; }
-.cards-initial-load .card-enter:nth-child(4) { animation-delay: 150ms; }
-.cards-initial-load .card-enter:nth-child(5) { animation-delay: 200ms; }
+.cards-initial-load .card-enter:nth-child(1) {
+  animation-delay: 0ms;
+}
+.cards-initial-load .card-enter:nth-child(2) {
+  animation-delay: 50ms;
+}
+.cards-initial-load .card-enter:nth-child(3) {
+  animation-delay: 100ms;
+}
+.cards-initial-load .card-enter:nth-child(4) {
+  animation-delay: 150ms;
+}
+.cards-initial-load .card-enter:nth-child(5) {
+  animation-delay: 200ms;
+}
 
 /* CSS containment to prevent cards from affecting siblings */
 .game-card-stable {
@@ -188,15 +240,26 @@ body {
 
 /* Score Predictor Game Animations */
 @keyframes spin-slot {
-  0% { transform: translateY(0); }
-  25% { transform: translateY(-25%); }
-  50% { transform: translateY(-50%); }
-  75% { transform: translateY(-75%); }
-  100% { transform: translateY(-100%); }
+  0% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-25%);
+  }
+  50% {
+    transform: translateY(-50%);
+  }
+  75% {
+    transform: translateY(-75%);
+  }
+  100% {
+    transform: translateY(-100%);
+  }
 }
 
 @keyframes rocket-flame {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.6;
     transform: scaleY(1);
   }
@@ -207,15 +270,18 @@ body {
 }
 
 @keyframes glow-pulse {
-  0%, 100% {
-    box-shadow: 0 0 5px rgba(251, 191, 36, 0.3),
-                0 0 10px rgba(251, 191, 36, 0.2),
-                0 0 15px rgba(251, 191, 36, 0.1);
+  0%,
+  100% {
+    box-shadow:
+      0 0 5px rgba(251, 191, 36, 0.3),
+      0 0 10px rgba(251, 191, 36, 0.2),
+      0 0 15px rgba(251, 191, 36, 0.1);
   }
   50% {
-    box-shadow: 0 0 10px rgba(251, 191, 36, 0.5),
-                0 0 20px rgba(251, 191, 36, 0.3),
-                0 0 30px rgba(251, 191, 36, 0.2);
+    box-shadow:
+      0 0 10px rgba(251, 191, 36, 0.5),
+      0 0 20px rgba(251, 191, 36, 0.3),
+      0 0 30px rgba(251, 191, 36, 0.2);
   }
 }
 
@@ -294,7 +360,11 @@ body {
     opacity: 1;
   }
   100% {
-    transform: translate(calc(-50% + var(--shard-x)), calc(-50% + var(--shard-y))) rotate(180deg) scale(0);
+    transform: translate(
+        calc(-50% + var(--shard-x)),
+        calc(-50% + var(--shard-y))
+      )
+      rotate(180deg) scale(0);
     opacity: 0;
   }
 }
@@ -310,11 +380,19 @@ body {
     opacity: 1;
   }
   50% {
-    transform: translate(calc(-50% + var(--money-x) * 0.5), calc(-50% + var(--money-y) * 0.5)) scale(1.5) rotate(180deg);
+    transform: translate(
+        calc(-50% + var(--money-x) * 0.5),
+        calc(-50% + var(--money-y) * 0.5)
+      )
+      scale(1.5) rotate(180deg);
     opacity: 1;
   }
   100% {
-    transform: translate(calc(-50% + var(--money-x)), calc(-50% + var(--money-y))) scale(0.5) rotate(360deg);
+    transform: translate(
+        calc(-50% + var(--money-x)),
+        calc(-50% + var(--money-y))
+      )
+      scale(0.5) rotate(360deg);
     opacity: 0;
   }
 }
@@ -359,9 +437,16 @@ body {
 
 /* Shake animation */
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px) rotate(-1deg); }
-  75% { transform: translateX(4px) rotate(1deg); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px) rotate(-1deg);
+  }
+  75% {
+    transform: translateX(4px) rotate(1deg);
+  }
 }
 
 .animate-shake {
@@ -370,7 +455,8 @@ body {
 
 /* Floating animation for tiles */
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -438,30 +524,41 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(34, 197, 94, 0.3);
+  background: rgba(0, 255, 255, 0.25);
   border-radius: 2px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 197, 94, 0.5);
+  background: rgba(0, 255, 255, 0.45);
 }
 
 /* Typewriter effect */
 @keyframes typewriter {
-  from { width: 0; }
-  to { width: 100%; }
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
 }
 
 @keyframes blink-caret {
-  from, to { border-color: transparent; }
-  50% { border-color: var(--terminal-green); }
+  from,
+  to {
+    border-color: transparent;
+  }
+  50% {
+    border-color: var(--terminal-green);
+  }
 }
 
 .typewriter {
   overflow: hidden;
   white-space: nowrap;
   border-right: 2px solid var(--terminal-green);
-  animation: typewriter 2s steps(40, end), blink-caret 0.75s step-end infinite;
+  animation:
+    typewriter 2s steps(40, end),
+    blink-caret 0.75s step-end infinite;
 }
 
 /* Bottom padding for SystemLog */
@@ -471,8 +568,14 @@ body {
 
 /* Matrix-style text animation */
 @keyframes matrix-fade {
-  0% { opacity: 1; color: #4ade80; }
-  100% { opacity: 0.3; color: #166534; }
+  0% {
+    opacity: 1;
+    color: #4ade80;
+  }
+  100% {
+    opacity: 0.3;
+    color: #166534;
+  }
 }
 
 .matrix-text {
@@ -481,11 +584,14 @@ body {
 
 /* Glow text effect */
 @keyframes text-glow {
-  0%, 100% {
+  0%,
+  100% {
     text-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
   }
   50% {
-    text-shadow: 0 0 8px rgba(34, 197, 94, 0.8), 0 0 12px rgba(34, 197, 94, 0.4);
+    text-shadow:
+      0 0 8px rgba(34, 197, 94, 0.8),
+      0 0 12px rgba(34, 197, 94, 0.4);
   }
 }
 

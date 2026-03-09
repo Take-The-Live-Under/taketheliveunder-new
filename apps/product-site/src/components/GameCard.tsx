@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { Game } from '@/types/game';
-import TriggerBuilder from './TriggerBuilder';
+import { Game } from "@/types/game";
+import TriggerBuilder from "./TriggerBuilder";
 
 interface GameCardProps {
   game: Game;
@@ -9,36 +9,45 @@ interface GameCardProps {
 }
 
 function formatPPM(ppm: number | null): string {
-  if (ppm === null) return '—';
+  if (ppm === null) return "—";
   return ppm.toFixed(2);
 }
 
 function getPeriodDisplay(game: Game): string {
   if (game.isOvertime) {
     const otNumber = game.period - 2;
-    return otNumber > 1 ? `OT${otNumber}` : 'OT';
+    return otNumber > 1 ? `OT${otNumber}` : "OT";
   }
-  if (game.period === 1) return 'H1';
-  if (game.period === 2) return 'H2';
+  if (game.period === 1) return "H1";
+  if (game.period === 2) return "H2";
   return `P${game.period}`;
 }
 
 // Edge color coding based on PPM difference
-function getEdgeColor(edge: number | null): { bg: string; text: string; label: string } {
-  if (edge === null) return { bg: 'bg-green-900/30', text: 'text-green-700', label: '' };
+function getEdgeColor(edge: number | null): {
+  bg: string;
+  text: string;
+  label: string;
+} {
+  if (edge === null)
+    return { bg: "bg-neutral-900/30", text: "text-neutral-600", label: "" };
 
   const absEdge = Math.abs(edge);
 
   if (absEdge >= 1.5) {
-    return { bg: 'bg-yellow-900/40', text: 'text-yellow-400', label: 'STRONG' };
+    return { bg: "bg-yellow-950/40", text: "text-yellow-400", label: "STRONG" };
   }
   if (absEdge >= 1.0) {
-    return { bg: 'bg-green-900/40', text: 'text-green-400', label: 'GOOD' };
+    return { bg: "bg-[#00ffff]/5", text: "text-[#00ffff]", label: "GOOD" };
   }
   if (absEdge >= 0.5) {
-    return { bg: 'bg-green-900/30', text: 'text-green-500', label: 'MODERATE' };
+    return {
+      bg: "bg-neutral-900/30",
+      text: "text-[#00ffff]/70",
+      label: "MODERATE",
+    };
   }
-  return { bg: 'bg-green-900/20', text: 'text-green-700', label: '' };
+  return { bg: "bg-neutral-900/20", text: "text-neutral-600", label: "" };
 }
 
 // Calculate trigger strength (0-100) based on how far above 4.5 the required PPM is
@@ -49,10 +58,10 @@ function getUnderTriggerStrength(requiredPPM: number | null): number {
 }
 
 export default function GameCard({ game, onClick }: GameCardProps) {
-  const isLive = game.status === 'in';
-  const isUnderTriggered = game.triggerType === 'under';
-  const isTripleDipper = game.triggerType === 'tripleDipper';
-  const isOverTriggered = game.triggerType === 'over';
+  const isLive = game.status === "in";
+  const isUnderTriggered = game.triggerType === "under";
+  const isTripleDipper = game.triggerType === "tripleDipper";
+  const isOverTriggered = game.triggerType === "over";
   const hasAnyTrigger = game.triggerType !== null;
   const triggerStrength = getUnderTriggerStrength(game.requiredPPM);
 
@@ -67,7 +76,7 @@ export default function GameCard({ game, onClick }: GameCardProps) {
   // Projected final = current total + (current PPM * minutes remaining)
   const projectedFinal =
     game.currentPPM !== null && game.minutesRemainingReg > 0
-      ? game.liveTotal + (game.currentPPM * game.minutesRemainingReg)
+      ? game.liveTotal + game.currentPPM * game.minutesRemainingReg
       : null;
 
   // Calculate if under-friendly (current PPM < required PPM means pace is slow)
@@ -79,15 +88,15 @@ export default function GameCard({ game, onClick }: GameCardProps) {
   // Determine card styling based on trigger type
   const getCardStyle = () => {
     if (isTripleDipper) {
-      return 'border-yellow-500/50 bg-black/60 terminal-glow-box';
+      return "border-yellow-500/40 bg-neutral-900/50 backdrop-blur-sm shadow-[0_0_20px_rgba(234,179,8,0.12)]";
     }
     if (isOverTriggered) {
-      return 'border-orange-500/50 bg-black/60 terminal-glow-box';
+      return "border-[#ff6b00]/40 bg-neutral-900/50 backdrop-blur-sm shadow-[0_0_20px_rgba(255,107,0,0.12)]";
     }
     if (isUnderTriggered) {
-      return 'border-green-500/50 bg-black/60 terminal-glow-box';
+      return "border-[#00ffff]/40 bg-neutral-900/50 backdrop-blur-sm shadow-[0_0_20px_rgba(0,255,255,0.12)]";
     }
-    return 'border-green-900 bg-black/40 hover:border-green-700';
+    return "border-neutral-800 bg-neutral-900/40 hover:border-neutral-700 hover:bg-neutral-900/60";
   };
 
   // Determine if trigger badge should be shown
@@ -96,50 +105,77 @@ export default function GameCard({ game, onClick }: GameCardProps) {
   // Get trigger badge color and text
   const getTriggerStyle = () => {
     if (isTripleDipper) {
-      return { color: 'text-yellow-400', ping: 'bg-yellow-400', dot: 'bg-yellow-500', label: 'TRIPLE_DIPPER 🏆' };
+      return {
+        color: "text-yellow-400",
+        ping: "bg-yellow-400",
+        dot: "bg-yellow-500",
+        label: "TRIPLE DIPPER 🏆",
+      };
     }
     if (isOverTriggered) {
-      return { color: 'text-orange-400', ping: 'bg-orange-400', dot: 'bg-orange-500', label: 'OVER_SIGNAL' };
+      return {
+        color: "text-[#ff6b00]",
+        ping: "bg-[#ff6b00]",
+        dot: "bg-[#ff6b00]",
+        label: "OVER SIGNAL",
+      };
     }
-    return { color: 'text-green-400', ping: 'bg-green-400', dot: 'bg-green-500', label: 'GOLDEN_ZONE' };
+    return {
+      color: "text-[#00ffff]",
+      ping: "bg-[#00ffff]",
+      dot: "bg-[#00ffff]",
+      label: "GOLDEN ZONE",
+    };
   };
   const triggerStyle = getTriggerStyle();
 
   return (
     <div
       onClick={onClick}
-      className={`border p-4 transition-all duration-200 card-enter font-mono game-card-stable ${getCardStyle()} ${onClick ? 'cursor-pointer active:scale-[0.99]' : ''}`}
+      className={`border rounded-xl p-4 transition-all duration-200 card-enter game-card-stable backdrop-blur-sm ${getCardStyle()} ${onClick ? "cursor-pointer active:scale-[0.99]" : ""}`}
     >
       {/* Trigger Badge - uses opacity for smooth transitions instead of unmounting */}
       <div
-        className={`mb-3 transition-all duration-300 ${showTriggerBadge ? 'opacity-100 max-h-20' : 'opacity-0 max-h-0 overflow-hidden mb-0'}`}
+        className={`mb-3 transition-all duration-300 ${showTriggerBadge ? "opacity-100 max-h-20" : "opacity-0 max-h-0 overflow-hidden mb-0"}`}
         aria-hidden={!showTriggerBadge}
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2.5 w-2.5">
-              <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${triggerStyle.ping} opacity-75`}></span>
-              <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${triggerStyle.dot}`}></span>
+              <span
+                className={`absolute inline-flex h-full w-full animate-ping rounded-full ${triggerStyle.ping} opacity-75`}
+              ></span>
+              <span
+                className={`relative inline-flex h-2.5 w-2.5 rounded-full ${triggerStyle.dot}`}
+              ></span>
             </span>
-            <span className={`text-xs font-bold uppercase tracking-wide ${triggerStyle.color}`}>
+            <span
+              className={`text-xs font-bold uppercase tracking-wide font-mono ${triggerStyle.color}`}
+            >
               {triggerStyle.label}
             </span>
           </div>
           {edge !== null && edgeStyle.label && (
-            <span className={`text-[10px] font-bold px-2 py-0.5 border ${
-              isTripleDipper ? 'border-yellow-700 text-yellow-400' :
-              isOverTriggered ? 'border-orange-700 text-orange-400' :
-              'border-green-700 text-green-400'
-            }`}>
+            <span
+              className={`text-[10px] font-bold px-2 py-0.5 rounded border font-mono ${
+                isTripleDipper
+                  ? "border-yellow-700/50 text-yellow-400"
+                  : isOverTriggered
+                    ? "border-[#ff6b00]/50 text-[#ff6b00]"
+                    : "border-[#00ffff]/50 text-[#00ffff]"
+              }`}
+            >
               {edgeStyle.label}
             </span>
           )}
         </div>
         {(isUnderTriggered || isTripleDipper) && (
-          <div className="mt-2 h-1 w-full bg-green-900/50 overflow-hidden">
+          <div className="mt-2 h-0.5 w-full bg-neutral-800 overflow-hidden rounded-full">
             <div
-              className={`h-full transition-all duration-500 ${
-                isTripleDipper ? 'bg-gradient-to-r from-yellow-500 to-amber-400' : 'bg-gradient-to-r from-green-500 to-green-400'
+              className={`h-full transition-all duration-500 rounded-full ${
+                isTripleDipper
+                  ? "bg-gradient-to-r from-yellow-500 to-amber-400"
+                  : "bg-gradient-to-r from-[#00ffff] to-[#00ffff]/60"
               }`}
               style={{ width: `${triggerStrength}%` }}
             />
@@ -151,93 +187,130 @@ export default function GameCard({ game, onClick }: GameCardProps) {
       <div className="mb-3">
         <div className="flex items-center justify-between gap-3 py-1.5">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="text-[10px] text-green-700 font-medium w-8">AWAY</span>
-            <span className="text-sm font-semibold text-green-400 truncate">{game.awayTeam}</span>
+            <span className="text-[10px] text-neutral-600 font-medium font-mono w-8">
+              AWAY
+            </span>
+            <span className="text-sm font-semibold text-white truncate">
+              {game.awayTeam}
+            </span>
             {/* Away team direction badge */}
             {game.awayTeamBadge && (
-              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold border ${
-                game.awayTeamBadge.color === 'red' ? 'border-red-700 text-red-400 bg-red-900/30' :
-                game.awayTeamBadge.color === 'orange' ? 'border-orange-700 text-orange-400 bg-orange-900/30' :
-                game.awayTeamBadge.color === 'blue' ? 'border-blue-700 text-blue-400 bg-blue-900/30' :
-                'border-green-700 text-green-400 bg-green-900/30'
-              }`}>
+              <span
+                className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded border font-mono ${
+                  game.awayTeamBadge.color === "red"
+                    ? "border-red-700/50 text-red-400"
+                    : game.awayTeamBadge.color === "orange"
+                      ? "border-[#ff6b00]/50 text-[#ff6b00]"
+                      : game.awayTeamBadge.color === "blue"
+                        ? "border-[#00ffff]/50 text-[#00ffff]"
+                        : "border-neutral-700 text-neutral-400"
+                }`}
+              >
                 {game.awayTeamBadge.text}
               </span>
             )}
             {/* Away team bonus indicator */}
-            {isLive && game.awayBonusStatus && (game.awayBonusStatus.inBonus || game.awayBonusStatus.inDoubleBonus) && (
-              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold border ${
-                game.awayBonusStatus.inDoubleBonus
-                  ? 'border-red-700 text-red-400'
-                  : 'border-yellow-700 text-yellow-400'
-              }`}>
-                {game.awayBonusStatus.inDoubleBonus ? '2X' : 'BNS'}
-              </span>
-            )}
+            {isLive &&
+              game.awayBonusStatus &&
+              (game.awayBonusStatus.inBonus ||
+                game.awayBonusStatus.inDoubleBonus) && (
+                <span
+                  className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded border font-mono ${
+                    game.awayBonusStatus.inDoubleBonus
+                      ? "border-red-700/50 text-red-400"
+                      : "border-yellow-700/50 text-yellow-400"
+                  }`}
+                >
+                  {game.awayBonusStatus.inDoubleBonus ? "2X" : "BNS"}
+                </span>
+              )}
           </div>
-          <span className="text-xl font-bold text-green-400 tabular-nums">{game.awayScore}</span>
+          <span className="text-xl font-bold text-white tabular-nums font-mono">
+            {game.awayScore}
+          </span>
         </div>
-        <div className="flex items-center justify-between gap-3 py-1.5 border-t border-green-900/30">
+        <div className="flex items-center justify-between gap-3 py-1.5 border-t border-neutral-800/50">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="text-[10px] text-green-700 font-medium w-8">HOME</span>
-            <span className="text-sm font-semibold text-green-400 truncate">{game.homeTeam}</span>
+            <span className="text-[10px] text-neutral-600 font-medium font-mono w-8">
+              HOME
+            </span>
+            <span className="text-sm font-semibold text-white truncate">
+              {game.homeTeam}
+            </span>
             {/* Home team direction badge */}
             {game.homeTeamBadge && (
-              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold border ${
-                game.homeTeamBadge.color === 'red' ? 'border-red-700 text-red-400 bg-red-900/30' :
-                game.homeTeamBadge.color === 'orange' ? 'border-orange-700 text-orange-400 bg-orange-900/30' :
-                game.homeTeamBadge.color === 'blue' ? 'border-blue-700 text-blue-400 bg-blue-900/30' :
-                'border-green-700 text-green-400 bg-green-900/30'
-              }`}>
+              <span
+                className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded border font-mono ${
+                  game.homeTeamBadge.color === "red"
+                    ? "border-red-700/50 text-red-400"
+                    : game.homeTeamBadge.color === "orange"
+                      ? "border-[#ff6b00]/50 text-[#ff6b00]"
+                      : game.homeTeamBadge.color === "blue"
+                        ? "border-[#00ffff]/50 text-[#00ffff]"
+                        : "border-neutral-700 text-neutral-400"
+                }`}
+              >
                 {game.homeTeamBadge.text}
               </span>
             )}
             {/* Home team bonus indicator */}
-            {isLive && game.homeBonusStatus && (game.homeBonusStatus.inBonus || game.homeBonusStatus.inDoubleBonus) && (
-              <span className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold border ${
-                game.homeBonusStatus.inDoubleBonus
-                  ? 'border-red-700 text-red-400'
-                  : 'border-yellow-700 text-yellow-400'
-              }`}>
-                {game.homeBonusStatus.inDoubleBonus ? '2X' : 'BNS'}
-              </span>
-            )}
+            {isLive &&
+              game.homeBonusStatus &&
+              (game.homeBonusStatus.inBonus ||
+                game.homeBonusStatus.inDoubleBonus) && (
+                <span
+                  className={`ml-1 px-1.5 py-0.5 text-[10px] font-bold rounded border font-mono ${
+                    game.homeBonusStatus.inDoubleBonus
+                      ? "border-red-700/50 text-red-400"
+                      : "border-yellow-700/50 text-yellow-400"
+                  }`}
+                >
+                  {game.homeBonusStatus.inDoubleBonus ? "2X" : "BNS"}
+                </span>
+              )}
           </div>
-          <span className="text-xl font-bold text-green-400 tabular-nums">{game.homeScore}</span>
+          <span className="text-xl font-bold text-white tabular-nums font-mono">
+            {game.homeScore}
+          </span>
         </div>
       </div>
 
       {/* Game Status Bar */}
-      <div className="mb-3 flex items-center gap-3 bg-green-900/20 border border-green-900/50 px-3 py-2">
+      <div className="mb-3 flex items-center gap-3 rounded-lg bg-neutral-900/50 border border-neutral-800/50 px-3 py-2">
         {isLive ? (
           <>
             <span className="relative flex h-2 w-2 flex-shrink-0">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00ffff] opacity-75"></span>
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#00ffff]"></span>
             </span>
-            <span className="text-xs font-semibold text-green-400">
+            <span className="text-xs font-semibold text-[#00ffff] font-mono">
               {game.clock} | {getPeriodDisplay(game)}
             </span>
-            <span className="text-[10px] text-green-700 ml-auto">
+            <span className="text-[10px] text-neutral-600 ml-auto font-mono">
               {game.minutesRemainingReg.toFixed(1)}m LEFT
             </span>
           </>
-        ) : game.status === 'post' ? (
-          <span className="text-xs font-medium text-green-600">FINAL</span>
+        ) : game.status === "post" ? (
+          <span className="text-xs font-medium text-neutral-500 font-mono">
+            FINAL
+          </span>
         ) : (
           <div className="flex items-center gap-2">
             {game.isTomorrow && (
-              <span className="border border-green-700 px-2 py-0.5 text-[10px] font-medium text-green-500">
+              <span className="rounded border border-neutral-700 px-2 py-0.5 text-[10px] font-medium text-neutral-400 font-mono">
                 TOMORROW
               </span>
             )}
-            <span className="text-xs font-medium text-green-500">
-              {new Date(game.startTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+            <span className="text-xs font-medium text-neutral-400 font-mono">
+              {new Date(game.startTime).toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+              })}
             </span>
           </div>
         )}
         {game.isOvertime && (
-          <span className="border border-yellow-700 px-2 py-0.5 text-[10px] font-bold text-yellow-400">
+          <span className="rounded border border-yellow-700/50 px-2 py-0.5 text-[10px] font-bold text-yellow-400 font-mono">
             OT
           </span>
         )}
@@ -247,38 +320,47 @@ export default function GameCard({ game, onClick }: GameCardProps) {
       <div
         className={`transition-all duration-300 ease-out ${
           isLive && game.foulGameWarning
-            ? 'opacity-100 max-h-32 mb-3'
-            : 'opacity-0 max-h-0 overflow-hidden mb-0'
+            ? "opacity-100 max-h-32 mb-3"
+            : "opacity-0 max-h-0 overflow-hidden mb-0"
         }`}
         aria-hidden={!(isLive && game.foulGameWarning)}
       >
-        <div className={`border p-3 ${
-          game.foulGameWarningLevel === 'high'
-            ? 'bg-red-900/20 border-red-700/50'
-            : game.foulGameWarningLevel === 'medium'
-            ? 'bg-yellow-900/20 border-yellow-700/50'
-            : 'bg-green-900/20 border-green-700/50'
-        }`}>
+        <div
+          className={`border p-3 ${
+            game.foulGameWarningLevel === "high"
+              ? "bg-red-900/20 border-red-700/50"
+              : game.foulGameWarningLevel === "medium"
+                ? "bg-yellow-900/20 border-yellow-700/50"
+                : "bg-green-900/20 border-green-700/50"
+          }`}
+        >
           <div className="flex items-start gap-2">
             <div className="flex-1">
-              <div className={`text-[10px] font-bold uppercase tracking-wide ${
-                game.foulGameWarningLevel === 'high' ? 'text-red-400' : 'text-yellow-400'
-              }`}>
-                // FT_FRENZY {game.foulGameWarningLevel === 'high' ? '- HIGH IMPACT' : ''}
+              <div
+                className={`text-[10px] font-bold uppercase tracking-wide ${
+                  game.foulGameWarningLevel === "high"
+                    ? "text-red-400"
+                    : "text-yellow-400"
+                }`}
+              >
+                // FT_FRENZY{" "}
+                {game.foulGameWarningLevel === "high" ? "- HIGH IMPACT" : ""}
               </div>
               {game.foulGameWarningMessage && (
-                <div className="text-xs text-green-500 mt-1">{game.foulGameWarningMessage}</div>
+                <div className="text-xs text-green-500 mt-1">
+                  {game.foulGameWarningMessage}
+                </div>
               )}
               {/* Show team-specific info */}
               <div className="flex flex-wrap gap-2 mt-2">
                 {game.homeFoulGameInfo && (
                   <span className="text-[10px] bg-green-900/30 border border-green-900 px-2 py-0.5 text-green-500">
-                    {game.homeTeam.split(' ')[0]}: {game.homeFoulGameInfo}
+                    {game.homeTeam.split(" ")[0]}: {game.homeFoulGameInfo}
                   </span>
                 )}
                 {game.awayFoulGameInfo && (
                   <span className="text-[10px] bg-green-900/30 border border-green-900 px-2 py-0.5 text-green-500">
-                    {game.awayTeam.split(' ')[0]}: {game.awayFoulGameInfo}
+                    {game.awayTeam.split(" ")[0]}: {game.awayFoulGameInfo}
                   </span>
                 )}
               </div>
@@ -291,31 +373,43 @@ export default function GameCard({ game, onClick }: GameCardProps) {
       {isLive && (
         <div className="grid grid-cols-4 gap-2 mb-3">
           {/* Current Total */}
-          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
-            <div className="text-[10px] text-green-700 uppercase tracking-wide">SCORE</div>
-            <div className="text-lg font-bold text-green-400 tabular-nums">{game.liveTotal}</div>
+          <div className="rounded-lg bg-neutral-900/60 border border-neutral-800/50 p-2 text-center">
+            <div className="text-[10px] text-neutral-600 uppercase tracking-wide font-mono">
+              SCORE
+            </div>
+            <div className="text-lg font-bold text-white tabular-nums font-mono">
+              {game.liveTotal}
+            </div>
           </div>
 
           {/* O/U Line */}
-          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
-            <div className="text-[10px] text-green-700 uppercase tracking-wide">O/U</div>
-            <div className="text-lg font-bold text-green-400 tabular-nums">
-              {game.ouLine !== null ? game.ouLine.toFixed(1) : '—'}
+          <div className="rounded-lg bg-neutral-900/60 border border-neutral-800/50 p-2 text-center">
+            <div className="text-[10px] text-neutral-600 uppercase tracking-wide font-mono">
+              O/U
+            </div>
+            <div className="text-lg font-bold text-white tabular-nums font-mono">
+              {game.ouLine !== null ? game.ouLine.toFixed(1) : "—"}
             </div>
           </div>
 
           {/* Required PPM */}
-          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
-            <div className="text-[10px] text-green-700 uppercase tracking-wide">REQ_PPM</div>
-            <div className={`text-lg font-bold tabular-nums ${isUnderFriendly ? 'text-yellow-400' : 'text-green-400'}`}>
+          <div className="rounded-lg bg-neutral-900/60 border border-neutral-800/50 p-2 text-center">
+            <div className="text-[10px] text-neutral-600 uppercase tracking-wide font-mono">
+              REQ
+            </div>
+            <div
+              className={`text-lg font-bold tabular-nums font-mono ${isUnderFriendly ? "text-yellow-400" : "text-[#00ffff]"}`}
+            >
               {formatPPM(game.requiredPPM)}
             </div>
           </div>
 
           {/* Current PPM */}
-          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
-            <div className="text-[10px] text-green-700 uppercase tracking-wide">CUR_PPM</div>
-            <div className="text-lg font-bold text-green-400 tabular-nums">
+          <div className="rounded-lg bg-neutral-900/60 border border-neutral-800/50 p-2 text-center">
+            <div className="text-[10px] text-neutral-600 uppercase tracking-wide font-mono">
+              CUR
+            </div>
+            <div className="text-lg font-bold text-white tabular-nums font-mono">
               {formatPPM(game.currentPPM)}
             </div>
           </div>
@@ -325,30 +419,49 @@ export default function GameCard({ game, onClick }: GameCardProps) {
       {/* Line Movement Tracking for Live Games */}
       {isLive && game.openingLine !== null && (
         <div className="grid grid-cols-4 gap-2 mb-3">
-          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
-            <div className="text-[10px] text-green-700 uppercase tracking-wide">OPEN</div>
-            <div className="text-sm font-bold text-green-500 tabular-nums">{game.openingLine.toFixed(1)}</div>
-          </div>
-          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
-            <div className="text-[10px] text-green-700 uppercase tracking-wide">HIGH</div>
-            <div className="text-sm font-bold text-green-500 tabular-nums">
-              {game.maxLine !== null ? game.maxLine.toFixed(1) : '—'}
+          <div className="rounded-lg bg-neutral-900/60 border border-neutral-800/50 p-2 text-center">
+            <div className="text-[10px] text-neutral-600 uppercase tracking-wide font-mono">
+              OPEN
+            </div>
+            <div className="text-sm font-bold text-neutral-300 tabular-nums font-mono">
+              {game.openingLine.toFixed(1)}
             </div>
           </div>
-          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
-            <div className="text-[10px] text-green-700 uppercase tracking-wide">LOW</div>
-            <div className="text-sm font-bold text-green-500 tabular-nums">
-              {game.minLine !== null ? game.minLine.toFixed(1) : '—'}
+          <div className="rounded-lg bg-neutral-900/60 border border-neutral-800/50 p-2 text-center">
+            <div className="text-[10px] text-neutral-600 uppercase tracking-wide font-mono">
+              HIGH
+            </div>
+            <div className="text-sm font-bold text-neutral-300 tabular-nums font-mono">
+              {game.maxLine !== null ? game.maxLine.toFixed(1) : "—"}
             </div>
           </div>
-          <div className="bg-green-900/20 border border-green-900/50 p-2 text-center">
-            <div className="text-[10px] text-green-700 uppercase tracking-wide">MOVE</div>
-            <div className={`text-sm font-bold tabular-nums ${
-              game.lineMovement === null ? 'text-green-500' :
-              game.lineMovement > 0 ? 'text-orange-400' :
-              game.lineMovement < 0 ? 'text-blue-400' : 'text-green-500'
-            }`}>
-              {game.lineMovement !== null ? (game.lineMovement > 0 ? '+' : '') + game.lineMovement.toFixed(1) : '—'}
+          <div className="rounded-lg bg-neutral-900/60 border border-neutral-800/50 p-2 text-center">
+            <div className="text-[10px] text-neutral-600 uppercase tracking-wide font-mono">
+              LOW
+            </div>
+            <div className="text-sm font-bold text-neutral-300 tabular-nums font-mono">
+              {game.minLine !== null ? game.minLine.toFixed(1) : "—"}
+            </div>
+          </div>
+          <div className="rounded-lg bg-neutral-900/60 border border-neutral-800/50 p-2 text-center">
+            <div className="text-[10px] text-neutral-600 uppercase tracking-wide font-mono">
+              MOVE
+            </div>
+            <div
+              className={`text-sm font-bold tabular-nums font-mono ${
+                game.lineMovement === null
+                  ? "text-neutral-400"
+                  : game.lineMovement > 0
+                    ? "text-[#ff6b00]"
+                    : game.lineMovement < 0
+                      ? "text-[#00ffff]"
+                      : "text-neutral-400"
+              }`}
+            >
+              {game.lineMovement !== null
+                ? (game.lineMovement > 0 ? "+" : "") +
+                  game.lineMovement.toFixed(1)
+                : "—"}
             </div>
           </div>
         </div>
@@ -356,11 +469,20 @@ export default function GameCard({ game, onClick }: GameCardProps) {
 
       {/* Edge Display */}
       {isLive && edge !== null && (
-        <div className={`border p-2 mb-3 ${edgeStyle.bg} ${isUnderTriggered ? 'border-yellow-700/50' : 'border-green-900/50'}`}>
+        <div
+          className={`rounded-lg border p-2 mb-3 ${edgeStyle.bg} ${
+            isUnderTriggered ? "border-[#00ffff]/30" : "border-neutral-800/50"
+          }`}
+        >
           <div className="flex items-center justify-between">
-            <span className="text-[10px] text-green-700 uppercase">EDGE</span>
-            <span className={`text-lg font-bold tabular-nums ${edgeStyle.text}`}>
-              {edge > 0 ? '+' : ''}{edge.toFixed(2)}
+            <span className="text-[10px] text-neutral-600 uppercase font-mono">
+              EDGE
+            </span>
+            <span
+              className={`text-lg font-bold tabular-nums font-mono ${edgeStyle.text}`}
+            >
+              {edge > 0 ? "+" : ""}
+              {edge.toFixed(2)}
             </span>
           </div>
         </div>
@@ -368,61 +490,91 @@ export default function GameCard({ game, onClick }: GameCardProps) {
 
       {/* Projected Final - with foul game adjustment */}
       {isLive && projectedFinal !== null && game.ouLine !== null && (
-        <div className="bg-green-900/20 border border-green-900/50 p-3 mb-3">
+        <div className="rounded-lg bg-neutral-900/60 border border-neutral-800/50 p-3 mb-3">
           {/* Base projection */}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-green-700">PROJ_FINAL</span>
-            <span className={`text-sm font-bold tabular-nums ${
-              projectedFinal < game.ouLine ? 'text-green-400' : 'text-red-400'
-            }`}>
+            <span className="text-xs text-neutral-600 font-mono">
+              PROJ FINAL
+            </span>
+            <span
+              className={`text-sm font-bold tabular-nums font-mono ${
+                projectedFinal < game.ouLine
+                  ? "text-[#00ffff]"
+                  : "text-[#ff6b00]"
+              }`}
+            >
               {projectedFinal.toFixed(1)}
-              <span className="text-[10px] ml-2 text-green-700">
-                ({projectedFinal < game.ouLine ? 'UNDER' : 'OVER'} {Math.abs(projectedFinal - game.ouLine).toFixed(1)})
+              <span className="text-[10px] ml-2 text-neutral-600 font-mono">
+                ({projectedFinal < game.ouLine ? "UNDER" : "OVER"}{" "}
+                {Math.abs(projectedFinal - game.ouLine).toFixed(1)})
               </span>
             </span>
           </div>
 
-          {/* Foul game adjusted projection - show when in foul game OR could enter soon */}
-          {(game.inFoulGame || game.couldEnterFoulGame) && game.adjustedProjectedTotal !== null && game.foulGameAdjustment !== null && (
-            <div className="mt-2 pt-2 border-t border-green-900/50">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${game.inFoulGame ? 'bg-yellow-400' : 'bg-orange-400'} opacity-75`}></span>
-                  <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${game.inFoulGame ? 'bg-yellow-500' : 'bg-orange-500'}`}></span>
-                </span>
-                <span className={`text-[10px] font-semibold uppercase tracking-wide ${game.inFoulGame ? 'text-yellow-400' : 'text-orange-400'}`}>
-                  {game.inFoulGame ? 'FT_FRENZY_ACTIVE' : 'FT_FRENZY_INCOMING'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-green-700">ADJ_PROJ</span>
-                <span className={`text-sm font-bold tabular-nums ${
-                  game.adjustedProjectedTotal < game.ouLine ? 'text-green-400' : 'text-red-400'
-                }`}>
-                  {game.adjustedProjectedTotal.toFixed(1)}
-                  <span className={`text-[10px] ml-2 ${game.inFoulGame ? 'text-yellow-500' : 'text-orange-500'}`}>
-                    (+{game.foulGameAdjustment.toFixed(1)} FTF{!game.inFoulGame ? ' est' : ''})
+          {/* Foul game adjusted projection */}
+          {(game.inFoulGame || game.couldEnterFoulGame) &&
+            game.adjustedProjectedTotal !== null &&
+            game.foulGameAdjustment !== null && (
+              <div className="mt-2 pt-2 border-t border-neutral-800/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span
+                      className={`absolute inline-flex h-full w-full animate-ping rounded-full ${game.inFoulGame ? "bg-yellow-400" : "bg-[#ff6b00]"} opacity-75`}
+                    ></span>
+                    <span
+                      className={`relative inline-flex h-1.5 w-1.5 rounded-full ${game.inFoulGame ? "bg-yellow-500" : "bg-[#ff6b00]"}`}
+                    ></span>
                   </span>
-                </span>
+                  <span
+                    className={`text-[10px] font-semibold uppercase tracking-wide font-mono ${game.inFoulGame ? "text-yellow-400" : "text-[#ff6b00]"}`}
+                  >
+                    {game.inFoulGame
+                      ? "FT FRENZY ACTIVE"
+                      : "FT FRENZY INCOMING"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-neutral-600 font-mono">
+                    ADJ PROJ
+                  </span>
+                  <span
+                    className={`text-sm font-bold tabular-nums font-mono ${
+                      game.adjustedProjectedTotal < game.ouLine
+                        ? "text-[#00ffff]"
+                        : "text-[#ff6b00]"
+                    }`}
+                  >
+                    {game.adjustedProjectedTotal.toFixed(1)}
+                    <span
+                      className={`text-[10px] ml-2 font-mono ${game.inFoulGame ? "text-yellow-500" : "text-[#ff6b00]"}`}
+                    >
+                      (+{game.foulGameAdjustment.toFixed(1)} FTF
+                      {!game.inFoulGame ? " est" : ""})
+                    </span>
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       )}
 
       {/* Simplified view for non-live games */}
       {!isLive && (
         <div className="grid grid-cols-2 gap-2 mb-3">
-          <div className="bg-green-900/20 border border-green-900/50 p-3">
-            <div className="text-[10px] text-green-700 uppercase tracking-wide mb-1">O/U_LINE</div>
-            <div className="text-xl font-bold text-green-400 tabular-nums">
-              {game.ouLine !== null ? game.ouLine.toFixed(1) : '—'}
+          <div className="rounded-lg bg-neutral-900/60 border border-neutral-800/50 p-3">
+            <div className="text-[10px] text-neutral-600 uppercase tracking-wide mb-1 font-mono">
+              O/U LINE
+            </div>
+            <div className="text-xl font-bold text-white tabular-nums font-mono">
+              {game.ouLine !== null ? game.ouLine.toFixed(1) : "—"}
             </div>
           </div>
-          <div className="bg-green-900/20 border border-green-900/50 p-3">
-            <div className="text-[10px] text-green-700 uppercase tracking-wide mb-1">STATUS</div>
-            <div className="text-xl font-bold text-green-500">
-              {game.status === 'pre' ? 'SCHED' : 'FINAL'}
+          <div className="rounded-lg bg-neutral-900/60 border border-neutral-800/50 p-3">
+            <div className="text-[10px] text-neutral-600 uppercase tracking-wide mb-1 font-mono">
+              STATUS
+            </div>
+            <div className="text-xl font-bold text-neutral-300 font-mono">
+              {game.status === "pre" ? "SCHED" : "FINAL"}
             </div>
           </div>
         </div>
@@ -440,15 +592,17 @@ export default function GameCard({ game, onClick }: GameCardProps) {
       <div
         className={`transition-all duration-300 ease-out ${
           isTripleDipper && game.ouLine !== null
-            ? 'opacity-100 max-h-24'
-            : 'opacity-0 max-h-0 overflow-hidden'
+            ? "opacity-100 max-h-24"
+            : "opacity-0 max-h-0 overflow-hidden"
         }`}
         aria-hidden={!(isTripleDipper && game.ouLine !== null)}
       >
-        <div className="border border-yellow-500/50 bg-yellow-900/20 p-3 text-center terminal-glow-box">
-          <div className="text-[10px] text-yellow-500 uppercase tracking-wider mb-1">// TRIPLE_DIPPER_SIGNAL 🏆</div>
-          <div className="text-xl font-bold text-yellow-400">
-            UNDER {game.ouLine?.toFixed(1) ?? '—'}
+        <div className="rounded-xl border border-yellow-500/40 bg-yellow-950/30 p-3 text-center">
+          <div className="text-[10px] text-yellow-500 uppercase tracking-wider mb-1 font-mono">
+            // TRIPLE DIPPER 🏆
+          </div>
+          <div className="text-xl font-bold text-yellow-400 font-mono">
+            UNDER {game.ouLine?.toFixed(1) ?? "—"}
           </div>
         </div>
       </div>
@@ -457,15 +611,23 @@ export default function GameCard({ game, onClick }: GameCardProps) {
       <div
         className={`transition-all duration-300 ease-out ${
           isUnderTriggered && game.ouLine !== null
-            ? 'opacity-100 max-h-24'
-            : 'opacity-0 max-h-0 overflow-hidden'
+            ? "opacity-100 max-h-24"
+            : "opacity-0 max-h-0 overflow-hidden"
         }`}
         aria-hidden={!(isUnderTriggered && game.ouLine !== null)}
       >
-        <div className="border border-green-500/50 bg-green-900/20 p-3 text-center terminal-glow-box">
-          <div className="text-[10px] text-green-500 uppercase tracking-wider mb-1">// GOLDEN_ZONE_SIGNAL</div>
-          <div className="text-xl font-bold text-green-400">
-            UNDER {game.ouLine?.toFixed(1) ?? '—'}
+        <div
+          className="rounded-xl border border-[#00ffff]/40 p-3 text-center"
+          style={{
+            background: "rgba(0,255,255,0.05)",
+            boxShadow: "0 0 15px rgba(0,255,255,0.1)",
+          }}
+        >
+          <div className="text-[10px] text-[#00ffff]/70 uppercase tracking-wider mb-1 font-mono">
+            // GOLDEN ZONE SIGNAL
+          </div>
+          <div className="text-xl font-bold text-[#00ffff] font-mono">
+            UNDER {game.ouLine?.toFixed(1) ?? "—"}
           </div>
         </div>
       </div>
@@ -474,23 +636,31 @@ export default function GameCard({ game, onClick }: GameCardProps) {
       <div
         className={`transition-all duration-300 ease-out ${
           isOverTriggered && game.ouLine !== null
-            ? 'opacity-100 max-h-24'
-            : 'opacity-0 max-h-0 overflow-hidden'
+            ? "opacity-100 max-h-24"
+            : "opacity-0 max-h-0 overflow-hidden"
         }`}
         aria-hidden={!(isOverTriggered && game.ouLine !== null)}
       >
-        <div className="border border-orange-500/50 bg-orange-900/20 p-3 text-center terminal-glow-box">
-          <div className="text-[10px] text-orange-500 uppercase tracking-wider mb-1">// OVER_SIGNAL 🔥</div>
-          <div className="text-xl font-bold text-orange-400">
-            OVER {game.ouLine?.toFixed(1) ?? '—'}
+        <div
+          className="rounded-xl border border-[#ff6b00]/40 p-3 text-center"
+          style={{
+            background: "rgba(255,107,0,0.05)",
+            boxShadow: "0 0 15px rgba(255,107,0,0.1)",
+          }}
+        >
+          <div className="text-[10px] text-[#ff6b00]/70 uppercase tracking-wider mb-1 font-mono">
+            // OVER SIGNAL 🔥
+          </div>
+          <div className="text-xl font-bold text-[#ff6b00] font-mono">
+            OVER {game.ouLine?.toFixed(1) ?? "—"}
           </div>
         </div>
       </div>
 
       {/* Tap indicator */}
       {onClick && (
-        <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-green-800">
-          <span>// TAP_FOR_DETAILS</span>
+        <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-neutral-700 font-mono">
+          <span>// tap for details</span>
         </div>
       )}
     </div>

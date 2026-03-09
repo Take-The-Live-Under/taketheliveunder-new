@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useRef } from 'react';
-import { Game } from '@/types/game';
+import { useEffect, useState, useRef } from "react";
+import { Game } from "@/types/game";
 
 interface SystemLogProps {
   games: Game[];
@@ -11,7 +11,7 @@ interface SystemLogProps {
 interface LogEntry {
   id: string;
   timestamp: Date;
-  type: 'scan' | 'check' | 'pass' | 'fail' | 'trigger' | 'info';
+  type: "scan" | "check" | "pass" | "fail" | "trigger" | "info";
   message: string;
   highlight?: boolean;
 }
@@ -23,35 +23,40 @@ export default function SystemLog({ games, isScanning }: SystemLogProps) {
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   // Get live games for scanning animation
-  const liveGames = games.filter(g => g.status === 'in');
-  const triggeredGames = games.filter(g => g.triggerType !== null);
+  const liveGames = games.filter((g) => g.status === "in");
+  const triggeredGames = games.filter((g) => g.triggerType !== null);
 
   // Simulate scanning through games
   useEffect(() => {
     if (!isScanning || liveGames.length === 0) return;
 
     const scanInterval = setInterval(() => {
-      setCurrentScanIndex(prev => (prev + 1) % liveGames.length);
+      setCurrentScanIndex((prev) => (prev + 1) % liveGames.length);
     }, 2000);
 
     return () => clearInterval(scanInterval);
   }, [isScanning, liveGames.length]);
 
-  // Generate log entries for current game being scanned (or fake searching if no games)
+  // Generate log entries
   useEffect(() => {
-    // If no live games, show fake searching animation
     if (liveGames.length === 0) {
       const fakeSearchMessages = [
-        { type: 'scan' as const, message: 'SEARCHING: NCAA Basketball feeds...' },
-        { type: 'check' as const, message: 'ESPN_API.connect() // established' },
-        { type: 'check' as const, message: 'ODDS_API.fetch() // polling...' },
-        { type: 'check' as const, message: 'for (game in scoreboard) {' },
-        { type: 'check' as const, message: '  if (game.status === "in") {' },
-        { type: 'check' as const, message: '    analyzeTriggers(game);' },
-        { type: 'check' as const, message: '  }' },
-        { type: 'check' as const, message: '}' },
-        { type: 'info' as const, message: '>> NO_LIVE_GAMES_FOUND' },
-        { type: 'info' as const, message: '>> RETRY_IN: 15s' },
+        {
+          type: "scan" as const,
+          message: "SEARCHING: NCAA Basketball feeds...",
+        },
+        {
+          type: "check" as const,
+          message: "ESPN_API.connect() // established",
+        },
+        { type: "check" as const, message: "ODDS_API.fetch() // polling..." },
+        { type: "check" as const, message: "for (game in scoreboard) {" },
+        { type: "check" as const, message: '  if (game.status === "in") {' },
+        { type: "check" as const, message: "    analyzeTriggers(game);" },
+        { type: "check" as const, message: "  }" },
+        { type: "check" as const, message: "}" },
+        { type: "info" as const, message: ">> NO_LIVE_GAMES_FOUND" },
+        { type: "info" as const, message: ">> RETRY_IN: 15s" },
       ];
 
       const now = new Date();
@@ -62,7 +67,7 @@ export default function SystemLog({ games, isScanning }: SystemLogProps) {
         message: msg.message,
       }));
 
-      setLogs(prev => [...newLogs, ...prev].slice(0, 50));
+      setLogs((prev) => [...newLogs, ...prev].slice(0, 50));
       return;
     }
 
@@ -70,72 +75,66 @@ export default function SystemLog({ games, isScanning }: SystemLogProps) {
     if (!game) return;
 
     const gameMinute = 40 - game.minutesRemainingReg;
-    const ppmGap = game.currentPPM !== null && game.requiredPPM !== null
-      ? game.currentPPM - game.requiredPPM
-      : null;
+    const ppmGap =
+      game.currentPPM !== null && game.requiredPPM !== null
+        ? game.currentPPM - game.requiredPPM
+        : null;
 
     const newLogs: LogEntry[] = [];
     const now = new Date();
 
-    // Scan header
     newLogs.push({
       id: `${game.id}-scan-${now.getTime()}`,
       timestamp: now,
-      type: 'scan',
+      type: "scan",
       message: `SCANNING: ${game.awayTeam} @ ${game.homeTeam}`,
     });
 
-    // Check game minute
     const minuteCheck = gameMinute >= 15 && gameMinute <= 32;
     newLogs.push({
       id: `${game.id}-minute-${now.getTime()}`,
       timestamp: now,
-      type: minuteCheck ? 'pass' : 'check',
-      message: `game_minute = ${gameMinute.toFixed(1)} ${minuteCheck ? '✓' : ''}`,
+      type: minuteCheck ? "pass" : "check",
+      message: `game_minute = ${gameMinute.toFixed(1)} ${minuteCheck ? "✓" : ""}`,
     });
 
-    // Check required PPM
     const reqPpmCheck = game.requiredPPM !== null && game.requiredPPM >= 4.5;
     newLogs.push({
       id: `${game.id}-reqppm-${now.getTime()}`,
       timestamp: now,
-      type: reqPpmCheck ? 'pass' : 'check',
-      message: `required_ppm = ${game.requiredPPM?.toFixed(2) ?? 'null'} ${reqPpmCheck ? '✓' : ''}`,
+      type: reqPpmCheck ? "pass" : "check",
+      message: `required_ppm = ${game.requiredPPM?.toFixed(2) ?? "null"} ${reqPpmCheck ? "✓" : ""}`,
     });
 
-    // Check current PPM
     newLogs.push({
       id: `${game.id}-curppm-${now.getTime()}`,
       timestamp: now,
-      type: 'check',
-      message: `current_ppm = ${game.currentPPM?.toFixed(2) ?? 'null'}`,
+      type: "check",
+      message: `current_ppm = ${game.currentPPM?.toFixed(2) ?? "null"}`,
     });
 
-    // Check PPM gap
     if (ppmGap !== null) {
       const gapForOver = ppmGap >= 0.3;
       const gapForTriple = ppmGap <= -1.0;
-      const gapForUnder = ppmGap >= 1.0 && ppmGap <= 1.5;
 
       newLogs.push({
         id: `${game.id}-gap-${now.getTime()}`,
         timestamp: now,
-        type: gapForOver || gapForTriple || gapForUnder ? 'pass' : 'check',
-        message: `ppm_gap = ${ppmGap > 0 ? '+' : ''}${ppmGap.toFixed(2)} ${gapForOver ? '(HOT 🔥)' : gapForTriple ? '(COLD ❄️)' : ''}`,
+        type: gapForOver || gapForTriple ? "pass" : "check",
+        message: `ppm_gap = ${ppmGap > 0 ? "+" : ""}${ppmGap.toFixed(2)} ${gapForOver ? "(HOT 🔥)" : gapForTriple ? "(COLD ❄️)" : ""}`,
       });
     }
 
-    // Result
     if (game.triggerType) {
       const triggerLabels = {
-        over: 'OVER_SIGNAL 🔥',
-        tripleDipper: 'TRIPLE_DIPPER 🏆',
-        under: 'GOLDEN_ZONE ✓',
+        over: "OVER_SIGNAL 🔥",
+        tripleDipper: "TRIPLE_DIPPER 🏆",
+        under: "GOLDEN_ZONE ✓",
       };
       newLogs.push({
         id: `${game.id}-result-${now.getTime()}`,
         timestamp: now,
-        type: 'trigger',
+        type: "trigger",
         message: `>> ${triggerLabels[game.triggerType]} DETECTED`,
         highlight: true,
       });
@@ -143,30 +142,37 @@ export default function SystemLog({ games, isScanning }: SystemLogProps) {
       newLogs.push({
         id: `${game.id}-noresult-${now.getTime()}`,
         timestamp: now,
-        type: 'info',
+        type: "info",
         message: `>> NO_TRIGGER (monitoring...)`,
       });
     }
 
-    setLogs(prev => [...newLogs, ...prev].slice(0, 50)); // Keep last 50 entries
+    setLogs((prev) => [...newLogs, ...prev].slice(0, 50));
   }, [currentScanIndex, liveGames]);
 
-  // Auto-scroll to top when new logs come in
+  // Auto-scroll to top
   useEffect(() => {
     if (logContainerRef.current && isExpanded) {
       logContainerRef.current.scrollTop = 0;
     }
   }, [logs, isExpanded]);
 
-  const getLogColor = (type: LogEntry['type']) => {
+  const getLogColor = (type: LogEntry["type"]) => {
     switch (type) {
-      case 'scan': return 'text-blue-400';
-      case 'pass': return 'text-green-400';
-      case 'fail': return 'text-red-400';
-      case 'trigger': return 'text-yellow-400';
-      case 'check': return 'text-green-600';
-      case 'info': return 'text-green-700';
-      default: return 'text-green-500';
+      case "scan":
+        return "text-[#00ffff]";
+      case "pass":
+        return "text-[#00ffff]";
+      case "fail":
+        return "text-red-400";
+      case "trigger":
+        return "text-yellow-400";
+      case "check":
+        return "text-neutral-500";
+      case "info":
+        return "text-neutral-700";
+      default:
+        return "text-neutral-400";
     }
   };
 
@@ -175,30 +181,37 @@ export default function SystemLog({ games, isScanning }: SystemLogProps) {
       {/* Collapsed Bar */}
       <div
         onClick={() => setIsExpanded(!isExpanded)}
-        className="bg-[#0a0a0a] border-t border-green-900/50 px-4 py-2 cursor-pointer hover:bg-green-900/10 transition-colors"
+        className="border-t border-neutral-800/80 px-4 py-2 cursor-pointer hover:bg-neutral-900/30 transition-colors"
+        style={{
+          background: "rgba(10,10,10,0.92)",
+          backdropFilter: "blur(12px)",
+        }}
       >
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-green-600 text-xs">$</span>
-            <span className="text-green-500 text-xs">SYSTEM_LOG</span>
+            <span className="text-neutral-600 text-xs">$</span>
+            <span className="text-neutral-400 text-xs">SYSTEM_LOG</span>
             {isScanning && (
               <span className="flex items-center gap-1.5">
                 <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00ffff] opacity-75"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#00ffff]"></span>
                 </span>
-                <span className="text-green-600 text-xs animate-pulse">SCANNING...</span>
+                <span className="text-[#00ffff]/70 text-xs animate-pulse">
+                  SCANNING...
+                </span>
               </span>
             )}
           </div>
           <div className="flex items-center gap-4">
             {triggeredGames.length > 0 && (
               <span className="text-yellow-400 text-xs">
-                {triggeredGames.length} ACTIVE_TRIGGER{triggeredGames.length > 1 ? 'S' : ''}
+                {triggeredGames.length} ACTIVE_TRIGGER
+                {triggeredGames.length > 1 ? "S" : ""}
               </span>
             )}
-            <span className="text-green-700 text-xs">
-              {isExpanded ? '▼ COLLAPSE' : '▲ EXPAND'}
+            <span className="text-neutral-600 text-xs">
+              {isExpanded ? "▼ COLLAPSE" : "▲ EXPAND"}
             </span>
           </div>
         </div>
@@ -206,27 +219,42 @@ export default function SystemLog({ games, isScanning }: SystemLogProps) {
 
       {/* Expanded Log View */}
       {isExpanded && (
-        <div className="bg-[#0a0a0a] border-t border-green-900/30">
+        <div
+          className="border-t border-neutral-800/50"
+          style={{
+            background: "rgba(10,10,10,0.95)",
+            backdropFilter: "blur(12px)",
+          }}
+        >
           <div className="max-w-2xl mx-auto">
             <div
               ref={logContainerRef}
-              className="h-48 overflow-y-auto px-4 py-2 space-y-1 scrollbar-thin scrollbar-thumb-green-900 scrollbar-track-transparent"
+              className="h-48 overflow-y-auto px-4 py-2 space-y-1 scrollbar-thin scrollbar-thumb-neutral-800 scrollbar-track-transparent"
             >
               {logs.length === 0 ? (
-                <div className="text-green-700 text-xs py-4 text-center">
+                <div className="text-neutral-700 text-xs py-4 text-center">
                   // Waiting for live games to scan...
                 </div>
               ) : (
                 logs.map((log) => (
                   <div
                     key={log.id}
-                    className={`text-xs flex gap-2 ${log.highlight ? 'bg-yellow-900/20 -mx-2 px-2 py-1' : ''}`}
+                    className={`text-xs flex gap-2 ${log.highlight ? "bg-yellow-900/20 -mx-2 px-2 py-1 rounded" : ""}`}
                   >
-                    <span className="text-green-800 flex-shrink-0">
-                      {log.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    <span className="text-neutral-800 flex-shrink-0">
+                      {log.timestamp.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })}
                     </span>
                     <span className={getLogColor(log.type)}>
-                      {log.type === 'scan' ? '>' : log.type === 'trigger' ? '!' : ' '} {log.message}
+                      {log.type === "scan"
+                        ? ">"
+                        : log.type === "trigger"
+                          ? "!"
+                          : " "}{" "}
+                      {log.message}
                     </span>
                   </div>
                 ))

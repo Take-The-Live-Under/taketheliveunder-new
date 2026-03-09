@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 interface AsciiLogoProps {
   animate?: boolean;
-  size?: 'small' | 'large';
+  size?: "small" | "large";
 }
 
 const logoLarge = `
@@ -22,11 +22,14 @@ const logoSmall = `
  ╩  ╩ ╩═╝╚═╝
 `;
 
-const tagline = '// TAKE THE LIVE UNDER';
+const tagline = "// TAKE THE LIVE UNDER";
 
-export default function AsciiLogo({ animate = true, size = 'large' }: AsciiLogoProps) {
+export default function AsciiLogo({
+  animate = true,
+  size = "large",
+}: AsciiLogoProps) {
   const [visibleChars, setVisibleChars] = useState(0);
-  const logo = size === 'large' ? logoLarge : logoSmall;
+  const logo = size === "large" ? logoLarge : logoSmall;
   const totalChars = logo.length;
 
   useEffect(() => {
@@ -37,7 +40,7 @@ export default function AsciiLogo({ animate = true, size = 'large' }: AsciiLogoP
 
     setVisibleChars(0);
     const interval = setInterval(() => {
-      setVisibleChars(prev => {
+      setVisibleChars((prev) => {
         if (prev >= totalChars) {
           clearInterval(interval);
           return prev;
@@ -51,12 +54,21 @@ export default function AsciiLogo({ animate = true, size = 'large' }: AsciiLogoP
 
   return (
     <div className="font-mono text-center">
-      <pre className="text-green-400 text-xs md:text-sm leading-tight inline-block text-left terminal-glow">
+      <pre
+        className="text-xs md:text-sm leading-tight inline-block text-left"
+        style={{
+          color: "#00ffff",
+          textShadow: "0 0 8px rgba(0,255,255,0.6)",
+        }}
+      >
         {logo.slice(0, visibleChars)}
         {visibleChars < totalChars && <span className="animate-pulse">█</span>}
       </pre>
       {visibleChars >= totalChars && (
-        <div className="text-green-600 text-xs mt-2 animate-fade-in">
+        <div
+          className="text-xs mt-2 animate-fade-in font-mono"
+          style={{ color: "rgba(0,255,255,0.5)" }}
+        >
           {tagline}
         </div>
       )}

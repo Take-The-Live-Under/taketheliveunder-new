@@ -9,7 +9,13 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Custom purple scale (primary)
+        // Neon palette (matching marketing site)
+        'neon-blue': '#00ffff',
+        'neon-pink': '#ff00ff',
+        'neon-lime': '#ccff00',
+        'neon-orange': '#ff6b00',
+        'neon-purple': '#b026ff',
+        // Custom purple scale (primary) - kept for compatibility
         'brand-purple': {
           50: '#faf5ff',
           100: '#f3e8ff',
@@ -66,10 +72,21 @@ module.exports = {
           950: '#020617',
         },
       },
+      fontFamily: {
+        display: ['var(--font-manrope)', 'sans-serif'],
+        marker: ['var(--font-permanent-marker)', 'cursive'],
+        sketch: ['var(--font-rock-salt)', 'cursive'],
+        mono: ['var(--font-geist-mono)', 'GeistMono', 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', 'monospace'],
+      },
       boxShadow: {
         'glow-purple': '0 0 20px rgba(168, 85, 247, 0.4)',
         'glow-orange': '0 0 20px rgba(249, 115, 22, 0.4)',
         'glow-teal': '0 0 20px rgba(20, 184, 166, 0.4)',
+        'glow-blue': '0 0 20px rgba(0, 255, 255, 0.4)',
+        'glow-pink': '0 0 20px rgba(255, 0, 255, 0.4)',
+        'glow-neon-purple': '0 0 20px rgba(176, 38, 255, 0.4)',
+        'neon-blue-sm': '0 0 10px rgba(0, 255, 255, 0.3)',
+        'neon-orange-sm': '0 0 10px rgba(255, 107, 0, 0.3)',
         'card': '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)',
         'card-hover': '0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
         'elevation-1': '0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.2)',
@@ -82,6 +99,7 @@ module.exports = {
         'gradient-teal-purple': 'linear-gradient(135deg, #14b8a6 0%, #a855f7 100%)',
         'gradient-dark': 'linear-gradient(180deg, #0f172a 0%, #020617 100%)',
         'gradient-radial': 'radial-gradient(circle, var(--tw-gradient-stops))',
+        'gradient-neon': 'linear-gradient(135deg, #00ffff 0%, #b026ff 50%, #ff00ff 100%)',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',

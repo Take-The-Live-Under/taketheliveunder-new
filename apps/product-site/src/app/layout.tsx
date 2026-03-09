@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Manrope, Rock_Salt, Permanent_Marker } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 
@@ -14,9 +15,28 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-manrope",
+});
+
+const rockSalt = Rock_Salt({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-rock-salt",
+});
+
+const permanentMarker = Permanent_Marker({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-permanent-marker",
+});
+
 export const metadata: Metadata = {
-  title: "NCAA Basketball Live Stats & Analytics | College Basketball Scores Today",
-  description: "Live NCAA basketball scores, stats, and analytics. Track college basketball games in real-time with pace analysis, team comparisons, head-to-head matchups, AP Poll rankings, and advanced efficiency metrics. Your source for March Madness and NCAAB live coverage.",
+  title:
+    "NCAA Basketball Live Stats & Analytics | College Basketball Scores Today",
+  description:
+    "Live NCAA basketball scores, stats, and analytics. Track college basketball games in real-time with pace analysis, team comparisons, head-to-head matchups, AP Poll rankings, and advanced efficiency metrics. Your source for March Madness and NCAAB live coverage.",
   keywords: [
     // High volume primary keywords
     "basketball",
@@ -75,7 +95,7 @@ export const metadata: Metadata = {
     "ncaab live scores",
     "basketball game tracker",
     "live game momentum",
-    "scoring projections"
+    "scoring projections",
   ],
   authors: [{ name: "Take The Live Under" }],
   creator: "Take The Live Under",
@@ -98,7 +118,8 @@ export const metadata: Metadata = {
     url: "https://taketheliveunder.com",
     siteName: "Take The Live Under",
     title: "NCAA Basketball Live Stats & Analytics | College Basketball Scores",
-    description: "Live NCAA basketball scores, stats, and analytics. Real-time game tracking with pace analysis, team comparisons, AP Poll rankings, and advanced efficiency metrics for March Madness and all NCAAB games.",
+    description:
+      "Live NCAA basketball scores, stats, and analytics. Real-time game tracking with pace analysis, team comparisons, AP Poll rankings, and advanced efficiency metrics for March Madness and all NCAAB games.",
     images: [
       {
         url: "/og-image.png",
@@ -111,7 +132,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "NCAA Basketball Live Stats & Analytics",
-    description: "Live college basketball scores, real-time game tracking, team comparisons, and advanced analytics for NCAAB and March Madness.",
+    description:
+      "Live college basketball scores, real-time game tracking, team comparisons, and advanced analytics for NCAAB and March Madness.",
     images: ["/og-image.png"],
   },
   robots: {
@@ -139,7 +161,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#0a0a0a] text-green-400`}
+        className={`${geistSans.variable} ${geistMono.variable} ${manrope.variable} ${rockSalt.variable} ${permanentMarker.variable} antialiased bg-[#0a0a0a] text-[#ededed]`}
       >
         <Providers>{children}</Providers>
       </body>
