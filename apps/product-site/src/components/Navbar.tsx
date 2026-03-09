@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Logo } from "@/components/Logo";
 
 interface NavbarProps {
@@ -16,12 +17,34 @@ export function Navbar({
   isRefreshing,
 }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const navLink = (href: string, label: string) => {
+    const isActive = pathname === href;
+    return (
+      <Link
+        href={href}
+        onClick={(e) => {
+          e.preventDefault();
+          window.location.href = href;
+        }}
+        className={`relative text-xs font-medium transition-colors pb-0.5 ${
+          isActive ? "text-white" : "text-neutral-500 hover:text-white"
+        }`}
+      >
+        {label}
+        {isActive && (
+          <span className="absolute -bottom-0.5 left-0 right-0 h-px bg-[#00ffff] rounded-full shadow-[0_0_6px_rgba(0,255,255,0.8)]" />
+        )}
+      </Link>
+    );
+  };
 
   return (
     <div
@@ -40,26 +63,8 @@ export function Navbar({
               <Logo size="sm" />
             </Link>
             <div className="hidden sm:flex items-center gap-3 border-l border-neutral-800 pl-4">
-              <Link
-                href="/brief"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.location.href = "/brief";
-                }}
-                className="text-xs font-medium text-neutral-500 hover:text-white transition-colors"
-              >
-                Brief
-              </Link>
-              <Link
-                href="/research"
-                onClick={(e) => {
-                  e.preventDefault();
-                  window.location.href = "/research";
-                }}
-                className="text-xs font-medium text-neutral-500 hover:text-white transition-colors"
-              >
-                Research
-              </Link>
+              {navLink("/brief", "Brief")}
+              {navLink("/research", "Research")}
             </div>
           </div>
 
