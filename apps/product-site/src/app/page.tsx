@@ -285,7 +285,7 @@ export default function Home() {
       />
 
       {/* Tab Bar */}
-      <div className="mx-auto max-w-2xl px-4 pb-3">
+      <div className="mx-auto max-w-7xl px-4 pb-3">
         <div
           className="flex gap-1 rounded-xl border border-neutral-800 p-1"
           style={{ background: "rgba(23,23,23,0.6)" }}
@@ -360,7 +360,7 @@ export default function Home() {
 
       {/* Hero Section - Show trigger stats when triggers are active */}
       {subTab === "under" && goldenCount > 0 && !loading && (
-        <div className="mx-auto max-w-2xl px-4 pt-4 pb-2">
+        <div className="mx-auto max-w-7xl px-4 pt-4 pb-2">
           <div
             className="rounded-xl border border-[#00ffff]/30 p-4"
             style={{
@@ -397,7 +397,7 @@ export default function Home() {
       )}
 
       {/* Main Content */}
-      <div className="mx-auto max-w-2xl px-4 py-6">
+      <div className="mx-auto max-w-7xl px-4 py-6">
         {/* Search */}
         <div className="mb-6 relative">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -561,10 +561,8 @@ export default function Home() {
         {subTab === "upcoming" &&
           !predictionsLoading &&
           filteredPredictions.length > 0 && (
-            <div
-              className={`space-y-3 ${isInitialLoad ? "cards-initial-load" : ""}`}
-            >
-              <div className="flex items-center gap-2 mb-2">
+            <div className={isInitialLoad ? "cards-initial-load" : ""}>
+              <div className="flex items-center gap-2 mb-4">
                 <span className="rounded-lg bg-[#00ffff]/10 border border-[#00ffff]/30 px-2 py-1 text-xs font-medium text-[#00ffff] font-mono">
                   KENPOM
                 </span>
@@ -572,13 +570,15 @@ export default function Home() {
                   // Pre-game projections
                 </span>
               </div>
-              {filteredPredictions.map((pred) => (
-                <UpcomingGameCard
-                  key={pred.gameId}
-                  prediction={pred}
-                  onClick={() => setSelectedPrediction(pred)}
-                />
-              ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {filteredPredictions.map((pred) => (
+                  <UpcomingGameCard
+                    key={pred.gameId}
+                    prediction={pred}
+                    onClick={() => setSelectedPrediction(pred)}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
@@ -612,16 +612,16 @@ export default function Home() {
           subTab !== "picks" &&
           subTab !== "upcoming" &&
           sortedGames.length > 0 && (
-            <div
-              className={`space-y-3 ${isInitialLoad ? "cards-initial-load" : ""}`}
-            >
-              {sortedGames.map((game) => (
-                <GameCard
-                  key={game.id}
-                  game={game}
-                  onClick={() => setSelectedGame(game)}
-                />
-              ))}
+            <div className={isInitialLoad ? "cards-initial-load" : ""}>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {sortedGames.map((game) => (
+                  <GameCard
+                    key={game.id}
+                    game={game}
+                    onClick={() => setSelectedGame(game)}
+                  />
+                ))}
+              </div>
             </div>
           )}
 

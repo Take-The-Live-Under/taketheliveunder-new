@@ -138,27 +138,25 @@ export default function GameDetailModal({
     }`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center font-mono">
+    <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center font-mono">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
 
-      {/* Modal */}
+      {/* Modal — bottom sheet mobile, wide side-panel on lg+ */}
       <div
-        className="relative w-full max-w-lg max-h-[90vh] rounded-t-2xl sm:rounded-2xl border border-neutral-800 animate-slide-up overflow-hidden flex flex-col"
+        className="relative w-full max-w-5xl max-h-[90vh] lg:max-h-[85vh] rounded-t-2xl lg:rounded-2xl border border-neutral-800 animate-slide-up overflow-hidden flex flex-col lg:flex-row"
         style={{
           background: "rgba(10,10,10,0.97)",
           backdropFilter: "blur(20px)",
         }}
       >
-        {/* Header */}
-        <div
-          className="flex-shrink-0 sticky top-0 border-b border-neutral-800 p-4 z-10"
-          style={{ background: "rgba(10,10,10,0.97)" }}
-        >
-          <div className="flex items-center justify-between mb-3">
+        {/* LEFT PANEL: header + nav */}
+        <div className="flex-shrink-0 lg:w-72 lg:border-r border-neutral-800 flex flex-col">
+          {/* Status bar + close */}
+          <div className="flex items-center justify-between p-4 border-b border-neutral-800">
             <div className="flex items-center gap-2">
               {game.status === "in" && (
                 <span
@@ -206,112 +204,114 @@ export default function GameDetailModal({
           </div>
 
           {/* Score Display */}
-          <div className="flex items-center justify-between">
-            <div className="flex-1 text-center">
-              <p className="text-xs text-neutral-600 mb-1">{game.awayTeam}</p>
-              <p className="text-2xl font-bold text-white font-mono">
-                {game.awayScore}
-              </p>
-              {awayTeam?.bonusStatus.label && (
-                <span
-                  className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-medium rounded border ${
-                    awayTeam.bonusStatus.inDoubleBonus
-                      ? "border-red-700 text-red-400"
-                      : "border-yellow-700 text-yellow-400"
-                  }`}
-                >
-                  {awayTeam.bonusStatus.label}
-                </span>
-              )}
-            </div>
-            <div className="px-4">
-              <p className="text-neutral-700 text-xs">@</p>
-              {game.status === "in" && (
-                <p className="text-[10px] text-[#00ffff]/70 mt-1 font-mono">
-                  {details?.period === 1
-                    ? "H1"
-                    : details?.period === 2
-                      ? "H2"
-                      : `OT${(details?.period || 3) - 2}`}{" "}
-                  {details?.clock}
+          <div className="p-4 border-b border-neutral-800">
+            <div className="flex items-center justify-between">
+              <div className="flex-1 text-center">
+                <p className="text-xs text-neutral-600 mb-1">{game.awayTeam}</p>
+                <p className="text-2xl font-bold text-white font-mono">
+                  {game.awayScore}
                 </p>
-              )}
+                {awayTeam?.bonusStatus.label && (
+                  <span
+                    className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-medium rounded border ${
+                      awayTeam.bonusStatus.inDoubleBonus
+                        ? "border-red-700 text-red-400"
+                        : "border-yellow-700 text-yellow-400"
+                    }`}
+                  >
+                    {awayTeam.bonusStatus.label}
+                  </span>
+                )}
+              </div>
+              <div className="px-4">
+                <p className="text-neutral-700 text-xs">@</p>
+                {game.status === "in" && (
+                  <p className="text-[10px] text-[#00ffff]/70 mt-1 font-mono">
+                    {details?.period === 1
+                      ? "H1"
+                      : details?.period === 2
+                        ? "H2"
+                        : `OT${(details?.period || 3) - 2}`}{" "}
+                    {details?.clock}
+                  </p>
+                )}
+              </div>
+              <div className="flex-1 text-center">
+                <p className="text-xs text-neutral-600 mb-1">{game.homeTeam}</p>
+                <p className="text-2xl font-bold text-white font-mono">
+                  {game.homeScore}
+                </p>
+                {homeTeam?.bonusStatus.label && (
+                  <span
+                    className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-medium rounded border ${
+                      homeTeam.bonusStatus.inDoubleBonus
+                        ? "border-red-700 text-red-400"
+                        : "border-yellow-700 text-yellow-400"
+                    }`}
+                  >
+                    {homeTeam.bonusStatus.label}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="flex-1 text-center">
-              <p className="text-xs text-neutral-600 mb-1">{game.homeTeam}</p>
-              <p className="text-2xl font-bold text-white font-mono">
-                {game.homeScore}
-              </p>
-              {homeTeam?.bonusStatus.label && (
-                <span
-                  className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-medium rounded border ${
-                    homeTeam.bonusStatus.inDoubleBonus
-                      ? "border-red-700 text-red-400"
-                      : "border-yellow-700 text-yellow-400"
+
+            {/* O/U Line */}
+            {game.ouLine && (
+              <div className="mt-3 pt-3 border-t border-neutral-800/50 flex items-center justify-center gap-4 text-xs font-mono">
+                <span className="text-neutral-600">
+                  O/U: <span className="text-[#00ffff]">{game.ouLine}</span>
+                </span>
+                <span className="text-neutral-600">
+                  TOTAL: <span className="text-white">{game.liveTotal}</span>
+                </span>
+                {game.requiredPPM && game.currentPPM && (
+                  <span
+                    className={`${
+                      game.requiredPPM - game.currentPPM > 1
+                        ? "text-yellow-400"
+                        : game.requiredPPM - game.currentPPM < -0.5
+                          ? "text-[#00ffff]"
+                          : "text-neutral-500"
+                    }`}
+                  >
+                    EDGE: {(game.requiredPPM - game.currentPPM).toFixed(2)}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          {/* end score section */}
+
+          {/* Tab Navigation — horizontal on mobile, vertical on desktop */}
+          <div className="p-3 border-b lg:border-b-0 border-neutral-800">
+            <div className="flex lg:flex-col gap-1">
+              {(["charts", "stats", "players", "refs"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 lg:flex-none py-2 px-3 text-xs font-medium rounded-lg transition-all text-center lg:text-left ${
+                    activeTab === tab
+                      ? "bg-[#00ffff] text-black font-bold"
+                      : "text-neutral-500 hover:text-white hover:bg-neutral-800/50"
                   }`}
                 >
-                  {homeTeam.bonusStatus.label}
-                </span>
-              )}
+                  {
+                    {
+                      charts: "CHARTS",
+                      stats: "STATS",
+                      players: "PLAYERS",
+                      refs: "REFS",
+                    }[tab]
+                  }
+                </button>
+              ))}
             </div>
           </div>
-
-          {/* O/U Line */}
-          {game.ouLine && (
-            <div className="mt-3 flex items-center justify-center gap-4 text-xs font-mono">
-              <span className="text-neutral-600">
-                O/U: <span className="text-[#00ffff]">{game.ouLine}</span>
-              </span>
-              <span className="text-neutral-600">
-                TOTAL: <span className="text-white">{game.liveTotal}</span>
-              </span>
-              {game.requiredPPM && game.currentPPM && (
-                <span
-                  className={`${
-                    game.requiredPPM - game.currentPPM > 1
-                      ? "text-yellow-400"
-                      : game.requiredPPM - game.currentPPM < -0.5
-                        ? "text-[#00ffff]"
-                        : "text-neutral-500"
-                  }`}
-                >
-                  EDGE: {(game.requiredPPM - game.currentPPM).toFixed(2)}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Tab Navigation */}
-          <div className="flex gap-1 mt-4 p-1 rounded-xl bg-neutral-900/50 border border-neutral-800">
-            <button
-              onClick={() => setActiveTab("charts")}
-              className={tabClass("charts")}
-            >
-              CHARTS
-            </button>
-            <button
-              onClick={() => setActiveTab("stats")}
-              className={tabClass("stats")}
-            >
-              STATS
-            </button>
-            <button
-              onClick={() => setActiveTab("players")}
-              className={tabClass("players")}
-            >
-              PLAYERS
-            </button>
-            <button
-              onClick={() => setActiveTab("refs")}
-              className={tabClass("refs")}
-            >
-              REFS
-            </button>
-          </div>
+          <div className="hidden lg:block flex-1" />
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
+        {/* RIGHT PANEL: scrollable content */}
+        <div className="flex-1 overflow-y-auto p-4 min-h-0">
           {loading && !details && (
             <div className="flex items-center justify-center py-12">
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#00ffff] border-t-transparent"></div>

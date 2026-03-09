@@ -166,33 +166,31 @@ export default function UpcomingGameDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center font-mono">
+    <div className="fixed inset-0 z-50 flex items-end lg:items-center justify-center font-mono">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal */}
+      {/* Modal — bottom sheet on mobile, wide side-panel on desktop */}
       <div
-        className="relative w-full max-w-lg max-h-[90vh] rounded-t-2xl sm:rounded-2xl border border-neutral-800 animate-slide-up overflow-hidden flex flex-col"
+        className="relative w-full max-w-5xl max-h-[90vh] lg:max-h-[85vh] rounded-t-2xl lg:rounded-2xl border border-neutral-800 animate-slide-up overflow-hidden flex flex-col lg:flex-row"
         style={{
           background: "rgba(10,10,10,0.97)",
           backdropFilter: "blur(20px)",
         }}
       >
-        {/* Header bar */}
-        <div
-          className="flex-shrink-0 sticky top-0 border-b border-neutral-800 p-4 z-10"
-          style={{ background: "rgba(10,10,10,0.97)" }}
-        >
-          <div className="flex items-center justify-between mb-3">
+        {/* LEFT PANEL — fixed matchup header */}
+        <div className="flex-shrink-0 lg:w-72 lg:border-r border-neutral-800 flex flex-col">
+          {/* Status bar */}
+          <div className="flex items-center justify-between p-4 border-b border-neutral-800">
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 rounded border border-neutral-700 text-xs text-neutral-400">
                 UPCOMING
               </span>
-              <span className="text-xs text-neutral-600">
-                {formatGameDate(gameTime)} · {formatGameTime(gameTime)} ET
+              <span className="text-xs text-neutral-600 font-mono">
+                {formatGameDate(gameTime)}
               </span>
             </div>
             <button
@@ -216,66 +214,143 @@ export default function UpcomingGameDetailModal({
           </div>
 
           {/* Teams + Projected Scores */}
-          <div className="flex items-center justify-between">
-            {/* Away */}
-            <div className="flex-1 text-center">
-              {awayRank && awayRank <= 50 && (
-                <p className="text-[10px] text-yellow-500 font-bold mb-0.5">
-                  #{awayRank}
+          <div className="p-4 border-b border-neutral-800">
+            <div className="flex items-center justify-between">
+              {/* Away */}
+              <div className="flex-1 text-center">
+                {awayRank && awayRank <= 50 && (
+                  <p className="text-[10px] text-yellow-500 font-bold mb-0.5">
+                    #{awayRank}
+                  </p>
+                )}
+                <p className="text-xs text-neutral-500 mb-1">{awayTeam}</p>
+                {awayBadge && (
+                  <span
+                    className={`inline-block mb-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${badgeClass(awayBadge)}`}
+                  >
+                    {awayBadge.text}
+                  </span>
+                )}
+                <p className="text-3xl font-bold text-white font-mono">
+                  {kenpomAwayScore.toFixed(0)}
                 </p>
-              )}
-              <p className="text-xs text-neutral-500 mb-1">{awayTeam}</p>
-              {awayBadge && (
-                <span
-                  className={`inline-block mb-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${badgeClass(awayBadge)}`}
-                >
-                  {awayBadge.text}
-                </span>
-              )}
-              <p className="text-2xl font-bold text-white">
-                {kenpomAwayScore.toFixed(0)}
-              </p>
-              <p className="text-[10px] text-neutral-700">PROJECTED</p>
-            </div>
-
-            {/* Center divider */}
-            <div className="px-4 text-center">
-              <p className="text-neutral-700 text-xs">@</p>
-              <p className="text-sm font-bold text-neutral-500 mt-2">
-                {kenpomTempo.toFixed(0)}
-              </p>
-              <p className="text-[10px] text-neutral-700">TEMPO</p>
-            </div>
-
-            {/* Home */}
-            <div className="flex-1 text-center">
-              {homeRank && homeRank <= 50 && (
-                <p className="text-[10px] text-yellow-500 font-bold mb-0.5">
-                  #{homeRank}
+                <p className="text-[10px] text-neutral-700">PROJECTED</p>
+              </div>
+              {/* Center */}
+              <div className="px-3 text-center">
+                <p className="text-neutral-700 text-xs">@</p>
+                <p className="text-sm font-bold text-neutral-500 mt-2 font-mono">
+                  {kenpomTempo.toFixed(0)}
                 </p>
-              )}
-              <p className="text-xs text-neutral-500 mb-1">{homeTeam}</p>
-              {homeBadge && (
-                <span
-                  className={`inline-block mb-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${badgeClass(homeBadge)}`}
-                >
-                  {homeBadge.text}
-                </span>
-              )}
-              <p className="text-2xl font-bold text-white">
-                {kenpomHomeScore.toFixed(0)}
-              </p>
-              <p className="text-[10px] text-neutral-700">PROJECTED</p>
+                <p className="text-[10px] text-neutral-700">TEMPO</p>
+              </div>
+              {/* Home */}
+              <div className="flex-1 text-center">
+                {homeRank && homeRank <= 50 && (
+                  <p className="text-[10px] text-yellow-500 font-bold mb-0.5">
+                    #{homeRank}
+                  </p>
+                )}
+                <p className="text-xs text-neutral-500 mb-1">{homeTeam}</p>
+                {homeBadge && (
+                  <span
+                    className={`inline-block mb-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${badgeClass(homeBadge)}`}
+                  >
+                    {homeBadge.text}
+                  </span>
+                )}
+                <p className="text-3xl font-bold text-white font-mono">
+                  {kenpomHomeScore.toFixed(0)}
+                </p>
+                <p className="text-[10px] text-neutral-700">PROJECTED</p>
+              </div>
             </div>
+            <p className="text-center text-[10px] text-neutral-600 font-mono mt-3">
+              {formatGameTime(gameTime)} ET
+            </p>
           </div>
-        </div>
 
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {/* KenPom Signal banner */}
+          {/* KenPom Signal card */}
           {lineDiffAbs !== null && lineDiffAbs >= 3 && (
             <div
-              className={`p-4 rounded-xl border ${
+              className={`mx-4 mt-3 p-3 rounded-xl border ${favorsUnder ? "border-[#00ffff]/40" : "border-[#ff6b00]/40"}`}
+              style={{
+                background: favorsUnder
+                  ? "rgba(0,255,255,0.05)"
+                  : "rgba(255,107,0,0.05)",
+              }}
+            >
+              <p
+                className={`text-xs font-bold ${favorsUnder ? "text-[#00ffff]" : "text-[#ff6b00]"}`}
+              >
+                {favorsUnder ? "❄️ KENPOM UNDER" : "🔥 KENPOM OVER"}
+              </p>
+              <p
+                className={`text-2xl font-bold font-mono mt-1 ${favorsUnder ? "text-[#00ffff]" : "text-[#ff6b00]"}`}
+              >
+                {lineDiffAbs.toFixed(1)} pts
+              </p>
+              <p className="text-[10px] text-neutral-600 mt-1">
+                edge over Vegas
+              </p>
+            </div>
+          )}
+
+          {/* Quick stats grid */}
+          <div className="mx-4 my-3 grid grid-cols-3 gap-2">
+            <div
+              className="text-center p-2 rounded-lg border border-neutral-800"
+              style={{ background: "rgba(255,255,255,0.02)" }}
+            >
+              <p className="text-[10px] text-neutral-600 mb-0.5">KENPOM</p>
+              <p className="text-sm font-bold text-[#00ffff] font-mono">
+                {kenpomTotal.toFixed(1)}
+              </p>
+            </div>
+            <div
+              className="text-center p-2 rounded-lg border border-neutral-800"
+              style={{ background: "rgba(255,255,255,0.02)" }}
+            >
+              <p className="text-[10px] text-neutral-600 mb-0.5">VEGAS</p>
+              <p className="text-sm font-bold text-white font-mono">
+                {vegasLine !== null ? vegasLine.toFixed(1) : "—"}
+              </p>
+            </div>
+            <div
+              className="text-center p-2 rounded-lg border border-neutral-800"
+              style={{ background: "rgba(255,255,255,0.02)" }}
+            >
+              <p className="text-[10px] text-neutral-600 mb-0.5">EDGE</p>
+              <p
+                className={`text-sm font-bold font-mono ${
+                  lineDiffAbs && lineDiffAbs >= 3
+                    ? favorsUnder
+                      ? "text-[#00ffff]"
+                      : "text-[#ff6b00]"
+                    : "text-neutral-400"
+                }`}
+              >
+                {lineDiff !== null ? (
+                  <>
+                    {favorsUnder ? "↓" : favorsOver ? "↑" : ""}
+                    {lineDiffAbs?.toFixed(1)}
+                  </>
+                ) : (
+                  "—"
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex-1" />
+        </div>
+
+        {/* RIGHT PANEL: scrollable content */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+          {/* KenPom Signal banner — mobile only (desktop has it in left panel) */}
+          {lineDiffAbs !== null && lineDiffAbs >= 3 && (
+            <div
+              className={`lg:hidden p-4 rounded-xl border ${
                 favorsUnder ? "border-[#00ffff]/40" : "border-[#ff6b00]/40"
               }`}
               style={{
@@ -305,44 +380,47 @@ export default function UpcomingGameDetailModal({
             </div>
           )}
 
-          {/* Total Comparison */}
-          <SectionCard title="// TOTAL_COMPARISON">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <p className="text-[10px] text-neutral-600 mb-1">KENPOM</p>
-                <p className="text-xl font-bold text-[#00ffff] font-mono">
-                  {kenpomTotal.toFixed(1)}
-                </p>
+          {/* Total Comparison — mobile only (desktop has it in left panel) */}
+          <div className="lg:hidden">
+            <SectionCard title="// TOTAL_COMPARISON">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <p className="text-[10px] text-neutral-600 mb-1">KENPOM</p>
+                  <p className="text-xl font-bold text-[#00ffff] font-mono">
+                    {kenpomTotal.toFixed(1)}
+                  </p>
+                </div>
+                <div className="text-center border-x border-neutral-800">
+                  <p className="text-[10px] text-neutral-600 mb-1">VEGAS</p>
+                  <p className="text-xl font-bold text-white font-mono">
+                    {vegasLine !== null ? vegasLine.toFixed(1) : "—"}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-neutral-600 mb-1">EDGE</p>
+                  <p
+                    className={`text-xl font-bold font-mono ${
+                      lineDiffAbs && lineDiffAbs >= 3
+                        ? favorsUnder
+                          ? "text-[#00ffff]"
+                          : "text-[#ff6b00]"
+                        : "text-neutral-400"
+                    }`}
+                  >
+                    {lineDiff !== null ? (
+                      <>
+                        {favorsUnder ? "↓" : favorsOver ? "↑" : ""}
+                        {lineDiffAbs?.toFixed(1)}
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </p>
+                </div>
               </div>
-              <div className="text-center border-x border-neutral-800">
-                <p className="text-[10px] text-neutral-600 mb-1">VEGAS</p>
-                <p className="text-xl font-bold text-white font-mono">
-                  {vegasLine !== null ? vegasLine.toFixed(1) : "—"}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-neutral-600 mb-1">EDGE</p>
-                <p
-                  className={`text-xl font-bold font-mono ${
-                    lineDiffAbs && lineDiffAbs >= 3
-                      ? favorsUnder
-                        ? "text-[#00ffff]"
-                        : "text-[#ff6b00]"
-                      : "text-neutral-400"
-                  }`}
-                >
-                  {lineDiff !== null ? (
-                    <>
-                      {favorsUnder ? "↓" : favorsOver ? "↑" : ""}
-                      {lineDiffAbs?.toFixed(1)}
-                    </>
-                  ) : (
-                    "—"
-                  )}
-                </p>
-              </div>
-            </div>
-          </SectionCard>
+            </SectionCard>
+          </div>
+          {/* end lg:hidden total comparison */}
 
           {/* Win Probability */}
           <SectionCard title="// WIN_PROBABILITY">
