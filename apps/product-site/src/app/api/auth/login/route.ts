@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPassword, generateToken } from '@/lib/auth';
-import { getUserByEmail, getSubscriptionByUserId } from '@/lib/supabase';
+import { getUserByEmail, getSubscriptionByUserId } from '@/lib/queries/users';
 
 export async function POST(request: NextRequest) {
   try {

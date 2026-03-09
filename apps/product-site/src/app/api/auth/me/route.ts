@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, getTokenFromHeader } from '@/lib/auth';
-import { getUserById, getSubscriptionByUserId, getUserActivity } from '@/lib/supabase';
+import { getUserById, getSubscriptionByUserId, getUserActivity } from '@/lib/queries/users';
 
 export async function GET(request: NextRequest) {
   try {

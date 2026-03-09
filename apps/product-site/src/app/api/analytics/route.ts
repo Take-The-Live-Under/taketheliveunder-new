@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { logAnalyticsEvent, getAnalyticsSummary } from '@/lib/supabase';
+import { logAnalyticsEvent, getAnalyticsSummary } from '@/lib/queries/analytics';
 
 export async function POST(request: NextRequest) {
   try {

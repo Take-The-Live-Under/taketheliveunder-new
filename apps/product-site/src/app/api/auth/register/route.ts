@@ -6,7 +6,7 @@ import {
   createSubscription,
   createUserPreferences,
   createUserActivity,
-} from '@/lib/supabase';
+} from '@/lib/queries/users';
 
 export async function POST(request: NextRequest) {
   try {

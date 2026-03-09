@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase, GameSnapshot } from '@/lib/supabase';
+import { getGameSnapshots, GameSnapshot } from '@/lib/queries/snapshots';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -9,25 +9,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'gameId required' }, { status: 400 });
   }
 
-  const client = getSupabase();
-  if (!client) {
-    return NextResponse.json({ error: 'Database not configured' }, { status: 500 });
-  }
-
   try {
-    const { data, error } = await client
-      .from('game_snapshots')
-      .select('*')
-      .eq('game_id', gameId)
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching game snapshots:', error);
-      return NextResponse.json({ error: 'Failed to fetch snapshots' }, { status: 500 });
-    }
+    const data = await getGameSnapshots(gameId);
 
     // Transform data for charting - track line movement over game time
-    const snapshots: GameSnapshot[] = data || [];
+    const snapshots = data || [];
 
     // Group by approximate game time (minutes remaining)
     const timelineData = snapshots.map((s) => ({

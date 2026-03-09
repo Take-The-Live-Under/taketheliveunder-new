@@ -15,7 +15,9 @@ import {
   getExpectedFoulGameAdjustment,
   TriggerType,
 } from '@/lib/calculations';
-import { logTrigger, hasBeenLoggedRecently, logGameSnapshots, updateLineCache, cleanLineCache } from '@/lib/supabase';
+import { logTrigger, hasBeenLoggedRecently } from '@/lib/queries/triggers';
+import { logGameSnapshots } from '@/lib/queries/snapshots';
+import { updateLineCache, cleanLineCache } from '@/lib/queries/lineHistory';
 import { analyzeMatchup } from '@/lib/allTeamFoulGameData';
 import { getTeamBadge, getGameWarnings, shouldFilterTrigger } from '@/lib/teamFilters';
 

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase, TriggerLog } from '@/lib/supabase';
+import { db } from '@/lib/db';
+import { triggerLogs } from '@/lib/schema';
+import { gte, lt } from 'drizzle-orm';
+import { TriggerLog } from '@/lib/queries/triggers';
 
 const ESPN_SCOREBOARD_URL =
   'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard';
@@ -133,25 +136,35 @@ async function fetchFinalScores(dateStr: string): Promise<Map<string, { home: nu
 
 // Get triggered games for a specific date (all trigger types)
 async function getTriggersForDate(dateStr: string): Promise<TriggerLog[]> {
-  const client = getSupabase();
-  if (!client) return [];
-
   const { start, end } = getDateRange(dateStr);
 
   try {
-    const { data, error } = await client
-      .from('trigger_logs')
-      .select('*')
-      .gte('created_at', start)
-      .lt('created_at', end)
-      .order('created_at', { ascending: true });
+    const data = await db.query.triggerLogs.findMany({
+      where: (triggerLogs, { and, gte, lt }) => and(
+        gte(triggerLogs.createdAt, new Date(start)),
+        lt(triggerLogs.createdAt, new Date(end))
+      ),
+      orderBy: (triggerLogs, { asc }) => [asc(triggerLogs.createdAt)],
+    });
 
-    if (error) {
-      console.error('Error fetching triggers:', error);
-      return [];
-    }
-
-    return data || [];
+    return data.map(log => ({
+      game_id: log.gameId,
+      home_team: log.homeTeam,
+      away_team: log.awayTeam,
+      home_score: log.homeScore,
+      away_score: log.awayScore,
+      live_total: log.liveTotal,
+      ou_line: log.ouLine,
+      required_ppm: log.requiredPpm,
+      current_ppm: log.currentPpm,
+      ppm_difference: log.ppmDifference,
+      minutes_remaining: log.minutesRemaining,
+      period: log.period,
+      clock: log.clock,
+      trigger_strength: log.triggerStrength,
+      trigger_type: log.triggerType,
+      created_at: log.createdAt.toISOString(),
+    }));
   } catch (err) {
     console.error('Failed to fetch triggers:', err);
     return [];
