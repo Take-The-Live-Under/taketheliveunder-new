@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { TriggerLog } from '@/lib/supabase';
+import { useState, useEffect } from "react";
+import { TriggerLog } from "@/lib/queries/triggers";
 
 export default function AdminPage() {
   const [logs, setLogs] = useState<TriggerLog[]>([]);
@@ -14,13 +14,13 @@ export default function AdminPage() {
 
   const fetchLogs = async () => {
     try {
-      const response = await fetch('/api/logs?limit=200');
-      if (!response.ok) throw new Error('Failed to fetch logs');
+      const response = await fetch("/api/logs?limit=200");
+      if (!response.ok) throw new Error("Failed to fetch logs");
       const data = await response.json();
       setLogs(data.logs || []);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -30,22 +30,22 @@ export default function AdminPage() {
     if (logs.length === 0) return;
 
     const headers = [
-      'Date/Time',
-      'Away Team',
-      'Home Team',
-      'Score',
-      'O/U Line',
-      'Required PPM',
-      'Current PPM',
-      'PPM Diff',
-      'Minutes Left',
-      'Period',
-      'Clock',
-      'Strength',
+      "Date/Time",
+      "Away Team",
+      "Home Team",
+      "Score",
+      "O/U Line",
+      "Required PPM",
+      "Current PPM",
+      "PPM Diff",
+      "Minutes Left",
+      "Period",
+      "Clock",
+      "Strength",
     ];
 
     const rows = logs.map((log) => [
-      new Date(log.created_at!).toLocaleString(),
+      new Date(log.created_at || "").toLocaleString(),
       log.away_team,
       log.home_team,
       `${log.away_score}-${log.home_score}`,
@@ -59,26 +59,29 @@ export default function AdminPage() {
       log.trigger_strength,
     ]);
 
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((r) => r.join(",")),
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `trigger-logs-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `trigger-logs-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
   const getStrengthColor = (strength: string) => {
     switch (strength) {
-      case 'STRONG':
-        return 'border-green-500 text-green-400 bg-green-500/10';
-      case 'GOOD':
-        return 'border-green-600 text-green-500 bg-green-600/10';
-      case 'MODERATE':
-        return 'border-yellow-600 text-yellow-500 bg-yellow-600/10';
+      case "STRONG":
+        return "border-green-500 text-green-400 bg-green-500/10";
+      case "GOOD":
+        return "border-green-600 text-green-500 bg-green-600/10";
+      case "MODERATE":
+        return "border-yellow-600 text-yellow-500 bg-yellow-600/10";
       default:
-        return 'border-green-800 text-green-700 bg-green-800/10';
+        return "border-green-800 text-green-700 bg-green-800/10";
     }
   };
 
@@ -88,7 +91,9 @@ export default function AdminPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6 border-b border-green-800 pb-4">
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-green-500 tracking-wider">TRIGGER_LOGS</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-green-500 tracking-wider">
+              TRIGGER_LOGS
+            </h1>
             <p className="text-green-700 text-xs mt-1">
               {logs.length} TRIGGERED_GAMES_RECORDED
             </p>
@@ -142,31 +147,54 @@ export default function AdminPage() {
               <table className="w-full text-xs">
                 <thead className="bg-green-900/30 border-b border-green-800">
                   <tr>
-                    <th className="text-left px-3 py-2 text-green-600 font-medium">TIME</th>
-                    <th className="text-left px-3 py-2 text-green-600 font-medium">MATCHUP</th>
-                    <th className="text-center px-3 py-2 text-green-600 font-medium">SCORE</th>
-                    <th className="text-center px-3 py-2 text-green-600 font-medium">O/U</th>
-                    <th className="text-center px-3 py-2 text-green-600 font-medium">REQ_PPM</th>
-                    <th className="text-center px-3 py-2 text-green-600 font-medium">CUR_PPM</th>
-                    <th className="text-center px-3 py-2 text-green-600 font-medium">PPM_DIFF</th>
-                    <th className="text-center px-3 py-2 text-green-600 font-medium">MIN_LEFT</th>
-                    <th className="text-center px-3 py-2 text-green-600 font-medium">STRENGTH</th>
+                    <th className="text-left px-3 py-2 text-green-600 font-medium">
+                      TIME
+                    </th>
+                    <th className="text-left px-3 py-2 text-green-600 font-medium">
+                      MATCHUP
+                    </th>
+                    <th className="text-center px-3 py-2 text-green-600 font-medium">
+                      SCORE
+                    </th>
+                    <th className="text-center px-3 py-2 text-green-600 font-medium">
+                      O/U
+                    </th>
+                    <th className="text-center px-3 py-2 text-green-600 font-medium">
+                      REQ_PPM
+                    </th>
+                    <th className="text-center px-3 py-2 text-green-600 font-medium">
+                      CUR_PPM
+                    </th>
+                    <th className="text-center px-3 py-2 text-green-600 font-medium">
+                      PPM_DIFF
+                    </th>
+                    <th className="text-center px-3 py-2 text-green-600 font-medium">
+                      MIN_LEFT
+                    </th>
+                    <th className="text-center px-3 py-2 text-green-600 font-medium">
+                      STRENGTH
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-green-900">
                   {logs.map((log) => (
-                    <tr key={log.id} className="hover:bg-green-900/20 transition-colors">
+                    <tr
+                      key={log.id}
+                      className="hover:bg-green-900/20 transition-colors"
+                    >
                       <td className="px-3 py-2 text-green-400 whitespace-nowrap">
                         {new Date(log.created_at!).toLocaleString([], {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: 'numeric',
-                          minute: '2-digit',
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
                         })}
                       </td>
                       <td className="px-3 py-2">
                         <div className="text-green-300">{log.away_team}</div>
-                        <div className="text-green-600 text-xs">@ {log.home_team}</div>
+                        <div className="text-green-600 text-xs">
+                          @ {log.home_team}
+                        </div>
                       </td>
                       <td className="px-3 py-2 text-center text-green-400 font-medium">
                         {log.away_score}-{log.home_score}
@@ -187,7 +215,9 @@ export default function AdminPage() {
                         {log.minutes_remaining.toFixed(1)}
                       </td>
                       <td className="px-3 py-2 text-center">
-                        <span className={`px-2 py-0.5 border text-xs font-bold ${getStrengthColor(log.trigger_strength)}`}>
+                        <span
+                          className={`px-2 py-0.5 border text-xs font-bold ${getStrengthColor(log.trigger_strength)}`}
+                        >
                           {log.trigger_strength}
                         </span>
                       </td>
