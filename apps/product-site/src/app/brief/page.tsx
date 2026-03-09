@@ -348,8 +348,8 @@ export default function BriefPage() {
     <main className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
       <Navbar isRefreshing={isRefreshing} />
 
-      {/* Content */}
-      <div className="max-w-2xl mx-auto px-4 py-6 pb-20">
+      {/* Content — max-w-7xl, two-column on lg+ */}
+      <div className="max-w-7xl mx-auto px-4 py-6 pb-20">
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
@@ -360,186 +360,269 @@ export default function BriefPage() {
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Overview Stats */}
-            {visibleSections >= 1 && (
-              <div className="animate-fade-in">
-                <div className="text-[#00ffff] text-xs mb-3 font-mono">
-                  {">"} SITUATION_OVERVIEW
+          <div className="flex flex-col lg:flex-row gap-6 items-start">
+            {/* ── LEFT SIDEBAR (sticky on desktop) ── */}
+            <div className="w-full lg:w-72 xl:w-80 lg:sticky lg:top-24 flex-shrink-0 space-y-4">
+              {/* Overview Stats */}
+              {visibleSections >= 1 && (
+                <div className="animate-fade-in">
+                  <div className="text-[#00ffff] text-xs mb-3 font-mono">
+                    {">"} SITUATION_OVERVIEW
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="rounded-xl border border-neutral-800 p-4 glass-card text-center">
+                      <div className="text-3xl font-bold text-white font-mono">
+                        {games.length}
+                      </div>
+                      <div className="text-[10px] text-neutral-600 font-mono mt-1">
+                        TOTAL
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-neutral-800 p-4 glass-card text-center">
+                      <div className="text-3xl font-bold text-[#00ffff] font-mono">
+                        {liveGames.length}
+                      </div>
+                      <div className="text-[10px] text-neutral-600 font-mono mt-1">
+                        LIVE
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-neutral-800 p-4 glass-card text-center">
+                      <div className="text-3xl font-bold text-yellow-400 font-mono">
+                        {triggeredGames.length}
+                      </div>
+                      <div className="text-[10px] text-neutral-600 font-mono mt-1">
+                        TRIGGERS
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-neutral-800 p-4 glass-card text-center">
+                      <div className="text-3xl font-bold text-white font-mono">
+                        {upcomingGames.length}
+                      </div>
+                      <div className="text-[10px] text-neutral-600 font-mono mt-1">
+                        UPCOMING
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-4 gap-3">
-                  <div className="rounded-xl border border-neutral-800 p-3 glass-card text-center">
-                    <div className="text-2xl font-bold text-white font-mono">
-                      {games.length}
-                    </div>
-                    <div className="text-[10px] text-neutral-600 font-mono">
-                      TOTAL
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-neutral-800 p-3 glass-card text-center">
-                    <div className="text-2xl font-bold text-[#00ffff] font-mono">
-                      {liveGames.length}
-                    </div>
-                    <div className="text-[10px] text-neutral-600 font-mono">
-                      LIVE
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-neutral-800 p-3 glass-card text-center">
-                    <div className="text-2xl font-bold text-yellow-400 font-mono">
-                      {triggeredGames.length}
-                    </div>
-                    <div className="text-[10px] text-neutral-600 font-mono">
-                      TRIGGERS
-                    </div>
-                  </div>
-                  <div className="rounded-xl border border-neutral-800 p-3 glass-card text-center">
-                    <div className="text-2xl font-bold text-white font-mono">
-                      {upcomingGames.length}
-                    </div>
-                    <div className="text-[10px] text-neutral-600 font-mono">
-                      UPCOMING
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* Active Triggers */}
-            {visibleSections >= 2 && triggeredGames.length > 0 && (
-              <div className="animate-fade-in">
-                <div className="text-[#00ffff] text-xs mb-3 font-mono">
-                  {">"} ACTIVE_TRIGGERS
-                </div>
-                <div
-                  className="rounded-xl border border-[#00ffff]/30 p-1 space-y-1"
-                  style={{ background: "rgba(0,255,255,0.04)" }}
-                >
-                  {triggeredGames.map((game) => (
-                    <GameRow key={game.id} game={game} />
-                  ))}
-                </div>
-                <div className="mt-2 text-[10px] text-neutral-700 px-1 font-mono">
-                  // Tap any game for full analysis
-                </div>
-              </div>
-            )}
-
-            {/* Close to Triggering */}
-            {visibleSections >= 3 && closeToTrigger.length > 0 && (
-              <div className="animate-fade-in">
-                <div className="text-[#00ffff] text-xs mb-3 font-mono">
-                  {">"} APPROACHING_TRIGGER
-                </div>
-                <div className="space-y-1">
-                  {closeToTrigger.map((game) => (
-                    <div key={game.id} className="relative">
-                      <GameRow game={game} />
-                      <div className="absolute right-12 top-1/2 -translate-y-1/2 text-[10px] text-yellow-500 font-mono">
-                        GAP: {game.ppmGap.toFixed(2)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* High O/U Watch - with stats */}
-            {visibleSections >= 4 && highOUGames.length > 0 && (
-              <div className="animate-fade-in">
-                <div className="text-[#00ffff] text-xs mb-3 font-mono">
-                  {">"} HIGH_OU_TARGETS{" "}
-                  <span className="text-[#ff6b00]">(Watch for OVER)</span>
-                  <span className="text-neutral-700 ml-2">
-                    // tap to expand stats
-                  </span>
-                </div>
-                <div className="space-y-1">
-                  {highOUGames.map((game) => (
-                    <GameRow
-                      key={game.id}
-                      game={game}
-                      highlight="high"
-                      showStats={true}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Low O/U Watch - with stats */}
-            {visibleSections >= 5 && lowOUGames.length > 0 && (
-              <div className="animate-fade-in">
-                <div className="text-[#00ffff] text-xs mb-3 font-mono">
-                  {">"} LOW_OU_TARGETS{" "}
-                  <span className="text-[#00ffff]/80">(Watch for UNDER)</span>
-                  <span className="text-neutral-700 ml-2">
-                    // tap to expand stats
-                  </span>
-                </div>
-                <div className="space-y-1">
-                  {lowOUGames.map((game) => (
-                    <GameRow
-                      key={game.id}
-                      game={game}
-                      highlight="low"
-                      showStats={true}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Trigger Parameters */}
-            {visibleSections >= 6 && (
-              <div className="animate-fade-in">
-                <div className="text-[#00ffff] text-xs mb-3 font-mono">
-                  {">"} TRIGGER_PARAMETERS
-                </div>
-                <div className="rounded-xl border border-neutral-800 glass-card p-4 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <span className="text-[#ff6b00] text-lg">▸</span>
-                    <div>
-                      <div className="text-[#ff6b00] font-bold text-sm font-mono">
-                        OVER_SIGNAL
-                      </div>
-                      <div className="text-neutral-500 text-xs font-mono">
-                        Game minute 20-30, PPM gap ≥ +0.3
-                      </div>
-                    </div>
+              {/* Trigger Parameters — sidebar on desktop */}
+              {visibleSections >= 6 && (
+                <div className="animate-fade-in hidden lg:block">
+                  <div className="text-[#00ffff] text-xs mb-3 font-mono">
+                    {">"} TRIGGER_PARAMETERS
                   </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-yellow-400 text-lg">▸</span>
-                    <div>
-                      <div className="text-yellow-400 font-bold text-sm font-mono">
-                        TRIPLE_DIPPER
-                      </div>
-                      <div className="text-neutral-500 text-xs font-mono">
-                        Required PPM ≥ 4.5, PPM gap ≤ -1.0
+                  <div className="rounded-xl border border-neutral-800 glass-card p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <span className="text-[#ff6b00] text-lg">▸</span>
+                      <div>
+                        <div className="text-[#ff6b00] font-bold text-xs font-mono">
+                          OVER_SIGNAL
+                        </div>
+                        <div className="text-neutral-500 text-[10px] font-mono mt-0.5">
+                          Game minute 20-30, PPM gap ≥ +0.3
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <span className="text-[#00ffff] text-lg">▸</span>
-                    <div>
-                      <div className="text-[#00ffff] font-bold text-sm font-mono">
-                        GOLDEN_ZONE
+                    <div className="flex items-start gap-3">
+                      <span className="text-yellow-400 text-lg">▸</span>
+                      <div>
+                        <div className="text-yellow-400 font-bold text-xs font-mono">
+                          TRIPLE_DIPPER
+                        </div>
+                        <div className="text-neutral-500 text-[10px] font-mono mt-0.5">
+                          Required PPM ≥ 4.5, PPM gap ≤ -1.0
+                        </div>
                       </div>
-                      <div className="text-neutral-500 text-xs font-mono">
-                        PPM difference in sweet spot 1.0-1.5
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-[#00ffff] text-lg">▸</span>
+                      <div>
+                        <div className="text-[#00ffff] font-bold text-xs font-mono">
+                          GOLDEN_ZONE
+                        </div>
+                        <div className="text-neutral-500 text-[10px] font-mono mt-0.5">
+                          PPM difference in sweet spot 1.0-1.5
+                        </div>
+                      </div>
+                    </div>
+                    <div className="pt-3 border-t border-neutral-800/50 text-center">
+                      <div className="text-white text-xs font-bold">
+                        Good Hunting, Operator
+                      </div>
+                      <div className="text-neutral-700 text-[10px] mt-1 font-mono">
+                        // END_BRIEFING
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className="mt-4 pt-4 border-t border-neutral-800/50 text-center">
-                  <div className="text-white text-sm font-bold">
-                    Good Hunting, Operator
+              )}
+
+              {/* Date label */}
+              <div className="text-[10px] text-neutral-800 font-mono px-1 hidden lg:block">
+                {dateStr}
+              </div>
+            </div>
+
+            {/* ── RIGHT PANEL: game lists ── */}
+            <div className="flex-1 min-w-0 space-y-6">
+              {/* Active Triggers */}
+              {visibleSections >= 2 && triggeredGames.length > 0 && (
+                <div className="animate-fade-in">
+                  <div className="text-[#00ffff] text-xs mb-3 font-mono">
+                    {">"} ACTIVE_TRIGGERS
                   </div>
-                  <div className="text-neutral-700 text-[10px] mt-1 font-mono">
-                    // END_BRIEFING
+                  <div
+                    className="rounded-xl border border-[#00ffff]/30 p-1 space-y-1"
+                    style={{ background: "rgba(0,255,255,0.04)" }}
+                  >
+                    {triggeredGames.map((game) => (
+                      <GameRow key={game.id} game={game} />
+                    ))}
+                  </div>
+                  <div className="mt-2 text-[10px] text-neutral-700 px-1 font-mono">
+                    // Tap any game for full analysis
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* Close to Triggering */}
+              {visibleSections >= 3 && closeToTrigger.length > 0 && (
+                <div className="animate-fade-in">
+                  <div className="text-[#00ffff] text-xs mb-3 font-mono">
+                    {">"} APPROACHING_TRIGGER
+                  </div>
+                  <div className="space-y-1">
+                    {closeToTrigger.map((game) => (
+                      <div key={game.id} className="relative">
+                        <GameRow game={game} />
+                        <div className="absolute right-12 top-1/2 -translate-y-1/2 text-[10px] text-yellow-500 font-mono">
+                          GAP: {game.ppmGap.toFixed(2)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* High O/U Watch */}
+              {visibleSections >= 4 && highOUGames.length > 0 && (
+                <div className="animate-fade-in">
+                  <div className="text-[#00ffff] text-xs mb-3 font-mono">
+                    {">"} HIGH_OU_TARGETS{" "}
+                    <span className="text-[#ff6b00]">(Watch for OVER)</span>
+                    <span className="text-neutral-700 ml-2">
+                      // tap to expand stats
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {highOUGames.map((game) => (
+                      <GameRow
+                        key={game.id}
+                        game={game}
+                        highlight="high"
+                        showStats={true}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Low O/U Watch */}
+              {visibleSections >= 5 && lowOUGames.length > 0 && (
+                <div className="animate-fade-in">
+                  <div className="text-[#00ffff] text-xs mb-3 font-mono">
+                    {">"} LOW_OU_TARGETS{" "}
+                    <span className="text-[#00ffff]/80">(Watch for UNDER)</span>
+                    <span className="text-neutral-700 ml-2">
+                      // tap to expand stats
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {lowOUGames.map((game) => (
+                      <GameRow
+                        key={game.id}
+                        game={game}
+                        highlight="low"
+                        showStats={true}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Trigger Parameters — mobile only (desktop has it in left sidebar) */}
+              {visibleSections >= 6 && (
+                <div className="animate-fade-in lg:hidden">
+                  <div className="text-[#00ffff] text-xs mb-3 font-mono">
+                    {">"} TRIGGER_PARAMETERS
+                  </div>
+                  <div className="rounded-xl border border-neutral-800 glass-card p-4 space-y-3">
+                    <div className="flex items-start gap-3">
+                      <span className="text-[#ff6b00] text-lg">▸</span>
+                      <div>
+                        <div className="text-[#ff6b00] font-bold text-sm font-mono">
+                          OVER_SIGNAL
+                        </div>
+                        <div className="text-neutral-500 text-xs font-mono">
+                          Game minute 20-30, PPM gap ≥ +0.3
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-yellow-400 text-lg">▸</span>
+                      <div>
+                        <div className="text-yellow-400 font-bold text-sm font-mono">
+                          TRIPLE_DIPPER
+                        </div>
+                        <div className="text-neutral-500 text-xs font-mono">
+                          Required PPM ≥ 4.5, PPM gap ≤ -1.0
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="text-[#00ffff] text-lg">▸</span>
+                      <div>
+                        <div className="text-[#00ffff] font-bold text-sm font-mono">
+                          GOLDEN_ZONE
+                        </div>
+                        <div className="text-neutral-500 text-xs font-mono">
+                          PPM difference in sweet spot 1.0-1.5
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-neutral-800/50 text-center">
+                      <div className="text-white text-sm font-bold">
+                        Good Hunting, Operator
+                      </div>
+                      <div className="text-neutral-700 text-[10px] mt-1 font-mono">
+                        // END_BRIEFING
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Empty state when no game sections visible yet */}
+              {visibleSections >= 2 &&
+                triggeredGames.length === 0 &&
+                closeToTrigger.length === 0 &&
+                highOUGames.length === 0 &&
+                lowOUGames.length === 0 && (
+                  <div className="text-center py-16 rounded-xl border border-neutral-800 glass-card">
+                    <div className="text-neutral-700 text-xs font-mono mb-2">
+                      // STATUS: STANDBY
+                    </div>
+                    <p className="text-white font-semibold">
+                      No active signals
+                    </p>
+                    <p className="text-neutral-500 text-sm mt-1">
+                      Check back during game windows
+                    </p>
+                  </div>
+                )}
+            </div>
+            {/* end right panel */}
           </div>
         )}
       </div>
