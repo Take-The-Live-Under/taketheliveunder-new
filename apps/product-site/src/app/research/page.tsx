@@ -440,11 +440,147 @@ export default function ResearchPage() {
 
       <div className="mx-auto max-w-7xl px-4 py-8 w-full flex-1">
         {/* ═══════════════════════════════════
-            COMPARE MODE — full width, wider container
+            COMPARE MODE
             ═══════════════════════════════════ */}
-        {viewMode === "compare" && (
+
+        {/* ── No teams selected: centered layout ── */}
+        {viewMode === "compare" && !team1 && !team2 && !comparing && (
+          <div className="flex flex-col items-center justify-center flex-1 py-12">
+            <div className="w-full space-y-6 text-center">
+              <div>
+                <div className="text-neutral-600 text-xs font-mono mb-2">
+                  // TEAM_ANALYSIS
+                </div>
+                <h1 className="text-3xl font-bold text-white mb-2">
+                  Head-to-Head
+                </h1>
+                <p className="text-neutral-500 text-sm">
+                  Compare two teams side by side
+                </p>
+              </div>
+
+              {/* Mode toggle centered */}
+              <div className="flex justify-center">
+                <div
+                  className="inline-flex items-center gap-1 rounded-xl border border-neutral-800 p-1"
+                  style={{ background: "rgba(23,23,23,0.6)" }}
+                >
+                  {(["single", "compare"] as ViewMode[]).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => switchMode(mode)}
+                      className={`px-5 py-2 rounded-lg text-xs font-semibold font-mono tracking-wide transition-all duration-200 ${
+                        viewMode === mode
+                          ? "bg-[#00ffff] text-black shadow-[0_0_12px_rgba(0,255,255,0.3)]"
+                          : "text-neutral-500 hover:text-white hover:bg-neutral-800"
+                      }`}
+                    >
+                      {mode === "single" ? "SINGLE" : "COMPARE"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Two search inputs */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                <div className="relative">
+                  <label className="block text-xs text-neutral-600 font-mono mb-2">
+                    // TEAM_1
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Search team..."
+                    value={team1Search}
+                    onChange={(e) => {
+                      setTeam1Search(e.target.value);
+                      setShowDropdown1(true);
+                    }}
+                    onFocus={() => setShowDropdown1(true)}
+                    className={inputCls}
+                  />
+                  {showDropdown1 && !team1 && team1Search && (
+                    <div className={dropdownCls}>
+                      {filteredTeams1.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => {
+                            setTeam1(t);
+                            setTeam1Search("");
+                            setShowDropdown1(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs text-neutral-300 hover:text-white hover:bg-neutral-800/60 flex items-center justify-between border-b border-neutral-800/50 last:border-0 transition-colors"
+                        >
+                          <span>{t.name}</span>
+                          {t.rank && t.rank < 26 && (
+                            <span className="text-yellow-400 font-mono font-bold">
+                              #{t.rank}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="relative">
+                  <label className="block text-xs text-neutral-600 font-mono mb-2">
+                    // TEAM_2
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Search team..."
+                    value={team2Search}
+                    onChange={(e) => {
+                      setTeam2Search(e.target.value);
+                      setShowDropdown2(true);
+                    }}
+                    onFocus={() => setShowDropdown2(true)}
+                    className={inputCls}
+                  />
+                  {showDropdown2 && !team2 && team2Search && (
+                    <div className={dropdownCls}>
+                      {filteredTeams2.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => {
+                            setTeam2(t);
+                            setTeam2Search("");
+                            setShowDropdown2(false);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs text-neutral-300 hover:text-white hover:bg-neutral-800/60 flex items-center justify-between border-b border-neutral-800/50 last:border-0 transition-colors"
+                        >
+                          <span>{t.name}</span>
+                          {t.rank && t.rank < 26 && (
+                            <span className="text-yellow-400 font-mono font-bold">
+                              #{t.rank}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* AWAITING_INPUT card */}
+              <div className="rounded-xl border border-neutral-800 glass-panel py-8 px-6 text-center">
+                <div className="text-neutral-700 text-xs font-mono mb-2">
+                  // AWAITING_INPUT
+                </div>
+                <p className="text-sm font-semibold text-white">
+                  Select Two Teams
+                </p>
+                <p className="text-xs text-neutral-500 mt-1">
+                  Search and select both teams above to compare their stats
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Teams selected or comparing: full-width layout ── */}
+        {viewMode === "compare" && (team1 || team2 || comparing) && (
           <div className="space-y-6">
-            {/* Header + mode toggle */}
+            {/* Compact header + mode toggle */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
               <div>
                 <div className="text-neutral-600 text-xs font-mono mb-1">
@@ -798,9 +934,122 @@ export default function ResearchPage() {
         )}
 
         {/* ═══════════════════════════════════
-            SINGLE MODE — two-column on lg+
+            SINGLE MODE
             ═══════════════════════════════════ */}
-        {viewMode === "single" && (
+        {viewMode === "single" && !selectedTeam && !analyzing && (
+          /* ── NO TEAM SELECTED: centered layout ── */
+          <div className="flex flex-col items-center justify-center flex-1 py-12">
+            <div className="w-full space-y-6 text-center">
+              <div>
+                <div className="text-neutral-600 text-xs font-mono mb-2">
+                  // TEAM_ANALYSIS
+                </div>
+                <h1 className="text-3xl font-bold text-white mb-2">
+                  Team Profile
+                </h1>
+                <p className="text-neutral-500 text-sm">
+                  Statistical deep-dive for any NCAA team
+                </p>
+              </div>
+
+              {/* Mode toggle centered */}
+              <div className="flex justify-center">
+                <div
+                  className="inline-flex items-center gap-1 rounded-xl border border-neutral-800 p-1"
+                  style={{ background: "rgba(23,23,23,0.6)" }}
+                >
+                  {(["single", "compare"] as ViewMode[]).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => switchMode(mode)}
+                      className={`px-5 py-2 rounded-lg text-xs font-semibold font-mono tracking-wide transition-all duration-200 ${
+                        viewMode === mode
+                          ? "bg-[#00ffff] text-black shadow-[0_0_12px_rgba(0,255,255,0.3)]"
+                          : "text-neutral-500 hover:text-white hover:bg-neutral-800"
+                      }`}
+                    >
+                      {mode === "single" ? "SINGLE" : "COMPARE"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Search input centered */}
+              <div className="relative text-left">
+                <label className="block text-xs text-neutral-600 font-mono mb-2">
+                  // SELECT_TEAM
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search team..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setShowDropdown(true);
+                    }}
+                    onFocus={() => setShowDropdown(true)}
+                    className={inputCls}
+                  />
+                </div>
+                {showDropdown && searchQuery && (
+                  <div className={dropdownCls}>
+                    {filteredTeams.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => selectTeam(t)}
+                        className="w-full px-4 py-3 text-left text-sm text-neutral-300 hover:text-white hover:bg-neutral-800/60 flex items-center justify-between border-b border-neutral-800/50 last:border-0 transition-colors"
+                      >
+                        <span>{t.name}</span>
+                        {t.rank && t.rank < 26 && (
+                          <span className="text-yellow-400 text-xs font-mono font-bold">
+                            #{t.rank}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                    {filteredTeams.length === 0 && (
+                      <div className="px-4 py-3 text-xs text-neutral-600 font-mono">
+                        NO_TEAMS_FOUND
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* AWAITING_INPUT card */}
+              {!loading && (
+                <div className="rounded-xl border border-neutral-800 glass-panel py-8 px-6 text-center">
+                  <div className="text-neutral-700 text-xs font-mono mb-2">
+                    // AWAITING_INPUT
+                  </div>
+                  <p className="text-sm font-semibold text-white">
+                    Select a Team
+                  </p>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Search above to load a full statistical profile
+                  </p>
+                </div>
+              )}
+              {loading && (
+                <div className="rounded-xl border border-neutral-800 glass-panel py-8 px-6 text-center">
+                  <div className="flex items-center justify-center gap-2 text-neutral-500">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#00ffff] border-t-transparent" />
+                    <span className="text-xs font-mono">LOADING_TEAMS...</span>
+                  </div>
+                </div>
+              )}
+              {/* Hint */}
+              {!loading && (
+                <div className="text-neutral-700 text-xs font-mono">
+                  // {teams.length} teams available · type to search
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {viewMode === "single" && (selectedTeam || analyzing) && (
           <div className="flex flex-col lg:flex-row gap-6 items-start">
             {/* ── LEFT SIDEBAR ── */}
             <div className="w-full lg:w-80 xl:w-96 flex-shrink-0 lg:sticky lg:top-24 space-y-4">
