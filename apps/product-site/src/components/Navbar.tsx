@@ -29,7 +29,7 @@ export function Navbar({
         scrolled ? "py-2" : "py-3"
       }`}
     >
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-7xl">
         <div
           className="flex items-center justify-between h-14 px-4 rounded-2xl border border-neutral-800 backdrop-blur-sm"
           style={{ background: "rgba(10,10,10,0.85)" }}

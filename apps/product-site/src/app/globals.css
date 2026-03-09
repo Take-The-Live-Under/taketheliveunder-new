@@ -30,6 +30,19 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+/* Font utilities — matching marketing site */
+:root {
+  --font-marker: var(--font-permanent-marker);
+}
+
+.font-marker {
+  font-family: var(--font-permanent-marker), cursive;
+}
+
+.font-rock-salt {
+  font-family: var(--font-rock-salt), cursive;
+}
+
 /* Glassmorphism utilities */
 .glass-panel {
   background: rgba(23, 23, 23, 0.6);

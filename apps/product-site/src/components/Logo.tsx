@@ -11,16 +11,15 @@ export function Logo({ className, size = "md" }: LogoProps) {
     <span
       className={`inline-flex items-center gap-1 ${sizeClass} ${className ?? ""}`}
     >
+      {/* "TakeThe" — Rock Salt font, neon blue — matches marketing site exactly */}
       <span
         className="text-[#00ffff] drop-shadow-[0_0_5px_rgba(0,255,255,0.8)]"
-        style={{ fontFamily: "'Rock Salt', cursive" }}
+        style={{ fontFamily: "var(--font-rock-salt), cursive" }}
       >
         TakeThe
       </span>
-      <span
-        className="text-[#ff6b00] drop-shadow-[0_0_5px_rgba(255,107,0,0.8)]"
-        style={{ fontFamily: "'Permanent Marker', cursive" }}
-      >
+      {/* "LiveUnder" — Permanent Marker font, neon orange — matches marketing site exactly */}
+      <span className="font-marker text-[#ff6b00] drop-shadow-[0_0_5px_rgba(255,107,0,0.8)]">
         LiveUnder
       </span>
     </span>
