@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { GamePrediction } from '@/app/api/predictions/route';
-import { getTeamBadge } from '@/lib/teamFilters';
+import { useEffect, useState } from "react";
+import { GamePrediction } from "@/app/api/predictions/route";
+import { getTeamBadge } from "@/lib/teamFilters";
 
 interface UpcomingGameDetailModalProps {
   prediction: GamePrediction;
@@ -25,17 +25,14 @@ interface KenPomTeamStats {
   sosEM: number | null;
   sosRank: number | null;
   ncSosEM: number | null;
-  // Four Factors offense
   offEfg: number | null;
   offTO: number | null;
   offOR: number | null;
   offFTR: number | null;
-  // Four Factors defense
   defEfg: number | null;
   defTO: number | null;
   defOR: number | null;
   defFTR: number | null;
-  // Record
   wins: number | null;
   losses: number | null;
   confWins: number | null;
@@ -44,27 +41,50 @@ interface KenPomTeamStats {
 }
 
 function formatGameTime(dateStr: string | null): string {
-  if (!dateStr) return 'TBD';
+  if (!dateStr) return "TBD";
   const date = new Date(dateStr);
-  return date.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZone: 'America/New_York',
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/New_York",
   });
 }
 
 function formatGameDate(dateStr: string | null): string {
-  if (!dateStr) return '';
+  if (!dateStr) return "";
   const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'America/New_York',
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "America/New_York",
   });
 }
 
-export default function UpcomingGameDetailModal({ prediction, isOpen, onClose }: UpcomingGameDetailModalProps) {
+// Reusable section card
+function SectionCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="rounded-xl border border-neutral-800 p-4"
+      style={{ background: "rgba(255,255,255,0.02)" }}
+    >
+      <h3 className="text-xs font-semibold text-[#00ffff] mb-3">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+export default function UpcomingGameDetailModal({
+  prediction,
+  isOpen,
+  onClose,
+}: UpcomingGameDetailModalProps) {
   const [homeStats, setHomeStats] = useState<KenPomTeamStats | null>(null);
   const [awayStats, setAwayStats] = useState<KenPomTeamStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -88,10 +108,8 @@ export default function UpcomingGameDetailModal({ prediction, isOpen, onClose }:
   const homeBadge = getTeamBadge(homeTeam);
   const awayBadge = getTeamBadge(awayTeam);
 
-  // Fetch KenPom team stats
   useEffect(() => {
     if (!isOpen) return;
-
     const fetchStats = async () => {
       setLoading(true);
       try {
@@ -99,7 +117,6 @@ export default function UpcomingGameDetailModal({ prediction, isOpen, onClose }:
           fetch(`/api/kenpom-team?team=${encodeURIComponent(homeTeam)}`),
           fetch(`/api/kenpom-team?team=${encodeURIComponent(awayTeam)}`),
         ]);
-
         if (homeRes.ok) {
           const data = await homeRes.json();
           if (!data.error) setHomeStats(data);
@@ -109,27 +126,25 @@ export default function UpcomingGameDetailModal({ prediction, isOpen, onClose }:
           if (!data.error) setAwayStats(data);
         }
       } catch (err) {
-        console.error('Error fetching KenPom stats:', err);
+        console.error("Error fetching KenPom stats:", err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchStats();
   }, [isOpen, homeTeam, awayTeam]);
 
-  // Close on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
     if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
+      document.addEventListener("keydown", handleEscape);
+      document.body.style.overflow = "hidden";
     }
     return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+      document.removeEventListener("keydown", handleEscape);
+      document.body.style.overflow = "unset";
     };
   }, [isOpen, onClose]);
 
@@ -139,99 +154,151 @@ export default function UpcomingGameDetailModal({ prediction, isOpen, onClose }:
   const favorsOver = lineDiff !== null && lineDiff < 0;
   const lineDiffAbs = lineDiff !== null ? Math.abs(lineDiff) : null;
 
+  const badgeClass = (badge: ReturnType<typeof getTeamBadge>) => {
+    if (!badge) return "";
+    if (badge.color === "red")
+      return "border-red-700 text-red-400 bg-red-900/20";
+    if (badge.color === "orange")
+      return "border-[#ff6b00]/40 text-[#ff6b00] bg-[#ff6b00]/10";
+    if (badge.color === "blue")
+      return "border-[#00ffff]/40 text-[#00ffff] bg-[#00ffff]/10";
+    return "border-neutral-700 text-neutral-400 bg-neutral-900/50";
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center font-mono">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/90 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg max-h-[90vh] bg-[#0a0a0a] border border-green-900 terminal-glow-box animate-slide-up overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex-shrink-0 sticky top-0 bg-[#0a0a0a]/95 backdrop-blur-sm border-b border-green-900 p-4 z-10">
+      <div
+        className="relative w-full max-w-lg max-h-[90vh] rounded-t-2xl sm:rounded-2xl border border-neutral-800 animate-slide-up overflow-hidden flex flex-col"
+        style={{
+          background: "rgba(10,10,10,0.97)",
+          backdropFilter: "blur(20px)",
+        }}
+      >
+        {/* Header bar */}
+        <div
+          className="flex-shrink-0 sticky top-0 border-b border-neutral-800 p-4 z-10"
+          style={{ background: "rgba(10,10,10,0.97)" }}
+        >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 border border-green-700 bg-green-900/30 text-xs text-green-400">
+              <span className="px-2 py-0.5 rounded border border-neutral-700 text-xs text-neutral-400">
                 UPCOMING
               </span>
-              <span className="text-xs text-green-700">
-                {formatGameDate(gameTime)} {formatGameTime(gameTime)} ET
+              <span className="text-xs text-neutral-600">
+                {formatGameDate(gameTime)} · {formatGameTime(gameTime)} ET
               </span>
             </div>
             <button
               onClick={onClose}
-              className="p-2 text-green-700 hover:text-green-400 hover:bg-green-900/30 transition-colors tap-target"
+              className="p-2 text-neutral-600 hover:text-white hover:bg-neutral-800/50 rounded-lg transition-colors"
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
 
-          {/* Teams and Projected Scores */}
+          {/* Teams + Projected Scores */}
           <div className="flex items-center justify-between">
+            {/* Away */}
             <div className="flex-1 text-center">
               {awayRank && awayRank <= 50 && (
-                <p className="text-[10px] text-yellow-500 font-bold mb-0.5">#{awayRank}</p>
+                <p className="text-[10px] text-yellow-500 font-bold mb-0.5">
+                  #{awayRank}
+                </p>
               )}
-              <p className="text-xs text-green-700 mb-1">{awayTeam}</p>
+              <p className="text-xs text-neutral-500 mb-1">{awayTeam}</p>
               {awayBadge && (
-                <span className={`inline-block mb-1 px-1.5 py-0.5 text-[10px] font-bold border ${
-                  awayBadge.color === 'red' ? 'border-red-700 text-red-400' :
-                  awayBadge.color === 'orange' ? 'border-orange-700 text-orange-400' :
-                  awayBadge.color === 'blue' ? 'border-blue-700 text-blue-400' :
-                  'border-green-700 text-green-400'
-                }`}>
+                <span
+                  className={`inline-block mb-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${badgeClass(awayBadge)}`}
+                >
                   {awayBadge.text}
                 </span>
               )}
-              <p className="text-2xl font-bold text-green-400">{kenpomAwayScore.toFixed(0)}</p>
-              <p className="text-[10px] text-green-700">PROJECTED</p>
+              <p className="text-2xl font-bold text-white">
+                {kenpomAwayScore.toFixed(0)}
+              </p>
+              <p className="text-[10px] text-neutral-700">PROJECTED</p>
             </div>
+
+            {/* Center divider */}
             <div className="px-4 text-center">
-              <p className="text-green-800 text-xs">@</p>
-              <p className="text-[10px] text-green-600 mt-2">{kenpomTempo.toFixed(0)}</p>
-              <p className="text-[10px] text-green-800">TEMPO</p>
+              <p className="text-neutral-700 text-xs">@</p>
+              <p className="text-sm font-bold text-neutral-500 mt-2">
+                {kenpomTempo.toFixed(0)}
+              </p>
+              <p className="text-[10px] text-neutral-700">TEMPO</p>
             </div>
+
+            {/* Home */}
             <div className="flex-1 text-center">
               {homeRank && homeRank <= 50 && (
-                <p className="text-[10px] text-yellow-500 font-bold mb-0.5">#{homeRank}</p>
+                <p className="text-[10px] text-yellow-500 font-bold mb-0.5">
+                  #{homeRank}
+                </p>
               )}
-              <p className="text-xs text-green-700 mb-1">{homeTeam}</p>
+              <p className="text-xs text-neutral-500 mb-1">{homeTeam}</p>
               {homeBadge && (
-                <span className={`inline-block mb-1 px-1.5 py-0.5 text-[10px] font-bold border ${
-                  homeBadge.color === 'red' ? 'border-red-700 text-red-400' :
-                  homeBadge.color === 'orange' ? 'border-orange-700 text-orange-400' :
-                  homeBadge.color === 'blue' ? 'border-blue-700 text-blue-400' :
-                  'border-green-700 text-green-400'
-                }`}>
+                <span
+                  className={`inline-block mb-1 px-1.5 py-0.5 text-[10px] font-bold rounded border ${badgeClass(homeBadge)}`}
+                >
                   {homeBadge.text}
                 </span>
               )}
-              <p className="text-2xl font-bold text-green-400">{kenpomHomeScore.toFixed(0)}</p>
-              <p className="text-[10px] text-green-700">PROJECTED</p>
+              <p className="text-2xl font-bold text-white">
+                {kenpomHomeScore.toFixed(0)}
+              </p>
+              <p className="text-[10px] text-neutral-700">PROJECTED</p>
             </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* KenPom Signal */}
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {/* KenPom Signal banner */}
           {lineDiffAbs !== null && lineDiffAbs >= 3 && (
-            <div className={`p-4 border ${
-              favorsUnder ? 'bg-blue-900/20 border-blue-800' : 'bg-orange-900/20 border-orange-800'
-            }`}>
+            <div
+              className={`p-4 rounded-xl border ${
+                favorsUnder ? "border-[#00ffff]/40" : "border-[#ff6b00]/40"
+              }`}
+              style={{
+                background: favorsUnder
+                  ? "rgba(0,255,255,0.05)"
+                  : "rgba(255,107,0,0.05)",
+              }}
+            >
               <div className="flex items-center justify-between mb-2">
-                <span className={`text-sm font-bold ${favorsUnder ? 'text-blue-400' : 'text-orange-400'}`}>
-                  {favorsUnder ? '❄️ KENPOM FAVORS UNDER' : '🔥 KENPOM FAVORS OVER'}
+                <span
+                  className={`text-sm font-bold ${favorsUnder ? "text-[#00ffff]" : "text-[#ff6b00]"}`}
+                >
+                  {favorsUnder
+                    ? "❄️ KENPOM FAVORS UNDER"
+                    : "🔥 KENPOM FAVORS OVER"}
                 </span>
-                <span className={`text-lg font-bold ${favorsUnder ? 'text-blue-400' : 'text-orange-400'}`}>
+                <span
+                  className={`text-lg font-bold ${favorsUnder ? "text-[#00ffff]" : "text-[#ff6b00]"}`}
+                >
                   {lineDiffAbs.toFixed(1)} pts
                 </span>
               </div>
-              <p className="text-xs text-green-600">
+              <p className="text-xs text-neutral-500">
                 KenPom projects {kenpomTotal.toFixed(1)} total points
                 {vegasLine && `, Vegas line is ${vegasLine.toFixed(1)}`}
               </p>
@@ -239,328 +306,425 @@ export default function UpcomingGameDetailModal({ prediction, isOpen, onClose }:
           )}
 
           {/* Total Comparison */}
-          <div className="bg-green-900/20 border border-green-900 p-4">
-            <h3 className="text-xs font-semibold text-green-400 mb-3">// TOTAL_COMPARISON</h3>
+          <SectionCard title="// TOTAL_COMPARISON">
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center">
-                <p className="text-[10px] text-green-700 mb-1">KENPOM</p>
-                <p className="text-xl font-bold text-green-400">{kenpomTotal.toFixed(1)}</p>
+                <p className="text-[10px] text-neutral-600 mb-1">KENPOM</p>
+                <p className="text-xl font-bold text-[#00ffff] font-mono">
+                  {kenpomTotal.toFixed(1)}
+                </p>
               </div>
-              <div className="text-center border-x border-green-900/50">
-                <p className="text-[10px] text-green-700 mb-1">VEGAS</p>
-                <p className="text-xl font-bold text-green-400">
-                  {vegasLine !== null ? vegasLine.toFixed(1) : '—'}
+              <div className="text-center border-x border-neutral-800">
+                <p className="text-[10px] text-neutral-600 mb-1">VEGAS</p>
+                <p className="text-xl font-bold text-white font-mono">
+                  {vegasLine !== null ? vegasLine.toFixed(1) : "—"}
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-[10px] text-green-700 mb-1">EDGE</p>
-                <p className={`text-xl font-bold ${
-                  lineDiffAbs && lineDiffAbs >= 3
-                    ? favorsUnder ? 'text-blue-400' : 'text-orange-400'
-                    : 'text-green-400'
-                }`}>
+                <p className="text-[10px] text-neutral-600 mb-1">EDGE</p>
+                <p
+                  className={`text-xl font-bold font-mono ${
+                    lineDiffAbs && lineDiffAbs >= 3
+                      ? favorsUnder
+                        ? "text-[#00ffff]"
+                        : "text-[#ff6b00]"
+                      : "text-neutral-400"
+                  }`}
+                >
                   {lineDiff !== null ? (
-                    <>{favorsUnder ? '↓' : favorsOver ? '↑' : ''}{lineDiffAbs?.toFixed(1)}</>
-                  ) : '—'}
+                    <>
+                      {favorsUnder ? "↓" : favorsOver ? "↑" : ""}
+                      {lineDiffAbs?.toFixed(1)}
+                    </>
+                  ) : (
+                    "—"
+                  )}
                 </p>
               </div>
             </div>
-          </div>
+          </SectionCard>
 
           {/* Win Probability */}
-          <div className="bg-green-900/20 border border-green-900 p-4">
-            <h3 className="text-xs font-semibold text-green-400 mb-3">// WIN_PROBABILITY</h3>
-            <div className="flex items-center justify-between text-xs text-green-600 mb-2">
-              <span>{awayTeam.split(' ').pop()}</span>
-              <span className={`font-bold ${confidence === 'HIGH' ? 'text-green-400' : 'text-green-600'}`}>
+          <SectionCard title="// WIN_PROBABILITY">
+            <div className="flex items-center justify-between text-xs text-neutral-500 mb-2">
+              <span>{awayTeam.split(" ").pop()}</span>
+              <span
+                className={`font-bold text-[10px] ${confidence === "HIGH" ? "text-[#00ffff]" : "text-neutral-600"}`}
+              >
                 {confidence} CONFIDENCE
               </span>
-              <span>{homeTeam.split(' ').pop()}</span>
+              <span>{homeTeam.split(" ").pop()}</span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-lg font-bold text-green-400 w-12">{(100 - kenpomWinProb).toFixed(0)}%</span>
-              <div className="flex-1 h-3 bg-green-900/50 overflow-hidden flex">
+              <span className="text-base font-bold text-white w-12 font-mono">
+                {(100 - kenpomWinProb).toFixed(0)}%
+              </span>
+              <div
+                className="flex-1 h-2 rounded-full overflow-hidden flex"
+                style={{ background: "rgba(255,255,255,0.08)" }}
+              >
                 <div
-                  className="h-full bg-green-600 transition-all duration-500"
-                  style={{ width: `${100 - kenpomWinProb}%` }}
+                  className="h-full transition-all duration-500"
+                  style={{
+                    width: `${100 - kenpomWinProb}%`,
+                    background: "rgba(0,255,255,0.4)",
+                  }}
                 />
                 <div
-                  className="h-full bg-green-400 transition-all duration-500"
-                  style={{ width: `${kenpomWinProb}%` }}
+                  className="h-full transition-all duration-500"
+                  style={{ width: `${kenpomWinProb}%`, background: "#00ffff" }}
                 />
               </div>
-              <span className="text-lg font-bold text-green-400 w-12 text-right">{kenpomWinProb.toFixed(0)}%</span>
+              <span className="text-base font-bold text-white w-12 text-right font-mono">
+                {kenpomWinProb.toFixed(0)}%
+              </span>
             </div>
-          </div>
+          </SectionCard>
 
-          {/* KenPom Team Ratings */}
+          {/* KenPom Ratings */}
           {(homeStats || awayStats || loading) && (
-            <div className="bg-green-900/20 border border-green-900 p-4">
-              <h3 className="text-xs font-semibold text-green-400 mb-3">// KENPOM_RATINGS</h3>
-
+            <SectionCard title="// KENPOM_RATINGS">
               {loading && (
                 <div className="flex items-center justify-center py-4">
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-green-500 border-t-transparent"></div>
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#00ffff] border-t-transparent" />
                 </div>
               )}
-
               {!loading && (
                 <div className="space-y-2">
-                  {/* Header */}
-                  <div className="grid grid-cols-6 gap-2 text-[10px] text-green-700 pb-2 border-b border-green-900/50">
+                  <div className="grid grid-cols-6 gap-2 text-[10px] text-neutral-600 pb-2 border-b border-neutral-800">
                     <span className="col-span-2">TEAM</span>
                     <span className="text-center">RK</span>
                     <span className="text-center">OFF</span>
                     <span className="text-center">DEF</span>
                     <span className="text-center">TEMPO</span>
                   </div>
-
-                  {/* Away Team */}
+                  {/* Away */}
                   <div className="grid grid-cols-6 gap-2 text-xs py-1">
                     <div className="col-span-2 truncate">
-                      <span className="text-green-500">{awayTeam}</span>
+                      <span className="text-neutral-300">{awayTeam}</span>
                       {awayStats?.wins !== null && (
-                        <span className="text-green-700 ml-1 text-[10px]">
+                        <span className="text-neutral-700 ml-1 text-[10px]">
                           ({awayStats?.wins}-{awayStats?.losses})
                         </span>
                       )}
                     </div>
                     <span className="text-center text-yellow-500 font-bold">
-                      {awayStats?.rank || '—'}
+                      {awayStats?.rank || "—"}
                     </span>
-                    <span className="text-center text-green-400">
-                      {awayStats?.adjO?.toFixed(1) || '—'}
-                      {awayStats?.adjORank && <span className="text-[9px] text-green-700"> #{awayStats.adjORank}</span>}
+                    <span className="text-center text-[#00ffff] font-mono">
+                      {awayStats?.adjO?.toFixed(1) || "—"}
+                      {awayStats?.adjORank && (
+                        <span className="text-[9px] text-neutral-700">
+                          {" "}
+                          #{awayStats.adjORank}
+                        </span>
+                      )}
                     </span>
-                    <span className="text-center text-green-400">
-                      {awayStats?.adjD?.toFixed(1) || '—'}
-                      {awayStats?.adjDRank && <span className="text-[9px] text-green-700"> #{awayStats.adjDRank}</span>}
+                    <span className="text-center text-neutral-400 font-mono">
+                      {awayStats?.adjD?.toFixed(1) || "—"}
+                      {awayStats?.adjDRank && (
+                        <span className="text-[9px] text-neutral-700">
+                          {" "}
+                          #{awayStats.adjDRank}
+                        </span>
+                      )}
                     </span>
-                    <span className="text-center text-green-400">
-                      {awayStats?.adjT?.toFixed(1) || '—'}
+                    <span className="text-center text-neutral-400 font-mono">
+                      {awayStats?.adjT?.toFixed(1) || "—"}
                     </span>
                   </div>
-
-                  {/* Home Team */}
-                  <div className="grid grid-cols-6 gap-2 text-xs py-1 border-t border-green-900/30">
+                  {/* Home */}
+                  <div className="grid grid-cols-6 gap-2 text-xs py-1 border-t border-neutral-800/50">
                     <div className="col-span-2 truncate">
-                      <span className="text-green-500">{homeTeam}</span>
+                      <span className="text-neutral-300">{homeTeam}</span>
                       {homeStats?.wins !== null && (
-                        <span className="text-green-700 ml-1 text-[10px]">
+                        <span className="text-neutral-700 ml-1 text-[10px]">
                           ({homeStats?.wins}-{homeStats?.losses})
                         </span>
                       )}
                     </div>
                     <span className="text-center text-yellow-500 font-bold">
-                      {homeStats?.rank || '—'}
+                      {homeStats?.rank || "—"}
                     </span>
-                    <span className="text-center text-green-400">
-                      {homeStats?.adjO?.toFixed(1) || '—'}
-                      {homeStats?.adjORank && <span className="text-[9px] text-green-700"> #{homeStats.adjORank}</span>}
+                    <span className="text-center text-[#00ffff] font-mono">
+                      {homeStats?.adjO?.toFixed(1) || "—"}
+                      {homeStats?.adjORank && (
+                        <span className="text-[9px] text-neutral-700">
+                          {" "}
+                          #{homeStats.adjORank}
+                        </span>
+                      )}
                     </span>
-                    <span className="text-center text-green-400">
-                      {homeStats?.adjD?.toFixed(1) || '—'}
-                      {homeStats?.adjDRank && <span className="text-[9px] text-green-700"> #{homeStats.adjDRank}</span>}
+                    <span className="text-center text-neutral-400 font-mono">
+                      {homeStats?.adjD?.toFixed(1) || "—"}
+                      {homeStats?.adjDRank && (
+                        <span className="text-[9px] text-neutral-700">
+                          {" "}
+                          #{homeStats.adjDRank}
+                        </span>
+                      )}
                     </span>
-                    <span className="text-center text-green-400">
-                      {homeStats?.adjT?.toFixed(1) || '—'}
+                    <span className="text-center text-neutral-400 font-mono">
+                      {homeStats?.adjT?.toFixed(1) || "—"}
                     </span>
                   </div>
                 </div>
               )}
-            </div>
+            </SectionCard>
           )}
 
           {/* Four Factors */}
           {!loading && (homeStats || awayStats) && (
-            <div className="bg-green-900/20 border border-green-900 p-4">
-              <h3 className="text-xs font-semibold text-green-400 mb-3">// FOUR_FACTORS</h3>
-              <div className="space-y-3">
-                {/* Offense Header */}
+            <SectionCard title="// FOUR_FACTORS">
+              <div className="space-y-4">
+                {/* Offense */}
                 <div>
-                  <p className="text-[10px] text-green-600 mb-2">OFFENSE</p>
-                  <div className="grid grid-cols-5 gap-2 text-[10px] text-green-700 pb-1 border-b border-green-900/30">
-                    <span className="col-span-1">TEAM</span>
+                  <p className="text-[10px] text-neutral-500 mb-2">OFFENSE</p>
+                  <div className="grid grid-cols-5 gap-2 text-[10px] text-neutral-600 pb-1 border-b border-neutral-800">
+                    <span>TEAM</span>
                     <span className="text-center">eFG%</span>
                     <span className="text-center">TO%</span>
                     <span className="text-center">OR%</span>
                     <span className="text-center">FTR</span>
                   </div>
-                  {/* Away Offense */}
                   <div className="grid grid-cols-5 gap-2 text-xs py-1">
-                    <span className="col-span-1 text-green-500 truncate">{awayTeam.split(' ').pop()}</span>
-                    <span className="text-center text-green-400">{awayStats?.offEfg?.toFixed(1) || '—'}</span>
-                    <span className="text-center text-green-400">{awayStats?.offTO?.toFixed(1) || '—'}</span>
-                    <span className="text-center text-green-400">{awayStats?.offOR?.toFixed(1) || '—'}</span>
-                    <span className="text-center text-green-400">{awayStats?.offFTR?.toFixed(1) || '—'}</span>
+                    <span className="text-neutral-400 truncate">
+                      {awayTeam.split(" ").pop()}
+                    </span>
+                    <span className="text-center text-[#00ffff] font-mono">
+                      {awayStats?.offEfg?.toFixed(1) || "—"}
+                    </span>
+                    <span className="text-center text-neutral-400 font-mono">
+                      {awayStats?.offTO?.toFixed(1) || "—"}
+                    </span>
+                    <span className="text-center text-neutral-400 font-mono">
+                      {awayStats?.offOR?.toFixed(1) || "—"}
+                    </span>
+                    <span className="text-center text-neutral-400 font-mono">
+                      {awayStats?.offFTR?.toFixed(1) || "—"}
+                    </span>
                   </div>
-                  {/* Home Offense */}
                   <div className="grid grid-cols-5 gap-2 text-xs py-1">
-                    <span className="col-span-1 text-green-500 truncate">{homeTeam.split(' ').pop()}</span>
-                    <span className="text-center text-green-400">{homeStats?.offEfg?.toFixed(1) || '—'}</span>
-                    <span className="text-center text-green-400">{homeStats?.offTO?.toFixed(1) || '—'}</span>
-                    <span className="text-center text-green-400">{homeStats?.offOR?.toFixed(1) || '—'}</span>
-                    <span className="text-center text-green-400">{homeStats?.offFTR?.toFixed(1) || '—'}</span>
+                    <span className="text-neutral-400 truncate">
+                      {homeTeam.split(" ").pop()}
+                    </span>
+                    <span className="text-center text-[#00ffff] font-mono">
+                      {homeStats?.offEfg?.toFixed(1) || "—"}
+                    </span>
+                    <span className="text-center text-neutral-400 font-mono">
+                      {homeStats?.offTO?.toFixed(1) || "—"}
+                    </span>
+                    <span className="text-center text-neutral-400 font-mono">
+                      {homeStats?.offOR?.toFixed(1) || "—"}
+                    </span>
+                    <span className="text-center text-neutral-400 font-mono">
+                      {homeStats?.offFTR?.toFixed(1) || "—"}
+                    </span>
                   </div>
                 </div>
 
-                {/* Defense Header */}
+                {/* Defense */}
                 <div>
-                  <p className="text-[10px] text-green-600 mb-2">DEFENSE (opp values)</p>
-                  <div className="grid grid-cols-5 gap-2 text-[10px] text-green-700 pb-1 border-b border-green-900/30">
-                    <span className="col-span-1">TEAM</span>
+                  <p className="text-[10px] text-neutral-500 mb-2">
+                    DEFENSE (opp values)
+                  </p>
+                  <div className="grid grid-cols-5 gap-2 text-[10px] text-neutral-600 pb-1 border-b border-neutral-800">
+                    <span>TEAM</span>
                     <span className="text-center">eFG%</span>
                     <span className="text-center">TO%</span>
                     <span className="text-center">OR%</span>
                     <span className="text-center">FTR</span>
                   </div>
-                  {/* Away Defense */}
                   <div className="grid grid-cols-5 gap-2 text-xs py-1">
-                    <span className="col-span-1 text-green-500 truncate">{awayTeam.split(' ').pop()}</span>
-                    <span className="text-center text-green-400">{awayStats?.defEfg?.toFixed(1) || '—'}</span>
-                    <span className="text-center text-green-400">{awayStats?.defTO?.toFixed(1) || '—'}</span>
-                    <span className="text-center text-green-400">{awayStats?.defOR?.toFixed(1) || '—'}</span>
-                    <span className="text-center text-green-400">{awayStats?.defFTR?.toFixed(1) || '—'}</span>
+                    <span className="text-neutral-400 truncate">
+                      {awayTeam.split(" ").pop()}
+                    </span>
+                    <span className="text-center text-neutral-400 font-mono">
+                      {awayStats?.defEfg?.toFixed(1) || "—"}
+                    </span>
+                    <span className="text-center text-neutral-400 font-mono">
+                      {awayStats?.defTO?.toFixed(1) || "—"}
+                    </span>
+                    <span className="text-center text-neutral-400 font-mono">
+                      {awayStats?.defOR?.toFixed(1) || "—"}
+                    </span>
+                    <span className="text-center text-neutral-400 font-mono">
+                      {awayStats?.defFTR?.toFixed(1) || "—"}
+                    </span>
                   </div>
-                  {/* Home Defense */}
                   <div className="grid grid-cols-5 gap-2 text-xs py-1">
-                    <span className="col-span-1 text-green-500 truncate">{homeTeam.split(' ').pop()}</span>
-                    <span className="text-center text-green-400">{homeStats?.defEfg?.toFixed(1) || '—'}</span>
-                    <span className="text-center text-green-400">{homeStats?.defTO?.toFixed(1) || '—'}</span>
-                    <span className="text-center text-green-400">{homeStats?.defOR?.toFixed(1) || '—'}</span>
-                    <span className="text-center text-green-400">{homeStats?.defFTR?.toFixed(1) || '—'}</span>
+                    <span className="text-neutral-400 truncate">
+                      {homeTeam.split(" ").pop()}
+                    </span>
+                    <span className="text-center text-neutral-400 font-mono">
+                      {homeStats?.defEfg?.toFixed(1) || "—"}
+                    </span>
+                    <span className="text-center text-neutral-400 font-mono">
+                      {homeStats?.defTO?.toFixed(1) || "—"}
+                    </span>
+                    <span className="text-center text-neutral-400 font-mono">
+                      {homeStats?.defOR?.toFixed(1) || "—"}
+                    </span>
+                    <span className="text-center text-neutral-400 font-mono">
+                      {homeStats?.defFTR?.toFixed(1) || "—"}
+                    </span>
                   </div>
                 </div>
 
-                <p className="text-[10px] text-green-800 pt-1">
-                  eFG% = Effective FG% | TO% = Turnover Rate | OR% = Off Rebound Rate | FTR = FT Rate
+                <p className="text-[10px] text-neutral-700">
+                  eFG% = Effective FG% | TO% = Turnover Rate | OR% = Off Rebound
+                  Rate | FTR = FT Rate
                 </p>
               </div>
-            </div>
+            </SectionCard>
           )}
 
           {/* Luck & Schedule Strength */}
           {!loading && (homeStats || awayStats) && (
-            <div className="bg-green-900/20 border border-green-900 p-4">
-              <h3 className="text-xs font-semibold text-green-400 mb-3">// LUCK_AND_SCHEDULE</h3>
+            <SectionCard title="// LUCK_AND_SCHEDULE">
               <div className="grid grid-cols-2 gap-4">
-                {/* Away Team */}
-                <div className="space-y-2">
-                  <p className="text-xs text-green-500 font-medium">{awayTeam.split(' ').pop()}</p>
-                  <div className="space-y-1 text-[11px]">
-                    <div className="flex justify-between">
-                      <span className="text-green-700">Luck:</span>
-                      <span className={`font-medium ${
-                        (awayStats?.luck ?? 0) > 0.03 ? 'text-green-400' :
-                        (awayStats?.luck ?? 0) < -0.03 ? 'text-red-400' : 'text-green-500'
-                      }`}>
-                        {awayStats?.luck != null ? ((awayStats.luck > 0 ? '+' : '') + awayStats.luck.toFixed(3)) : '—'}
-                        {awayStats?.luckRank && <span className="text-green-700"> #{awayStats.luckRank}</span>}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-green-700">SoS:</span>
-                      <span className="text-green-400">
-                        {awayStats?.sosEM != null ? ((awayStats.sosEM > 0 ? '+' : '') + awayStats.sosEM.toFixed(2)) : '—'}
-                        {awayStats?.sosRank && <span className="text-green-700"> #{awayStats.sosRank}</span>}
-                      </span>
-                    </div>
-                    {awayStats?.conference && (
+                {[
+                  { label: awayTeam.split(" ").pop()!, stats: awayStats },
+                  { label: homeTeam.split(" ").pop()!, stats: homeStats },
+                ].map(({ label, stats }) => (
+                  <div key={label} className="space-y-2">
+                    <p className="text-xs text-white font-medium">{label}</p>
+                    <div className="space-y-1 text-[11px]">
                       <div className="flex justify-between">
-                        <span className="text-green-700">Conf:</span>
-                        <span className="text-green-400">{awayStats.conference}</span>
+                        <span className="text-neutral-600">Luck:</span>
+                        <span
+                          className={`font-medium ${
+                            (stats?.luck ?? 0) > 0.03
+                              ? "text-[#00ffff]"
+                              : (stats?.luck ?? 0) < -0.03
+                                ? "text-red-400"
+                                : "text-neutral-400"
+                          }`}
+                        >
+                          {stats?.luck != null
+                            ? (stats.luck > 0 ? "+" : "") +
+                              stats.luck.toFixed(3)
+                            : "—"}
+                          {stats?.luckRank && (
+                            <span className="text-neutral-700">
+                              {" "}
+                              #{stats.luckRank}
+                            </span>
+                          )}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Home Team */}
-                <div className="space-y-2">
-                  <p className="text-xs text-green-500 font-medium">{homeTeam.split(' ').pop()}</p>
-                  <div className="space-y-1 text-[11px]">
-                    <div className="flex justify-between">
-                      <span className="text-green-700">Luck:</span>
-                      <span className={`font-medium ${
-                        (homeStats?.luck ?? 0) > 0.03 ? 'text-green-400' :
-                        (homeStats?.luck ?? 0) < -0.03 ? 'text-red-400' : 'text-green-500'
-                      }`}>
-                        {homeStats?.luck != null ? ((homeStats.luck > 0 ? '+' : '') + homeStats.luck.toFixed(3)) : '—'}
-                        {homeStats?.luckRank && <span className="text-green-700"> #{homeStats.luckRank}</span>}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-green-700">SoS:</span>
-                      <span className="text-green-400">
-                        {homeStats?.sosEM != null ? ((homeStats.sosEM > 0 ? '+' : '') + homeStats.sosEM.toFixed(2)) : '—'}
-                        {homeStats?.sosRank && <span className="text-green-700"> #{homeStats.sosRank}</span>}
-                      </span>
-                    </div>
-                    {homeStats?.conference && (
                       <div className="flex justify-between">
-                        <span className="text-green-700">Conf:</span>
-                        <span className="text-green-400">{homeStats.conference}</span>
+                        <span className="text-neutral-600">SoS:</span>
+                        <span className="text-neutral-400 font-mono">
+                          {stats?.sosEM != null
+                            ? (stats.sosEM > 0 ? "+" : "") +
+                              stats.sosEM.toFixed(2)
+                            : "—"}
+                          {stats?.sosRank && (
+                            <span className="text-neutral-700">
+                              {" "}
+                              #{stats.sosRank}
+                            </span>
+                          )}
+                        </span>
                       </div>
-                    )}
+                      {stats?.conference && (
+                        <div className="flex justify-between">
+                          <span className="text-neutral-600">Conf:</span>
+                          <span className="text-neutral-400">
+                            {stats.conference}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
-              <p className="text-[10px] text-green-800 pt-3">
-                Luck = record vs expected | SoS = Strength of Schedule (efficiency margin)
+              <p className="text-[10px] text-neutral-700 pt-3">
+                Luck = record vs expected | SoS = Strength of Schedule
+                (efficiency margin)
               </p>
-            </div>
+            </SectionCard>
           )}
 
           {/* Game Factors */}
-          <div className="bg-green-900/20 border border-green-900 p-4">
-            <h3 className="text-xs font-semibold text-green-400 mb-3">// GAME_FACTORS</h3>
+          <SectionCard title="// GAME_FACTORS">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-[10px] text-green-700 mb-1">PROJECTED TEMPO</p>
-                <p className="text-sm font-medium text-green-400">
-                  {kenpomTempo.toFixed(1)} possessions
+                <p className="text-[10px] text-neutral-600 mb-1">
+                  PROJECTED TEMPO
                 </p>
-                <p className="text-[10px] text-green-700 mt-0.5">
-                  {kenpomTempo >= 72 ? 'FAST' : kenpomTempo >= 68 ? 'AVERAGE' : 'SLOW'} pace game
+                <p className="text-sm font-medium text-[#00ffff] font-mono">
+                  {kenpomTempo.toFixed(1)}{" "}
+                  <span className="text-neutral-600 text-[10px]">poss</span>
+                </p>
+                <p className="text-[10px] text-neutral-600 mt-0.5">
+                  {kenpomTempo >= 72
+                    ? "FAST"
+                    : kenpomTempo >= 68
+                      ? "AVERAGE"
+                      : "SLOW"}{" "}
+                  pace game
                 </p>
               </div>
               <div>
-                <p className="text-[10px] text-green-700 mb-1">PROJECTED MARGIN</p>
-                <p className="text-sm font-medium text-green-400">
-                  {Math.abs(kenpomHomeScore - kenpomAwayScore).toFixed(1)} pts
+                <p className="text-[10px] text-neutral-600 mb-1">
+                  PROJECTED MARGIN
                 </p>
-                <p className="text-[10px] text-green-700 mt-0.5">
-                  {kenpomHomeScore > kenpomAwayScore ? homeTeam : awayTeam} favored
+                <p className="text-sm font-medium text-white font-mono">
+                  {Math.abs(kenpomHomeScore - kenpomAwayScore).toFixed(1)}{" "}
+                  <span className="text-neutral-600 text-[10px]">pts</span>
+                </p>
+                <p className="text-[10px] text-neutral-600 mt-0.5">
+                  {kenpomHomeScore > kenpomAwayScore ? homeTeam : awayTeam}{" "}
+                  favored
                 </p>
               </div>
             </div>
-          </div>
+          </SectionCard>
 
           {/* Betting Insight */}
           {lineDiff !== null && vegasLine !== null && (
-            <div className="bg-green-900/20 border border-green-900 p-4">
-              <h3 className="text-xs font-semibold text-green-400 mb-3">// BETTING_INSIGHT</h3>
-              <p className="text-xs text-green-600 leading-relaxed">
+            <SectionCard title="// BETTING_INSIGHT">
+              <p className="text-xs text-neutral-500 leading-relaxed">
                 {lineDiffAbs && lineDiffAbs >= 5 ? (
                   <>
-                    <span className={favorsUnder ? 'text-blue-400' : 'text-orange-400'}>Strong edge detected.</span>{' '}
-                    KenPom projects {kenpomTotal.toFixed(1)} total, {lineDiffAbs.toFixed(1)} points{' '}
-                    {favorsUnder ? 'below' : 'above'} the Vegas line of {vegasLine.toFixed(1)}.
-                    {' '}Consider the {favorsUnder ? 'UNDER' : 'OVER'} if line movement confirms.
+                    <span
+                      className={
+                        favorsUnder ? "text-[#00ffff]" : "text-[#ff6b00]"
+                      }
+                    >
+                      Strong edge detected.
+                    </span>{" "}
+                    KenPom projects {kenpomTotal.toFixed(1)} total,{" "}
+                    {lineDiffAbs.toFixed(1)} points{" "}
+                    {favorsUnder ? "below" : "above"} the Vegas line of{" "}
+                    {vegasLine.toFixed(1)}. Consider the{" "}
+                    {favorsUnder ? "UNDER" : "OVER"} if line movement confirms.
                   </>
                 ) : lineDiffAbs && lineDiffAbs >= 3 ? (
                   <>
-                    <span className={favorsUnder ? 'text-blue-400' : 'text-orange-400'}>Moderate edge detected.</span>{' '}
-                    KenPom projects {kenpomTotal.toFixed(1)} total, {lineDiffAbs.toFixed(1)} points{' '}
-                    {favorsUnder ? 'below' : 'above'} the Vegas line. Monitor for line movement.
+                    <span
+                      className={
+                        favorsUnder ? "text-[#00ffff]" : "text-[#ff6b00]"
+                      }
+                    >
+                      Moderate edge detected.
+                    </span>{" "}
+                    KenPom projects {kenpomTotal.toFixed(1)} total,{" "}
+                    {lineDiffAbs.toFixed(1)} points{" "}
+                    {favorsUnder ? "below" : "above"} the Vegas line. Monitor
+                    for line movement.
                   </>
                 ) : (
                   <>
-                    No significant edge. KenPom and Vegas are within {lineDiffAbs?.toFixed(1) || 0} points.
-                    Look for other factors before betting.
+                    No significant edge. KenPom and Vegas are within{" "}
+                    {lineDiffAbs?.toFixed(1) || 0} points. Look for other
+                    factors before betting.
                   </>
                 )}
               </p>
-            </div>
+            </SectionCard>
           )}
         </div>
       </div>
