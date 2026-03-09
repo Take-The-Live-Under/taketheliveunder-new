@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import { Game } from "@/types/game";
 import { Matchup, TeamStats } from "@/types/team";
 import GameDetailModal from "@/components/GameDetailModal";
-import { Logo } from "@/components/Logo";
+import { Navbar } from "@/components/Navbar";
 
 export default function BriefPage() {
   const [games, setGames] = useState<Game[]>([]);
@@ -347,34 +346,7 @@ export default function BriefPage() {
 
   return (
     <main className="min-h-screen bg-[#0a0a0a] text-[#ededed]">
-      {/* Header */}
-      <div className="sticky top-0 z-20 px-4 py-3">
-        <div className="max-w-2xl mx-auto">
-          <div
-            className="flex items-center justify-between h-14 px-4 rounded-2xl border border-neutral-800 backdrop-blur-sm"
-            style={{ background: "rgba(10,10,10,0.85)" }}
-          >
-            <div className="flex items-center gap-3">
-              <Link
-                href="/"
-                className="text-neutral-500 hover:text-white transition-colors text-sm"
-              >
-                ← Back
-              </Link>
-              <div className="w-px h-4 bg-neutral-800"></div>
-              <Logo size="sm" />
-            </div>
-            <div className="flex items-center gap-3">
-              {isRefreshing && (
-                <div className="w-4 h-4 border-2 border-[#00ffff] border-t-transparent rounded-full animate-spin"></div>
-              )}
-              <span className="text-xs text-neutral-600 hidden sm:block">
-                {dateStr}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <Navbar isRefreshing={isRefreshing} />
 
       {/* Content */}
       <div className="max-w-2xl mx-auto px-4 py-6 pb-20">
