@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { TrialStatus, Subscription, calculateTrialStatus } from '@/lib/trial';
+import { authClient } from '@/lib/auth-client';
 
 export interface User {
   id: string;
@@ -16,7 +17,7 @@ interface AuthContextType {
   trialStatus: TrialStatus;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>;
   register: (email: string, password: string, displayName?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -24,69 +25,49 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_KEY = 'ttlu_token';
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const { data: session, isPending: isSessionLoading } = authClient.useSession();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isSubLoading, setIsSubLoading] = useState(true);
 
+  const isLoading = isSessionLoading || (!!session?.user && isSubLoading);
   const trialStatus = calculateTrialStatus(subscription);
 
-  const fetchUser = useCallback(async () => {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      setIsLoading(false);
+  const fetchSubscription = useCallback(async () => {
+    if (!session?.user) {
+      setSubscription(null);
+      setIsSubLoading(false);
       return;
     }
-
+    
     try {
-      const response = await fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      setIsSubLoading(true);
+      const response = await fetch('/api/user/subscription');
       if (response.ok) {
         const data = await response.json();
-        setUser(data.user);
         setSubscription(data.subscription);
       } else {
-        // Token invalid, clear it
-        localStorage.removeItem(TOKEN_KEY);
-        setUser(null);
         setSubscription(null);
       }
     } catch (error) {
-      console.error('Failed to fetch user:', error);
-      localStorage.removeItem(TOKEN_KEY);
-      setUser(null);
+      console.error('Failed to fetch subscription:', error);
       setSubscription(null);
     } finally {
-      setIsLoading(false);
+      setIsSubLoading(false);
     }
-  }, []);
+  }, [session?.user]);
 
   useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+    fetchSubscription();
+  }, [fetchSubscription]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, rememberMe: boolean = false) => {
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.token) {
-        localStorage.setItem(TOKEN_KEY, data.token);
-        setUser(data.user);
-        setSubscription(data.subscription);
-        return { success: true };
+      const response = await authClient.signIn.email({ email, password, rememberMe });
+      if (response.error) {
+        return { success: false, error: response.error.message || 'Login failed' };
       }
-
-      return { success: false, error: data.error || 'Login failed' };
+      return { success: true };
     } catch (error) {
       return { success: false, error: 'Network error' };
     }
@@ -94,45 +75,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (email: string, password: string, displayName?: string) => {
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, displayName }),
+      const response = await authClient.signUp.email({ 
+         email, 
+         password, 
+         name: displayName || email.split('@')[0] 
       });
-
-      const data = await response.json();
-
-      if (response.ok && data.token) {
-        localStorage.setItem(TOKEN_KEY, data.token);
-        setUser(data.user);
-        setSubscription(data.subscription);
-        return { success: true };
+      if (response.error) {
+        return { success: false, error: response.error.message || 'Registration failed' };
       }
-
-      return { success: false, error: data.error || 'Registration failed' };
+      return { success: true };
     } catch (error) {
       return { success: false, error: 'Network error' };
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem(TOKEN_KEY);
-    setUser(null);
+  const logout = async () => {
+    await authClient.signOut();
     setSubscription(null);
   };
 
   const refreshUser = async () => {
-    await fetchUser();
+    await fetchSubscription();
   };
+
+  // Convert BetterAuth user type to what the app expects for backwards compatibility
+  const appUser: User | null = session?.user ? {
+    id: session.user.id,
+    email: session.user.email,
+    display_name: session.user.name,
+    created_at: session.user.createdAt.toISOString(),
+  } : null;
 
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: appUser,
         subscription,
         trialStatus,
         isLoading,
-        isAuthenticated: !!user,
+        isAuthenticated: !!session?.user,
         login,
         register,
         logout,

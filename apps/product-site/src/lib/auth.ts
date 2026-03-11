@@ -1,39 +1,44 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { db } from "./db";
+import { users, session, account, verification } from "./schema";
+import { createSubscription, createUserPreferences, createUserActivity } from "./queries/users";
 
-const JWT_SECRET = process.env.JWT_SECRET || 'ttlu-secret-key-change-in-production';
-const JWT_EXPIRES_IN = '7d';
-
-export interface JWTPayload {
-  userId: string;
-  email: string;
-  iat?: number;
-  exp?: number;
-}
-
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12);
-}
-
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
-}
-
-export function generateToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-}
-
-export function verifyToken(token: string): JWTPayload | null {
-  try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload;
-  } catch {
-    return null;
+export const auth = betterAuth({
+  database: drizzleAdapter(db, {
+    provider: "pg", // Because Neon is Postgres
+    schema: {
+      user: users,
+      session: session,
+      account: account,
+      verification: verification,
+    },
+  }),
+  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+  emailAndPassword: {
+    enabled: true,
+  },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+    },
+  },
+  advanced: {
+    cookiePrefix: "taketheliveunder",
+    crossSubDomainCookies: {
+        enabled: true,
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          await createSubscription(user.id);
+          await createUserPreferences(user.id);
+          await createUserActivity(user.id);
+        }
+      }
+    }
   }
-}
-
-export function getTokenFromHeader(authHeader: string | null): string | null {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null;
-  }
-  return authHeader.slice(7);
-}
+});

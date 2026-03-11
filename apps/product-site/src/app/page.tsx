@@ -20,12 +20,12 @@ import { Navbar } from "@/components/Navbar";
 import { Game } from "@/types/game";
 import { GamePrediction } from "@/app/api/predictions/route";
 import { usePageView, useAnalytics } from "@/hooks/useAnalytics";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SubTab = "under" | "over" | "live" | "upcoming" | "picks";
 
 export default function Home() {
-  // Access check - must be at top with other hooks
-  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [games, setGames] = useState<Game[]>([]);
@@ -50,21 +50,6 @@ export default function Home() {
   // Analytics tracking
   usePageView("home");
   const { trackTabChange, trackDashboardAccess } = useAnalytics();
-
-  // Check localStorage for access on client side - only runs on client
-  useEffect(() => {
-    // Small delay to ensure we're fully client-side
-    const timer = setTimeout(() => {
-      try {
-        const access = localStorage.getItem("ttlu_access");
-        setHasAccess(!!access);
-      } catch (e) {
-        // localStorage not available, default to no access
-        setHasAccess(false);
-      }
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
 
   const fetchGames = useCallback(
     async (isRetry = false, showRefresh = false) => {
@@ -241,7 +226,7 @@ export default function Home() {
   const upcomingCount = games.filter((g) => g.status === "pre").length;
 
   // Show loading while checking access
-  if (hasAccess === null) {
+  if (isAuthLoading) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
         <div className="text-[#00ffff] font-mono text-sm animate-pulse">
@@ -252,14 +237,10 @@ export default function Home() {
   }
 
   // Show landing page if no access
-  if (!hasAccess) {
+  if (!isAuthenticated) {
     return (
       <LandingPage
-        onAccess={(email) => {
-          localStorage.setItem("ttlu_access", email);
-          localStorage.setItem("ttlu_email", email);
-          setHasAccess(true);
-        }}
+        onAccess={() => {}}
       />
     );
   }

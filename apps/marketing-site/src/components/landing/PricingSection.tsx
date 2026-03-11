@@ -101,17 +101,12 @@ export function PricingSection() {
               </p>
             </div>
 
-            {/* Button */}
             <Button
               asChild
               variant="outline"
               className="w-full rounded-full border-neutral-700 bg-transparent hover:bg-orange-500/10 hover:border-orange-500/30 text-white h-12 text-base pointer-events-auto mb-2"
             >
-              <a
-                href="https://app.taketheliveunder.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a href="http://localhost:3000">
                 Get Started
               </a>
             </Button>
@@ -205,16 +200,11 @@ export function PricingSection() {
               </p>
             </div>
 
-            {/* Button */}
             <Button
               asChild
               className="w-full rounded-full bg-orange-500 text-[#050505] hover:bg-orange-400 font-semibold h-12 text-base pointer-events-auto mb-2"
             >
-              <a
-                href="https://app.taketheliveunder.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a href="http://localhost:3000">
                 Go Pro
               </a>
             </Button>

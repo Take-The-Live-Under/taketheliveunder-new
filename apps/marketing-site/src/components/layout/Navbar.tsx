@@ -76,12 +76,8 @@ export function Navbar() {
             asChild
             className="rounded-full bg-neon-pink text-black font-bold text-sm hover:bg-white hover:text-neon-pink transition-all hover:scale-105 shadow-[0_0_15px_rgba(255,0,255,0.5)] hover:shadow-[0_0_20px_rgba(255,0,255,0.7)]"
           >
-            <a
-              href="https://app.taketheliveunder.com"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Get Started
+            <a href="http://localhost:3000">
+              Get Started / Log In
             </a>
           </Button>
 

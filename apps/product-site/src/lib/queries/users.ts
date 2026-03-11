@@ -5,11 +5,10 @@ import { eq, sql } from 'drizzle-orm';
 export interface DbUser {
   id: string;
   email: string;
-  password_hash: string | null;
-  google_id: string | null;
-  display_name: string | null;
-  created_at: string;
-  email_verified: boolean;
+  name: string | null;
+  image: string | null;
+  createdAt: string;
+  emailVerified: boolean;
 }
 
 export interface DbSubscription {
@@ -45,24 +44,25 @@ export interface DbUserActivity {
 
 export async function createUser(
   email: string,
-  passwordHash: string,
-  displayName?: string
+  name?: string | null
 ): Promise<DbUser | null> {
   try {
     const [user] = await db.insert(users).values({
+      id: crypto.randomUUID(),
       email: email.toLowerCase(),
-      passwordHash: passwordHash,
-      displayName: displayName || null,
+      name: name || "",
+      emailVerified: false,
+      createdAt: new Date(),
+      updatedAt: new Date()
     }).returning();
 
     return {
       id: user.id,
       email: user.email,
-      password_hash: user.passwordHash,
-      google_id: user.googleId,
-      display_name: user.displayName,
-      created_at: user.createdAt.toISOString(),
-      email_verified: user.emailVerified,
+      name: user.name,
+      image: user.image,
+      createdAt: user.createdAt.toISOString(),
+      emailVerified: user.emailVerified,
     };
   } catch (err) {
     console.error('Failed to create user:', err);
@@ -81,11 +81,10 @@ export async function getUserByEmail(email: string): Promise<DbUser | null> {
     return {
       id: user.id,
       email: user.email,
-      password_hash: user.passwordHash,
-      google_id: user.googleId,
-      display_name: user.displayName,
-      created_at: user.createdAt.toISOString(),
-      email_verified: user.emailVerified,
+      name: user.name,
+      image: user.image,
+      createdAt: user.createdAt.toISOString(),
+      emailVerified: user.emailVerified,
     };
   } catch (err) {
     console.error('Failed to fetch user:', err);
@@ -104,11 +103,10 @@ export async function getUserById(userId: string): Promise<DbUser | null> {
     return {
       id: user.id,
       email: user.email,
-      password_hash: user.passwordHash,
-      google_id: user.googleId,
-      display_name: user.displayName,
-      created_at: user.createdAt.toISOString(),
-      email_verified: user.emailVerified,
+      name: user.name,
+      image: user.image,
+      createdAt: user.createdAt.toISOString(),
+      emailVerified: user.emailVerified,
     };
   } catch (err) {
     console.error('Failed to fetch user by id:', err);

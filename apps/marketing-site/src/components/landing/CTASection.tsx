@@ -50,11 +50,7 @@ export function CTASection() {
               asChild
               className="h-14 px-10 rounded-full bg-neon-pink text-black font-bold text-lg hover:bg-white hover:text-neon-pink transition-all hover:scale-105 shadow-[0_0_30px_rgba(255,0,255,0.5)] hover:shadow-[0_0_40px_rgba(255,0,255,0.7)] pointer-events-auto"
             >
-              <a
-                href="https://app.taketheliveunder.com"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a href="http://localhost:3000">
                 Get Started Free
               </a>
             </Button>

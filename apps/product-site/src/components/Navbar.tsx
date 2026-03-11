@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo } from "@/components/Logo";
 
+import { useAuth } from "@/contexts/AuthContext";
+
 interface NavbarProps {
   showHowItWorks?: boolean;
   onHowItWorksClick?: () => void;
@@ -18,6 +20,7 @@ export function Navbar({
 }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
+  const { isAuthenticated, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -70,6 +73,14 @@ export function Navbar({
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
+            {isAuthenticated && (
+              <button 
+                onClick={() => logout()}
+                className="text-xs text-neutral-400 hover:text-white transition-colors px-3 py-1.5 rounded-lg hover:bg-neutral-800 font-medium"
+              >
+                Sign Out
+              </button>
+            )}
             {isRefreshing && (
               <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#00ffff] border-t-transparent" />
             )}
