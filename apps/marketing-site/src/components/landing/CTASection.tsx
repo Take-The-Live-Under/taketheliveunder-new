@@ -97,14 +97,6 @@ export function CTASection() {
                 </li>
                 <li>
                   <a
-                    href="#access"
-                    className="hover:text-neon-blue transition-colors"
-                  >
-                    Pricing
-                  </a>
-                </li>
-                <li>
-                  <a
                     href="#"
                     className="hover:text-neon-blue transition-colors"
                   >

@@ -4,7 +4,6 @@ import { StatsSection } from "@/components/landing/StatsSection";
 import { LiveDashboardSection } from "@/components/landing/LiveDashboardSection";
 import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
 import { BenefitsSection } from "@/components/landing/BenefitsSection";
-import { PricingSection } from "@/components/landing/PricingSection";
 import { FAQSection } from "@/components/landing/FAQSection";
 import { CTASection } from "@/components/landing/CTASection";
 import { LandingIntro } from "@/components/ui/LandingIntro";
@@ -27,8 +26,6 @@ export default function Home() {
         <LiveDashboardSection />
         <HowItWorksSection />
         <BenefitsSection />
-        {/* <SimpleStepsSection /> */}
-        <PricingSection />
         <FAQSection />
         <CTASection />
       </div>
