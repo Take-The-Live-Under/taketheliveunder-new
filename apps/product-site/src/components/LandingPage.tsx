@@ -20,12 +20,12 @@ export default function LandingPage({ onAccess }: LandingPageProps) {
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 flex flex-col items-center">
         <Logo size="lg" />
         <h2 className="mt-8 text-center text-3xl font-bold tracking-tight text-white mb-2">
-          {mode === 'login' ? 'Welcome Back' : 'Start Your Free Trial'}
+          {mode === 'login' ? 'Welcome Back' : 'Create an Account'}
         </h2>
         <p className="text-neutral-400 text-center mb-8">
           {mode === 'login' 
             ? 'Sign in to access your dashboard' 
-            : 'Get 14 days of full access, free'}
+            : 'Join today to get full access'}
         </p>
       </div>
 

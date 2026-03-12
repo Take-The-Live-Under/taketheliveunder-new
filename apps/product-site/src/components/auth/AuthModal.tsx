@@ -44,12 +44,12 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'register', o
         {/* Header */}
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-white">
-            {mode === 'login' ? 'Welcome Back' : 'Start Your Free Trial'}
+            {mode === 'login' ? 'Welcome Back' : 'Create an Account'}
           </h2>
           <p className="text-slate-400 mt-1">
             {mode === 'login'
               ? 'Sign in to access your dashboard'
-              : 'Get 14 days of full access, free'}
+              : 'Join today to get full access'}
           </p>
         </div>
 

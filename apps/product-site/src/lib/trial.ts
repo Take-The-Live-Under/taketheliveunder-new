@@ -79,7 +79,7 @@ export function calculateTrialStatus(subscription: Subscription | null): TrialSt
 export function getTrialMessage(status: TrialStatus): string {
   if (status.isPaid) return '';
   if (status.phase === 'expired') return 'Your trial has ended';
-  if (status.phase === 'final') return 'Last day of your free trial';
+  if (status.phase === 'final') return 'Last day of your trial';
   if (status.phase === 'warning') return `${status.daysRemaining} days left in your trial`;
   return `${status.daysRemaining} days remaining`;
 }

@@ -30,7 +30,7 @@ export default function PaywallModal({ onSelectPlan, stats }: PaywallModalProps)
             KEEP_YOUR_LIVE_TRIGGERS
           </h2>
           <p className="text-green-700 text-sm">
-            Your free trial has ended. Subscribe to continue accessing real-time triggers and alerts.
+            Your trial access has ended. Subscribe to continue accessing real-time triggers and alerts.
           </p>
         </div>
 
