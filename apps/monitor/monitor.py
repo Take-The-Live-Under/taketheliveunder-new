@@ -502,7 +502,7 @@ class NCAABettingMonitor:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
-                    "http://localhost:8000/api/internal/trigger-update",
+                    f"{config.BACKEND_URL}/api/internal/trigger-update",
                     json={"game_data": game_data, "update_type": update_type},
                     timeout=aiohttp.ClientTimeout(total=5)
                 ) as response:

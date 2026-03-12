@@ -23,8 +23,10 @@ MODEL_PATH = DATA_DIR / "trained_models" / "ensemble_latest.pkl"
 KENPOM_PATH = DATA_DIR / "kenpom_historical" / "season_2025" / "cleaned_kenpom_data_latest.csv"
 PREDICTIONS_DIR = DATA_DIR / "predictions"
 
+import os
+
 # API Configuration
-API_URL = "http://localhost:8000"
+API_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 ODDS_API_KEY = 'c1e957e22dfde2c23b3cac82758bef3e'
 ODDS_API_BASE = "https://api.the-odds-api.com/v4"
 SPORT_MODE = 'basketball_ncaab'

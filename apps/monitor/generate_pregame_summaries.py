@@ -10,8 +10,10 @@ import requests
 import json
 from utils.pregame_ai_summary import get_pregame_ai_summary_generator
 
+import os
+
 # API Configuration
-API_URL = "http://localhost:8000"
+API_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
 def main():

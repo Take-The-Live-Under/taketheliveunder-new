@@ -11,8 +11,10 @@ import json
 from typing import Dict, List
 
 
+import os
+
 # API Configuration
-API_URL = "http://localhost:8000"
+API_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 
 def generate_data_summary(prediction: Dict) -> Dict:
