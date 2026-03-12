@@ -9,8 +9,8 @@ export function middleware(request: NextRequest) {
   // We only run this on the root URL or explicit entrance pages
   if (sessionToken && request.nextUrl.pathname === '/') {
     // Redirect authenticated users to the main product dashboard
-    // Default to localhost:3000 in dev, or your production URL
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // Default to app.taketheliveunder.com in production, or localhost in dev
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.taketheliveunder.com';
     return NextResponse.redirect(new URL(appUrl));
   }
 

@@ -106,7 +106,7 @@ export function PricingSection() {
               variant="outline"
               className="w-full rounded-full border-neutral-700 bg-transparent hover:bg-orange-500/10 hover:border-orange-500/30 text-white h-12 text-base pointer-events-auto mb-2"
             >
-              <a href="http://localhost:3000">
+              <a href={process.env.NEXT_PUBLIC_APP_URL || "https://app.taketheliveunder.com"}>
                 Get Started
               </a>
             </Button>
@@ -204,7 +204,7 @@ export function PricingSection() {
               asChild
               className="w-full rounded-full bg-orange-500 text-[#050505] hover:bg-orange-400 font-semibold h-12 text-base pointer-events-auto mb-2"
             >
-              <a href="http://localhost:3000">
+              <a href={process.env.NEXT_PUBLIC_APP_URL || "https://app.taketheliveunder.com"}>
                 Go Pro
               </a>
             </Button>
