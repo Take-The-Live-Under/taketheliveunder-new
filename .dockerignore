@@ -1,0 +1,9 @@
+node_modules
+.next
+.turbo
+.git
+*.pyc
+__pycache__
+venv/
+.env
+.env.local
