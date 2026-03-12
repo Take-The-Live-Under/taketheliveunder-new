@@ -6,6 +6,8 @@ from pathlib import Path
 
 # Add monitor directory to path so we can import shared config and utils modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "monitor"))
+# Add api directory to path so we can import local modules
+sys.path.insert(0, str(Path(__file__).parent))
 
 from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware

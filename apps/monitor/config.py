@@ -195,7 +195,7 @@ LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
 LOG_FILE = LOG_DIR / "monitor.log"
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
 # ========== DEPLOYMENT CONFIGURATION ==========
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")  # development, production
