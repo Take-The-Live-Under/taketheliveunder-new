@@ -5,6 +5,7 @@ WORKDIR /app
 # Install system dependencies required for building Python packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    g++ \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
