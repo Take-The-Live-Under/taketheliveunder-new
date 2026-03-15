@@ -6,6 +6,7 @@ interface BracketTreeProps {
   matchups: BracketMatchup[];
   selectedId: string | null;
   onSelect: (matchup: BracketMatchup) => void;
+  onEnter: (matchup: BracketMatchup) => void;
 }
 
 function SeedBadge({ seed }: { seed: number }) {
@@ -20,23 +21,24 @@ function MatchupCard({
   matchup,
   selected,
   onClick,
+  onEnter,
 }: {
   matchup: BracketMatchup;
   selected: boolean;
   onClick: () => void;
+  onEnter: () => void;
 }) {
   const isSelected = selected;
   const isFeatured = matchup.isFeatured;
 
   return (
-    <button
-      onClick={onClick}
+    <div
       className={`
-        relative w-full text-left rounded-xl border transition-all duration-300 overflow-hidden group
+        relative rounded-xl border transition-all duration-300 overflow-hidden group
         ${isSelected
           ? 'border-[#00ffff] shadow-[0_0_24px_rgba(0,255,255,0.25)] bg-[#00ffff]/5'
           : isFeatured
-          ? 'border-[#ff6b00]/50 shadow-[0_0_12px_rgba(255,107,0,0.12)] bg-[#ff6b00]/[0.03] hover:border-[#ff6b00] hover:shadow-[0_0_20px_rgba(255,107,0,0.2)]'
+          ? 'border-[#ff6b00]/50 shadow-[0_0_12px_rgba(255,107,0,0.12)] bg-[#ff6b00]/[0.03] hover:border-[#ff6b00]/80 hover:shadow-[0_0_20px_rgba(255,107,0,0.2)]'
           : 'border-neutral-800 bg-neutral-900/40 hover:border-neutral-600 hover:bg-neutral-800/40'}
       `}
     >
@@ -53,19 +55,9 @@ function MatchupCard({
           </span>
         </div>
       )}
-      {isSelected && (
-        <div className="absolute top-2 right-2">
-          <span className="flex items-center gap-1 text-[9px] font-mono font-bold text-[#00ffff]">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00ffff] opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#00ffff]" />
-            </span>
-            ACTIVE
-          </span>
-        </div>
-      )}
 
-      <div className="p-3 space-y-2">
+      {/* Clickable matchup info area */}
+      <button onClick={onClick} className="w-full text-left p-3 space-y-2">
         {/* Region label */}
         <div className="text-[9px] font-mono text-neutral-700 tracking-widest uppercase">
           {matchup.region} · {matchup.projectedLine ? `O/U ${matchup.projectedLine}` : ''}
@@ -107,17 +99,30 @@ function MatchupCard({
             {matchup.teamB.metrics.adjustedTempo.toFixed(0)} T
           </div>
         </div>
-      </div>
+      </button>
+
+      {/* ENTER BATTLE button — appears when selected */}
+      {isSelected && (
+        <div className="px-3 pb-3">
+          <button
+            onClick={onEnter}
+            className="w-full flex items-center justify-center gap-2 py-2 rounded-lg text-[10px] font-mono font-black tracking-[0.15em] uppercase transition-all duration-200 bg-[#00ffff] text-black hover:bg-[#00ffff]/90 hover:shadow-[0_0_16px_rgba(0,255,255,0.4)]"
+          >
+            <span>ENTER BATTLE</span>
+            <span>⚔</span>
+          </button>
+        </div>
+      )}
 
       {/* Bottom glow bar when selected */}
       {isSelected && (
         <div className="h-0.5 w-full bg-gradient-to-r from-transparent via-[#00ffff] to-transparent" />
       )}
-    </button>
+    </div>
   );
 }
 
-export default function BracketTree({ matchups, selectedId, onSelect }: BracketTreeProps) {
+export default function BracketTree({ matchups, selectedId, onSelect, onEnter }: BracketTreeProps) {
   const regions = Array.from(new Set(matchups.map(m => m.region)));
 
   return (
@@ -148,6 +153,7 @@ export default function BracketTree({ matchups, selectedId, onSelect }: BracketT
                   matchup={matchup}
                   selected={selectedId === matchup.id}
                   onClick={() => onSelect(matchup)}
+                  onEnter={() => onEnter(matchup)}
                 />
               ))}
             </div>

@@ -12,12 +12,21 @@ export default function BracketLabPage() {
     BRACKET_MATCHUPS.find(m => m.isFeatured) ?? BRACKET_MATCHUPS[0] ?? null
   );
   const [weights, setWeights] = useState<PredictorWeights>({ ...DEFAULT_WEIGHTS });
-  const [mobileView, setMobileView] = useState<'bracket' | 'battle'>('battle');
+  const [mobileView, setMobileView] = useState<'bracket' | 'battle'>('bracket');
+  const [bracketCollapsed, setBracketCollapsed] = useState(false);
 
+  // First click = select + preview; second click (ENTER BATTLE) = collapse bracket + go full screen
   const handleSelectMatchup = useCallback((matchup: BracketMatchup) => {
     setSelectedMatchup(matchup);
-    setMobileView('battle');
-    setWeights({ ...DEFAULT_WEIGHTS }); // reset weights on new matchup
+    setWeights({ ...DEFAULT_WEIGHTS });
+    // On mobile just select, don't switch view yet
+  }, []);
+
+  const handleEnterBattle = useCallback((matchup: BracketMatchup) => {
+    setSelectedMatchup(matchup);
+    setWeights({ ...DEFAULT_WEIGHTS });
+    setBracketCollapsed(true);   // desktop: collapse bracket panel
+    setMobileView('battle');     // mobile: switch to battle view
   }, []);
 
   const handleWeightChange = useCallback((key: keyof PredictorWeights, value: number) => {
@@ -124,27 +133,67 @@ export default function BracketLabPage() {
         {/* LEFT PANEL — Bracket Tree */}
         <aside
           className={`
-            w-full lg:w-80 lg:flex-shrink-0 lg:border-r border-neutral-800 overflow-y-auto
-            ${mobileView === 'bracket' ? 'block' : 'hidden lg:block'}
+            lg:flex-shrink-0 lg:border-r border-neutral-800 overflow-y-auto transition-all duration-500
+            ${mobileView === 'bracket' ? 'block w-full' : 'hidden lg:block'}
+            ${bracketCollapsed ? 'lg:w-14' : 'lg:w-80'}
           `}
           style={{ background: 'rgba(10,10,10,0.8)' }}
         >
-          <div className="p-4">
-            {/* Panel header */}
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-1 h-5 bg-[#00ffff] rounded-full" />
-              <div>
-                <div className="text-xs font-mono font-bold text-white tracking-wider">MATCHUPS</div>
-                <div className="text-[9px] font-mono text-neutral-600">Select to enter battle mode</div>
-              </div>
+          {/* Collapsed rail — desktop only */}
+          {bracketCollapsed ? (
+            <div className="hidden lg:flex flex-col items-center py-4 gap-4">
+              <button
+                onClick={() => setBracketCollapsed(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-neutral-800 text-neutral-600 hover:text-[#00ffff] hover:border-[#00ffff]/40 transition-all text-xs"
+                title="Expand bracket"
+              >
+                ◉
+              </button>
+              {/* Mini matchup dots */}
+              {BRACKET_MATCHUPS.map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => { setSelectedMatchup(m); setWeights({ ...DEFAULT_WEIGHTS }); }}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    selectedMatchup?.id === m.id
+                      ? 'bg-[#00ffff] shadow-[0_0_6px_rgba(0,255,255,0.8)]'
+                      : 'bg-neutral-700 hover:bg-neutral-500'
+                  }`}
+                  title={`${m.teamA.shortName} vs ${m.teamB.shortName}`}
+                />
+              ))}
             </div>
+          ) : (
+            <div className="p-4">
+              {/* Panel header */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-5 bg-[#00ffff] rounded-full" />
+                  <div>
+                    <div className="text-xs font-mono font-bold text-white tracking-wider">MATCHUPS</div>
+                    <div className="text-[9px] font-mono text-neutral-600">Click a matchup, then Enter Battle</div>
+                  </div>
+                </div>
+                {/* Collapse button — desktop only */}
+                {bracketCollapsed === false && selectedMatchup && (
+                  <button
+                    onClick={() => setBracketCollapsed(true)}
+                    className="hidden lg:flex items-center justify-center w-6 h-6 rounded border border-neutral-800 text-neutral-600 hover:text-[#00ffff] hover:border-[#00ffff]/40 transition-all text-xs"
+                    title="Collapse bracket"
+                  >
+                    ←
+                  </button>
+                )}
+              </div>
 
-            <BracketTree
-              matchups={BRACKET_MATCHUPS}
-              selectedId={selectedMatchup?.id ?? null}
-              onSelect={handleSelectMatchup}
-            />
-          </div>
+              <BracketTree
+                matchups={BRACKET_MATCHUPS}
+                selectedId={selectedMatchup?.id ?? null}
+                onSelect={handleSelectMatchup}
+                onEnter={handleEnterBattle}
+              />
+            </div>
+          )}
         </aside>
 
         {/* RIGHT PANEL — Battle Screen */}
@@ -162,7 +211,7 @@ export default function BracketLabPage() {
                 weights={weights}
                 onWeightChange={handleWeightChange}
                 onWeightReset={handleWeightReset}
-                onBack={() => setMobileView('bracket')}
+                onBack={() => { setMobileView('bracket'); setBracketCollapsed(false); }}
               />
             </div>
           ) : (
@@ -173,8 +222,8 @@ export default function BracketLabPage() {
                 <div className="text-[#00ffff]/40 text-xs font-mono tracking-[0.4em] uppercase mb-2">
                   Select a Matchup
                 </div>
-                <p className="text-neutral-700 text-xs font-mono">
-                  Choose a game from the bracket to enter battle mode
+                <p className="text-neutral-700 text-xs font-mono max-w-xs">
+                  Choose a game from the bracket, then hit <span className="text-[#00ffff]">ENTER BATTLE</span> to open the stats lab
                 </p>
               </div>
             </div>
