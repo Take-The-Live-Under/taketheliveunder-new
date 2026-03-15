@@ -68,6 +68,7 @@ interface PpmSplit {
   homePoints: number;
   awayPoints: number;
   complete: boolean;
+  live: boolean;
 }
 
 interface LinePoint {

@@ -488,7 +488,14 @@ export async function GET(request: Request) {
       homePoints: number;
       awayPoints: number;
       complete: boolean;
+      live: boolean; // true when this split is in-progress (not yet complete)
     };
+
+    // Current game minute for live PPM calculation
+    const clockParts = clock.split(':');
+    const clockMin = parseInt(clockParts[0]) || 0;
+    const clockSec = parseInt(clockParts[1]) || 0;
+    const currentGameMinute = toGameMinute(currentPeriod <= 2 ? currentPeriod : 2, clockMin, clockSec);
 
     const ppmSplits: PpmSplit[] = splitBoundaries.map(({ label, start, end }) => {
       // Get last play in the previous bucket as baseline
@@ -496,7 +503,7 @@ export async function GET(request: Request) {
       const playsBeforeEnd = scoringPlays.filter(p => toGameMinute(p.period, p.clockMinutes, p.clockSeconds) <= end);
 
       if (playsBeforeEnd.length === 0) {
-        return { split: label, homePPM: null, awayPPM: null, totalPPM: null, homePoints: 0, awayPoints: 0, complete: false };
+        return { split: label, homePPM: null, awayPPM: null, totalPPM: null, homePoints: 0, awayPoints: 0, complete: false, live: false };
       }
 
       const endPlay = playsBeforeEnd[playsBeforeEnd.length - 1];
@@ -508,14 +515,19 @@ export async function GET(request: Request) {
       const minutes = end - start;
       const complete = toGameMinute(endPlay.period, endPlay.clockMinutes, endPlay.clockSeconds) >= end - 0.5;
 
+      // For the in-progress split: compute live PPM using elapsed minutes so far
+      const isLiveSplit = !complete && gameStatus === 'in' && currentGameMinute >= start && currentGameMinute < end;
+      const elapsedInSplit = isLiveSplit ? Math.max(currentGameMinute - start, 0.5) : minutes;
+
       return {
         split: label,
-        homePPM: complete ? Math.round((homePoints / minutes) * 100) / 100 : null,
-        awayPPM: complete ? Math.round((awayPoints / minutes) * 100) / 100 : null,
-        totalPPM: complete ? Math.round((totalPoints / minutes) * 100) / 100 : null,
+        homePPM: (complete || isLiveSplit) ? Math.round((homePoints / elapsedInSplit) * 100) / 100 : null,
+        awayPPM: (complete || isLiveSplit) ? Math.round((awayPoints / elapsedInSplit) * 100) / 100 : null,
+        totalPPM: (complete || isLiveSplit) ? Math.round((totalPoints / elapsedInSplit) * 100) / 100 : null,
         homePoints,
         awayPoints,
         complete,
+        live: isLiveSplit,
       };
     });
 

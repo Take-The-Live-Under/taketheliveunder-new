@@ -10,6 +10,7 @@ interface PpmSplit {
   homePoints: number;
   awayPoints: number;
   complete: boolean;
+  live: boolean;
 }
 
 interface LinePoint {
@@ -230,57 +231,60 @@ export default function GameSplitsTab({
               <span className="text-[10px] text-neutral-600 font-mono uppercase text-right">Total</span>
             </div>
 
-            {ppmSplits.map((split, i) => (
-              <div
-                key={split.split}
-                className={`grid grid-cols-4 px-3 py-2.5 ${i < ppmSplits.length - 1 ? "border-b border-neutral-800/50" : ""} ${!split.complete ? "opacity-40" : ""}`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-mono text-neutral-400">{split.split}</span>
-                  {!split.complete && status === "in" && (
-                    <span className="text-[9px] font-mono text-[#00ffff] animate-pulse">live</span>
-                  )}
-                </div>
-                <div className="text-center">
-                  {split.complete ? (
-                    <div>
-                      <div className={`text-sm font-bold font-mono tabular-nums ${ppmColor(split.awayPPM)}`}>
-                        {split.awayPPM?.toFixed(2) ?? "—"}
+            {ppmSplits.map((split, i) => {
+              const showData = split.complete || split.live;
+              return (
+                <div
+                  key={split.split}
+                  className={`grid grid-cols-4 px-3 py-2.5 ${i < ppmSplits.length - 1 ? "border-b border-neutral-800/50" : ""} ${!showData ? "opacity-40" : ""} ${split.live ? "bg-[#00ffff]/[0.03]" : ""}`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-mono text-neutral-400">{split.split}</span>
+                    {split.live && (
+                      <span className="text-[9px] font-mono text-[#00ffff] animate-pulse">live</span>
+                    )}
+                  </div>
+                  <div className="text-center">
+                    {showData ? (
+                      <div>
+                        <div className={`text-sm font-bold font-mono tabular-nums ${ppmColor(split.awayPPM)} ${split.live ? "opacity-80" : ""}`}>
+                          {split.live && <span className="text-[10px] text-neutral-600">~</span>}{split.awayPPM?.toFixed(2) ?? "—"}
+                        </div>
+                        <div className="text-[10px] text-neutral-700 font-mono">{split.awayPoints}pts</div>
                       </div>
-                      <div className="text-[10px] text-neutral-700 font-mono">{split.awayPoints}pts</div>
-                    </div>
-                  ) : (
-                    <span className="text-neutral-700 font-mono text-sm">—</span>
-                  )}
-                </div>
-                <div className="text-center">
-                  {split.complete ? (
-                    <div>
-                      <div className={`text-sm font-bold font-mono tabular-nums ${ppmColor(split.homePPM)}`}>
-                        {split.homePPM?.toFixed(2) ?? "—"}
+                    ) : (
+                      <span className="text-neutral-700 font-mono text-sm">—</span>
+                    )}
+                  </div>
+                  <div className="text-center">
+                    {showData ? (
+                      <div>
+                        <div className={`text-sm font-bold font-mono tabular-nums ${ppmColor(split.homePPM)} ${split.live ? "opacity-80" : ""}`}>
+                          {split.live && <span className="text-[10px] text-neutral-600">~</span>}{split.homePPM?.toFixed(2) ?? "—"}
+                        </div>
+                        <div className="text-[10px] text-neutral-700 font-mono">{split.homePoints}pts</div>
                       </div>
-                      <div className="text-[10px] text-neutral-700 font-mono">{split.homePoints}pts</div>
-                    </div>
-                  ) : (
-                    <span className="text-neutral-700 font-mono text-sm">—</span>
-                  )}
-                </div>
-                <div className="text-right">
-                  {split.complete ? (
-                    <div>
-                      <div className={`text-sm font-bold font-mono tabular-nums ${ppmColor(split.totalPPM)}`}>
-                        {split.totalPPM?.toFixed(2) ?? "—"}
+                    ) : (
+                      <span className="text-neutral-700 font-mono text-sm">—</span>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    {showData ? (
+                      <div>
+                        <div className={`text-sm font-bold font-mono tabular-nums ${ppmColor(split.totalPPM)} ${split.live ? "opacity-80" : ""}`}>
+                          {split.live && <span className="text-[10px] text-neutral-600">~</span>}{split.totalPPM?.toFixed(2) ?? "—"}
+                        </div>
+                        <div className="text-[10px] text-neutral-700 font-mono">
+                          {split.homePoints + split.awayPoints}pts
+                        </div>
                       </div>
-                      <div className="text-[10px] text-neutral-700 font-mono">
-                        {split.homePoints + split.awayPoints}pts
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-neutral-700 font-mono text-sm">—</span>
-                  )}
+                    ) : (
+                      <span className="text-neutral-700 font-mono text-sm">—</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
