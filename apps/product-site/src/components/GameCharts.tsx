@@ -440,6 +440,79 @@ export default function GameCharts({
       </ChartCard>
 
       <ChartCard
+        title="// OU_LINE_MOVEMENT"
+        note={
+          <>
+            <span className="text-[10px] text-neutral-700 font-mono">
+              // LINE_OVER_GAME_TIME
+            </span>
+            <span className="text-[10px] text-yellow-500 font-mono">
+              ── O/U_LINE
+            </span>
+          </>
+        }
+      >
+        <LineChart
+          data={chartData}
+          margin={{ top: 5, right: 5, left: -20, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+          <XAxis
+            dataKey="elapsedMinutes"
+            stroke="#404040"
+            tick={axisStyle}
+            tickFormatter={(v) => `${v}'`}
+          />
+          <YAxis
+            domain={["auto", "auto"]}
+            stroke="#404040"
+            tick={axisStyle}
+            tickFormatter={(v) => v.toFixed(1)}
+          />
+          <Tooltip
+            content={({ active, payload }: any) => {
+              if (!active || !payload?.length) return null;
+              const d = payload[0]?.payload;
+              if (!d) return null;
+              return (
+                <div
+                  className="rounded-xl border border-neutral-700 p-3 font-mono text-xs"
+                  style={{ background: "rgba(10,10,10,0.95)", backdropFilter: "blur(12px)" }}
+                >
+                  <div className="text-[#00ffff]/60 mb-2">
+                    // {d.period === 1 ? "H1" : "H2"} {d.clock}
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-neutral-600">O/U_LINE:</span>
+                    <span className="text-yellow-400">{d.ouLine?.toFixed(1) ?? "—"}</span>
+                  </div>
+                </div>
+              );
+            }}
+          />
+          <Line
+            type="stepAfter"
+            dataKey="ouLine"
+            name="O/U_LINE"
+            stroke="#eab308"
+            strokeWidth={2}
+            dot={{ r: 2, fill: "#eab308" }}
+            activeDot={{ r: 4, fill: "#eab308" }}
+            connectNulls
+          />
+          {chartData.length > 5 && (
+            <Brush
+              dataKey="elapsedMinutes"
+              height={20}
+              stroke="#404040"
+              fill="#0a0a0a"
+              tickFormatter={(v) => `${v}'`}
+            />
+          )}
+        </LineChart>
+      </ChartCard>
+
+      <ChartCard
         title="// TOTAL_MOVEMENT"
         note={
           <>
