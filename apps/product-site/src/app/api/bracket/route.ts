@@ -49,15 +49,15 @@ const ROUND_LABELS: Record<number, string> = {
   6: 'Championship',
 };
 
-// All tournament dates for 2025
+// All tournament dates for 2026
 const TOURNAMENT_DATES = [
-  '20250318', '20250319', // First Four
-  '20250320', '20250321', // R64
-  '20250322', '20250323', // R32
-  '20250327', '20250328', // S16
-  '20250329', '20250330', // E8
-  '20250405',             // F4
-  '20250407',             // Championship
+  '20260317', '20260318', // First Four
+  '20260319', '20260320', // R64
+  '20260321', '20260322', // R32
+  '20260326', '20260327', // S16
+  '20260328', '20260329', // E8
+  '20260404',             // F4
+  '20260406',             // Championship
 ];
 
 // Map ESPN round names to round numbers

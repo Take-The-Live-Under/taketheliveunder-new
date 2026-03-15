@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
+import type { BracketData, BracketGame, BracketTeam } from "@/app/api/bracket/route";
 
 interface Team {
   id: string;
@@ -258,10 +260,120 @@ function getClassificationColor(color: Classification["color"]): string {
   }
 }
 
+// ─── Round label ─────────────────────────────────────────────────────────────
+const ROUND_LABELS: Record<number, string> = {
+  0: "First Four",
+  1: "First Round",
+  2: "Second Round",
+  3: "Sweet 16",
+  4: "Elite Eight",
+  5: "Final Four",
+  6: "Championship",
+};
+
+// ─── Matchup card for research page ──────────────────────────────────────────
+function MatchupResearchCard({
+  game,
+  onResearch,
+}: {
+  game: BracketGame;
+  onResearch: (teamName: string) => void;
+}) {
+  const isComplete = game.status === "post";
+  const isLive = game.status === "in";
+
+  function TeamRow({
+    team,
+    isWinner,
+    isEliminated,
+  }: {
+    team: BracketTeam | null;
+    isWinner: boolean;
+    isEliminated: boolean;
+  }) {
+    if (!team) {
+      return (
+        <div className="flex items-center gap-2 h-9 px-3">
+          <span className="text-[10px] text-neutral-700 font-mono">TBD</span>
+        </div>
+      );
+    }
+    return (
+      <button
+        onClick={() => onResearch(team.name)}
+        className={`w-full flex items-center gap-2 h-9 px-3 text-left transition-all hover:bg-neutral-800/60 group
+          ${isWinner ? "bg-neutral-800/40" : ""}
+          ${isEliminated ? "opacity-30" : ""}
+        `}
+      >
+        <span className={`text-[10px] font-bold font-mono w-4 flex-shrink-0 ${isWinner ? "text-white" : "text-neutral-600"}`}>
+          {team.seed || ""}
+        </span>
+        {team.logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={team.logo} alt={team.shortName} className="w-4 h-4 object-contain flex-shrink-0" />
+        ) : (
+          <div className="w-4 h-4 rounded-full bg-neutral-800 flex-shrink-0" />
+        )}
+        <span className={`text-xs font-mono flex-1 truncate ${isWinner ? "text-white font-bold" : "text-neutral-300"} group-hover:text-white transition-colors`}>
+          {team.shortName}
+        </span>
+        {team.score !== undefined && (
+          <span className={`text-xs font-mono font-bold tabular-nums flex-shrink-0 ${isWinner ? "text-white" : "text-neutral-600"}`}>
+            {team.score}
+          </span>
+        )}
+        {isWinner && <span className="text-[#00ffff] text-[9px] flex-shrink-0">✓</span>}
+        <span className="text-[9px] text-[#00ffff]/0 group-hover:text-[#00ffff]/60 transition-colors flex-shrink-0 font-mono">→ research</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className={`rounded-xl border overflow-hidden bg-[#0f0f0f] transition-all
+      ${isLive ? "border-[#00ffff]/40 shadow-[0_0_12px_rgba(0,255,255,0.08)]" : isComplete ? "border-neutral-700" : "border-neutral-800"}
+    `}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-neutral-800 bg-neutral-900/40">
+        <span className="text-[9px] font-mono text-neutral-600 truncate">
+          {game.location ? `${game.date} · ${game.location}` : game.date}
+        </span>
+        {isLive && (
+          <span className="flex items-center gap-1 text-[9px] font-mono text-[#00ffff] flex-shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00ffff] animate-pulse" />
+            LIVE
+          </span>
+        )}
+        {isComplete && (
+          <span className="text-[9px] font-mono text-neutral-700 flex-shrink-0">FINAL</span>
+        )}
+      </div>
+      {/* Teams */}
+      <div className="divide-y divide-neutral-800/60">
+        <TeamRow
+          team={game.topTeam}
+          isWinner={isComplete && game.winner?.id === game.topTeam?.id}
+          isEliminated={isComplete && !!game.winner && game.winner.id !== game.topTeam?.id}
+        />
+        <TeamRow
+          team={game.bottomTeam}
+          isWinner={isComplete && game.winner?.id === game.bottomTeam?.id}
+          isEliminated={isComplete && !!game.winner && game.winner.id !== game.bottomTeam?.id}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function ResearchPage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>("single");
+
+  // Bracket data
+  const [bracketData, setBracketData] = useState<BracketData | null>(null);
+  const [bracketLoading, setBracketLoading] = useState(true);
+  const [bracketRound, setBracketRound] = useState<number>(1); // which round to show in matchups
 
   // Single team mode
   const [searchQuery, setSearchQuery] = useState("");
@@ -305,6 +417,42 @@ export default function ResearchPage() {
     }
     fetchTeams();
   }, []);
+
+  useEffect(() => {
+    async function fetchBracket() {
+      try {
+        const res = await fetch("/api/bracket");
+        const data: BracketData = await res.json();
+        setBracketData(data);
+        // Auto-select the most interesting round: live > latest completed > first upcoming > round 1
+        const liveRound = data.rounds.find((r) => r.games.some((g) => g.status === "in"));
+        const latestCompleted = [...data.rounds].reverse().find((r) => r.games.some((g) => g.status === "post"));
+        const firstUpcoming = data.rounds.find((r) => r.round > 0 && r.games.some((g) => g.status === "pre"));
+        if (liveRound) setBracketRound(liveRound.round);
+        else if (latestCompleted) setBracketRound(latestCompleted.round);
+        else if (firstUpcoming) setBracketRound(firstUpcoming.round);
+      } catch (error) {
+        console.error("Error fetching bracket:", error);
+      } finally {
+        setBracketLoading(false);
+      }
+    }
+    fetchBracket();
+  }, []);
+
+  // Games for the currently selected round, filtered to the 4 main regions
+  const bracketGamesForRound = useMemo(() => {
+    if (!bracketData) return [];
+    return (bracketData.rounds.find((r) => r.round === bracketRound)?.games ?? []).filter(
+      (g) => ["South", "East", "West", "Midwest", "National"].includes(g.region),
+    );
+  }, [bracketData, bracketRound]);
+
+  // Available rounds (non-empty)
+  const bracketRounds = useMemo(() => {
+    if (!bracketData) return [];
+    return bracketData.rounds.filter((r) => r.round > 0 && r.games.length > 0);
+  }, [bracketData]);
 
   const fetchAnalysis = useCallback(async (team: Team) => {
     setAnalyzing(true);
@@ -428,6 +576,26 @@ export default function ResearchPage() {
     }
   };
 
+  // Quick-research a team from a bracket matchup card
+  const handleResearchTeam = useCallback((teamName: string) => {
+    // Find the closest match in our teams list
+    const match = teams.find((t) =>
+      t.name.toLowerCase().includes(teamName.toLowerCase()) ||
+      teamName.toLowerCase().includes(t.name.toLowerCase())
+    );
+    const teamToSelect = match ?? { id: teamName, name: teamName, rank: 0 };
+    setViewMode("single");
+    setSelectedTeam(teamToSelect as Team);
+    setSearchQuery("");
+    setCompareTeam(null);
+    setCompareAnalysis(null);
+    setShowCompareInput(false);
+    // Scroll down to the research panel
+    setTimeout(() => {
+      document.getElementById("research-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  }, [teams]);
+
   // Shared input style
   const inputCls =
     "w-full rounded-xl border border-neutral-800 bg-neutral-900/60 px-4 py-3 text-sm text-white placeholder-neutral-600 focus:border-[#00ffff]/50 focus:outline-none backdrop-blur-sm font-mono transition-colors";
@@ -438,7 +606,110 @@ export default function ResearchPage() {
     <main className="min-h-screen bg-[#0a0a0a] text-[#ededed] flex flex-col">
       <Navbar />
 
-      <div className="mx-auto max-w-7xl px-4 py-8 w-full flex-1">
+      {/* ══════════════════════════════════════════════
+          TOURNAMENT MATCHUPS SECTION
+          ══════════════════════════════════════════════ */}
+      <div className="border-b border-neutral-800/60 bg-[#0a0a0a]">
+        <div className="mx-auto max-w-7xl px-4 py-6">
+          {/* Section header */}
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-1 h-5 bg-[#00ffff] rounded-full" />
+              <div>
+                <h2 className="text-sm font-bold font-mono text-white tracking-wider">
+                  2026 NCAA TOURNAMENT
+                </h2>
+                <p className="text-[10px] font-mono text-neutral-600">
+                  Click any team to research their stats
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/bracket"
+                className="text-[10px] font-mono text-neutral-600 hover:text-[#00ffff] transition-colors border border-neutral-800 hover:border-[#00ffff]/40 rounded-lg px-3 py-1.5"
+              >
+                Full Bracket →
+              </Link>
+            </div>
+          </div>
+
+          {/* Round tabs */}
+          {bracketRounds.length > 0 && (
+            <div className="flex items-center gap-1 mb-4 flex-wrap">
+              {bracketRounds.map((r) => {
+                const hasLive = r.games.some((g) => g.status === "in");
+                const allDone = r.games.every((g) => g.status === "post");
+                return (
+                  <button
+                    key={r.round}
+                    onClick={() => setBracketRound(r.round)}
+                    className={`relative px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold tracking-wider transition-all ${
+                      bracketRound === r.round
+                        ? "bg-[#00ffff]/10 text-[#00ffff] border border-[#00ffff]/30"
+                        : "text-neutral-600 border border-neutral-800 hover:text-neutral-400 hover:border-neutral-700"
+                    }`}
+                  >
+                    {hasLive && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#00ffff] animate-pulse" />
+                    )}
+                    {r.label}
+                    {allDone && (
+                      <span className="ml-1.5 text-[8px] text-neutral-700">✓</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Matchup grid */}
+          {bracketLoading ? (
+            <div className="flex items-center gap-2 py-8 text-neutral-700 text-xs font-mono">
+              <div className="h-3 w-3 animate-spin rounded-full border-2 border-[#00ffff] border-t-transparent" />
+              Loading tournament data...
+            </div>
+          ) : bracketGamesForRound.length === 0 ? (
+            <div className="py-8 text-neutral-700 text-xs font-mono text-center">
+              No matchup data available for this round.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              {bracketGamesForRound.map((game) => (
+                <MatchupResearchCard
+                  key={game.id}
+                  game={game}
+                  onResearch={handleResearchTeam}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Championship winner callout */}
+          {bracketData && (() => {
+            const champRound = bracketData.rounds.find((r) => r.round === 6);
+            const champGame = champRound?.games[0];
+            if (!champGame?.winner) return null;
+            return (
+              <div className="mt-4 flex items-center gap-3 p-3 rounded-xl border border-[#00ffff]/20 bg-[#00ffff]/5">
+                <span className="text-lg">🏆</span>
+                <div>
+                  <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest">2026 NCAA Champion</span>
+                  <div className="text-sm font-bold font-mono text-white">{champGame.winner.name}</div>
+                </div>
+                <button
+                  onClick={() => handleResearchTeam(champGame.winner!.name)}
+                  className="ml-auto text-[10px] font-mono text-[#00ffff] hover:text-white transition-colors border border-[#00ffff]/30 hover:border-[#00ffff] rounded-lg px-3 py-1.5"
+                >
+                  Research →
+                </button>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 py-8 w-full flex-1" id="research-panel">
         {/* ═══════════════════════════════════
             COMPARE MODE
             ═══════════════════════════════════ */}

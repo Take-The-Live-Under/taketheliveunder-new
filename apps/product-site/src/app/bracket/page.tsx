@@ -212,7 +212,7 @@ function FirstFour({ games }: { games: BracketGame[] }) {
   return (
     <div className="mb-8 pb-6 border-b border-neutral-800">
       <div className="text-[10px] font-mono text-neutral-600 tracking-widest uppercase mb-4">
-        First Four — Mar 18–19
+        First Four — Mar 17–18
       </div>
       <div className="flex flex-wrap gap-6">
         {games.map((g) => <MatchupBox key={g.id} game={g} showLocation />)}
@@ -252,7 +252,7 @@ export default function BracketPage() {
           <div className="flex items-center gap-4">
             <Link href="/" className="text-xs text-neutral-600 hover:text-white transition-colors">← Back</Link>
             <div>
-              <h1 className="text-sm font-bold text-white">2025 NCAA Tournament</h1>
+              <h1 className="text-sm font-bold text-white">2026 NCAA Tournament</h1>
               <p className="text-[11px] text-neutral-600">
                 {loading ? "Loading..." : data ? `Live data from ESPN · Updated ${new Date(data.lastUpdated).toLocaleTimeString()}` : error}
               </p>

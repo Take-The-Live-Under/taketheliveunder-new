@@ -100,7 +100,7 @@ export default function BracketLabPage() {
           <div className="flex items-center gap-3 text-[9px] font-mono text-neutral-600">
             <span>{BRACKET_MATCHUPS.length} MATCHUPS</span>
             <span className="text-neutral-800">|</span>
-            <span className="text-[#00ffff]/60">MARCH MADNESS 2025</span>
+            <span className="text-[#00ffff]/60">MARCH MADNESS 2026</span>
           </div>
         </div>
 
