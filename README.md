@@ -1,4 +1,5 @@
 # Take The Live Under - Monorepo 🏀
+<!-- Claude Code connected: 2026-03-15 -->
 
 An intelligent, real-time NCAA basketball betting monitoring system with smart confidence scoring, built as a Turborepo monorepo.
 
