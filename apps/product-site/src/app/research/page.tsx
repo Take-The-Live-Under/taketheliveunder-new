@@ -274,13 +274,14 @@ const ROUND_LABELS: Record<number, string> = {
 // ─── Matchup card for research page ──────────────────────────────────────────
 function MatchupResearchCard({
   game,
-  onResearch,
+  onMatchup,
 }: {
   game: BracketGame;
-  onResearch: (teamName: string) => void;
+  onMatchup: (team1Name: string, team2Name: string) => void;
 }) {
   const isComplete = game.status === "post";
   const isLive = game.status === "in";
+  const bothTeams = game.topTeam && game.bottomTeam;
 
   function TeamRow({
     team,
@@ -299,9 +300,8 @@ function MatchupResearchCard({
       );
     }
     return (
-      <button
-        onClick={() => onResearch(team.name)}
-        className={`w-full flex items-center gap-2 h-9 px-3 text-left transition-all hover:bg-neutral-800/60 group
+      <div
+        className={`w-full flex items-center gap-2 h-9 px-3
           ${isWinner ? "bg-neutral-800/40" : ""}
           ${isEliminated ? "opacity-30" : ""}
         `}
@@ -315,7 +315,7 @@ function MatchupResearchCard({
         ) : (
           <div className="w-4 h-4 rounded-full bg-neutral-800 flex-shrink-0" />
         )}
-        <span className={`text-xs font-mono flex-1 truncate ${isWinner ? "text-white font-bold" : "text-neutral-300"} group-hover:text-white transition-colors`}>
+        <span className={`text-xs font-mono flex-1 truncate ${isWinner ? "text-white font-bold" : "text-neutral-300"}`}>
           {team.shortName}
         </span>
         {team.score !== undefined && (
@@ -324,8 +324,7 @@ function MatchupResearchCard({
           </span>
         )}
         {isWinner && <span className="text-[#00ffff] text-[9px] flex-shrink-0">✓</span>}
-        <span className="text-[9px] text-[#00ffff]/0 group-hover:text-[#00ffff]/60 transition-colors flex-shrink-0 font-mono">→ research</span>
-      </button>
+      </div>
     );
   }
 
@@ -361,6 +360,17 @@ function MatchupResearchCard({
           isEliminated={isComplete && !!game.winner && game.winner.id !== game.bottomTeam?.id}
         />
       </div>
+      {/* Head-to-head CTA */}
+      {bothTeams && (
+        <button
+          onClick={() => onMatchup(game.topTeam!.name, game.bottomTeam!.name)}
+          className="w-full flex items-center justify-center gap-1.5 py-2 border-t border-neutral-800 bg-neutral-900/40 hover:bg-[#00ffff]/10 hover:border-[#00ffff]/30 transition-all group"
+        >
+          <span className="text-[9px] font-mono font-bold text-neutral-600 group-hover:text-[#00ffff] transition-colors tracking-widest uppercase">
+            VS · Head-to-Head
+          </span>
+        </button>
+      )}
     </div>
   );
 }
@@ -576,20 +586,26 @@ export default function ResearchPage() {
     }
   };
 
-  // Quick-research a team from a bracket matchup card
-  const handleResearchTeam = useCallback((teamName: string) => {
-    // Find the closest match in our teams list
-    const match = teams.find((t) =>
-      t.name.toLowerCase().includes(teamName.toLowerCase()) ||
-      teamName.toLowerCase().includes(t.name.toLowerCase())
-    );
-    const teamToSelect = match ?? { id: teamName, name: teamName, rank: 0 };
-    setViewMode("single");
-    setSelectedTeam(teamToSelect as Team);
-    setSearchQuery("");
-    setCompareTeam(null);
-    setCompareAnalysis(null);
-    setShowCompareInput(false);
+  // Load a matchup head-to-head into compare mode
+  const handleMatchup = useCallback((team1Name: string, team2Name: string) => {
+    const findTeam = (name: string): Team =>
+      teams.find(
+        (t) =>
+          t.name.toLowerCase().includes(name.toLowerCase()) ||
+          name.toLowerCase().includes(t.name.toLowerCase())
+      ) ?? { id: name, name, rank: 0 };
+
+    const t1 = findTeam(team1Name);
+    const t2 = findTeam(team2Name);
+
+    // Switch to compare mode and set both teams
+    setViewMode("compare");
+    setTeam1(t1 as Team);
+    setTeam2(t2 as Team);
+    setTeam1Search(t1.name);
+    setTeam2Search(t2.name);
+    setAnalysis1(null);
+    setAnalysis2(null);
     // Scroll down to the research panel
     setTimeout(() => {
       document.getElementById("research-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -679,7 +695,7 @@ export default function ResearchPage() {
                 <MatchupResearchCard
                   key={game.id}
                   game={game}
-                  onResearch={handleResearchTeam}
+                  onMatchup={handleMatchup}
                 />
               ))}
             </div>
@@ -698,7 +714,16 @@ export default function ResearchPage() {
                   <div className="text-sm font-bold font-mono text-white">{champGame.winner.name}</div>
                 </div>
                 <button
-                  onClick={() => handleResearchTeam(champGame.winner!.name)}
+                  onClick={() => {
+                    const name = champGame.winner!.name;
+                    const match = teams.find(
+                      (t) => t.name.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(t.name.toLowerCase())
+                    ) ?? { id: name, name, rank: 0 };
+                    setViewMode("single");
+                    setSelectedTeam(match as Team);
+                    setSearchQuery("");
+                    setTimeout(() => document.getElementById("research-panel")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+                  }}
                   className="ml-auto text-[10px] font-mono text-[#00ffff] hover:text-white transition-colors border border-[#00ffff]/30 hover:border-[#00ffff] rounded-lg px-3 py-1.5"
                 >
                   Research →
