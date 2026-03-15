@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Game } from "@/types/game";
 import GameCharts from "./GameCharts";
+import GameSplitsTab from "./GameSplitsTab";
 
 interface GameDetailModalProps {
   game: Game;
@@ -58,6 +59,22 @@ interface TopPlayer {
   fouls: number;
 }
 
+interface PpmSplit {
+  split: string;
+  homePPM: number | null;
+  awayPPM: number | null;
+  totalPPM: number | null;
+  homePoints: number;
+  awayPoints: number;
+  complete: boolean;
+}
+
+interface LinePoint {
+  minute: number;
+  line: number;
+  timestamp: string;
+}
+
 interface GameDetails {
   gameId: string;
   status: string;
@@ -73,6 +90,8 @@ interface GameDetails {
     teamName: string;
     players: TopPlayer[];
   }>;
+  ppmSplits?: PpmSplit[];
+  lineMovement?: LinePoint[];
 }
 
 export default function GameDetailModal({
@@ -84,7 +103,7 @@ export default function GameDetailModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
-    "charts" | "stats" | "players" | "refs"
+    "charts" | "stats" | "players" | "refs" | "splits"
   >("charts");
 
   const fetchDetails = useCallback(async () => {
@@ -285,7 +304,7 @@ export default function GameDetailModal({
           {/* Tab Navigation — horizontal on mobile, vertical on desktop */}
           <div className="p-3 border-b lg:border-b-0 border-neutral-800">
             <div className="flex lg:flex-col gap-1">
-              {(["charts", "stats", "players", "refs"] as const).map((tab) => (
+              {(["charts", "splits", "stats", "players", "refs"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -298,6 +317,7 @@ export default function GameDetailModal({
                   {
                     {
                       charts: "CHARTS",
+                      splits: "SPLITS",
                       stats: "STATS",
                       players: "PLAYERS",
                       refs: "REFS",
@@ -336,6 +356,24 @@ export default function GameDetailModal({
               currentOULine={game.ouLine}
               game={game}
             />
+          )}
+
+          {/* Splits Tab */}
+          {activeTab === "splits" && (
+            details ? (
+              <GameSplitsTab
+                homeTeamName={game.homeTeam}
+                awayTeamName={game.awayTeam}
+                ppmSplits={details.ppmSplits ?? []}
+                lineMovement={details.lineMovement ?? []}
+                currentPeriod={details.period}
+                status={details.status}
+              />
+            ) : (
+              <div className="p-8 text-center text-neutral-600 font-mono text-xs">
+                {loading ? "Loading split data..." : "No data available"}
+              </div>
+            )
           )}
 
           {details && !loading && (

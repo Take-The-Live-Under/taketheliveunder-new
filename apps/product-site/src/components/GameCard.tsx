@@ -5,6 +5,8 @@ import TriggerBuilder from "./TriggerBuilder";
 
 interface GameCardProps {
   game: Game;
+  isPinned?: boolean;
+  onPin?: (gameId: string) => void;
   onClick?: () => void;
 }
 
@@ -57,7 +59,7 @@ function getUnderTriggerStrength(requiredPPM: number | null): number {
   return Math.round(strength);
 }
 
-export default function GameCard({ game, onClick }: GameCardProps) {
+export default function GameCard({ game, isPinned = false, onPin, onClick }: GameCardProps) {
   const isLive = game.status === "in";
   const isUnderTriggered = game.triggerType === "under";
   const isTripleDipper = game.triggerType === "tripleDipper";
@@ -85,8 +87,11 @@ export default function GameCard({ game, onClick }: GameCardProps) {
     game.requiredPPM !== null &&
     game.currentPPM < game.requiredPPM;
 
-  // Determine card styling based on trigger type
+  // Determine card styling based on trigger type and pin state
   const getCardStyle = () => {
+    if (isPinned) {
+      return "border-[#00ffff]/60 bg-neutral-900/50 backdrop-blur-sm shadow-[0_0_24px_rgba(0,255,255,0.18)] ring-1 ring-[#00ffff]/20";
+    }
     if (isTripleDipper) {
       return "border-yellow-500/40 bg-neutral-900/50 backdrop-blur-sm shadow-[0_0_20px_rgba(234,179,8,0.12)]";
     }
@@ -132,8 +137,24 @@ export default function GameCard({ game, onClick }: GameCardProps) {
   return (
     <div
       onClick={onClick}
-      className={`border rounded-xl p-4 transition-all duration-200 card-enter game-card-stable backdrop-blur-sm ${getCardStyle()} ${onClick ? "cursor-pointer active:scale-[0.99]" : ""}`}
+      className={`relative border rounded-xl p-4 transition-all duration-200 card-enter game-card-stable backdrop-blur-sm ${getCardStyle()} ${onClick ? "cursor-pointer active:scale-[0.99]" : ""}`}
     >
+      {/* Pin button */}
+      {onPin && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPin(game.id); }}
+          title={isPinned ? "Unpin game" : "Pin to top"}
+          className={`absolute top-3 right-3 z-10 h-7 w-7 flex items-center justify-center rounded-lg border transition-all duration-200 tap-target ${
+            isPinned
+              ? "bg-[#00ffff]/15 border-[#00ffff]/50 text-[#00ffff]"
+              : "bg-neutral-900/60 border-neutral-700/50 text-neutral-600 hover:text-neutral-300 hover:border-neutral-500"
+          }`}
+        >
+          <svg className="h-3.5 w-3.5" fill={isPinned ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+          </svg>
+        </button>
+      )}
       {/* Trigger Badge - uses opacity for smooth transitions instead of unmounting */}
       <div
         className={`mb-3 transition-all duration-300 ${showTriggerBadge ? "opacity-100 max-h-20" : "opacity-0 max-h-0 overflow-hidden mb-0"}`}

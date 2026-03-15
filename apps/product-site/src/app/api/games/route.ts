@@ -317,6 +317,32 @@ export async function GET() {
     const espnData = await espnResponse.json();
     let espnEvents: ESPNEvent[] = espnData.events || [];
 
+    // If it's early morning (before 4am Eastern), also fetch yesterday's scoreboard.
+    // Late-night games that crossed midnight Eastern may only appear on the previous date's
+    // scoreboard but still be live — without this they disappear from the UI.
+    if (easternToday.getHours() < 4) {
+      try {
+        const easternYesterday = new Date(easternToday.getTime() - 86400000);
+        const yesterdayStr = formatDateForESPN(easternYesterday);
+        const yesterdayResponse = await fetch(`${ESPN_URL}?limit=500&groups=50&dates=${yesterdayStr}`, {
+          next: { revalidate: 0 },
+          cache: 'no-store'
+        });
+        if (yesterdayResponse.ok) {
+          const yesterdayData = await yesterdayResponse.json();
+          const yesterdayEvents: ESPNEvent[] = yesterdayData.events || [];
+          // Only carry over games that are still live — deduplicate by event id
+          const existingIds = new Set(espnEvents.map((e) => e.id));
+          const liveYesterday = yesterdayEvents.filter(
+            (e) => e.status?.type?.state === 'in' && !existingIds.has(e.id)
+          );
+          espnEvents = [...liveYesterday, ...espnEvents];
+        }
+      } catch (error) {
+        console.error('Error fetching yesterday games:', error);
+      }
+    }
+
     // Check if there are any upcoming games today
     const hasUpcomingToday = espnEvents.some(
       (e) => e.status?.type?.state === 'pre' && isToday(e.date)

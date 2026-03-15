@@ -344,6 +344,58 @@ export function getTriggerType(
 }
 
 /**
+ * getTriggerTypeWithSettings — same logic as getTriggerType but uses custom user thresholds.
+ * Used by the Triggers tab to requalify games in real time based on slider settings.
+ */
+export function getTriggerTypeWithSettings(
+  status: string,
+  minutesRemainingReg: number,
+  currentPPM: number | null,
+  requiredPPM: number | null,
+  isOT: boolean,
+  pointDiff: number | undefined,
+  settings: { minRequiredPPM: number; underGapMin: number; overGapMin: number },
+): TriggerType {
+  if (status !== 'in' || isOT) return null;
+  if (currentPPM === null || requiredPPM === null) return null;
+
+  const gameMinute = REGULATION_MINUTES - minutesRemainingReg;
+  const minutesElapsed = gameMinute;
+
+  // Triple Dipper (UNDER strict)
+  if (
+    gameMinute >= 20 && gameMinute <= 32 &&
+    requiredPPM >= settings.minRequiredPPM &&
+    (currentPPM - requiredPPM) <= -(settings.underGapMin + 0.1) && // triple dipper stays slightly tighter
+    (pointDiff === undefined || pointDiff > 8)
+  ) {
+    return 'tripleDipper';
+  }
+
+  // OVER trigger
+  if (
+    gameMinute >= 20 && gameMinute <= 30 &&
+    (currentPPM - requiredPPM) >= settings.overGapMin
+  ) {
+    return 'over';
+  }
+
+  // Standard UNDER (Golden Zone)
+  if (
+    minutesElapsed >= 4.0 &&
+    minutesRemainingReg > 5.0 &&
+    requiredPPM >= settings.minRequiredPPM &&
+    (requiredPPM - currentPPM) >= settings.underGapMin &&
+    (requiredPPM - currentPPM) <= settings.underGapMin + 0.3 &&
+    (pointDiff === undefined || pointDiff > 8)
+  ) {
+    return 'under';
+  }
+
+  return null;
+}
+
+/**
  * Legacy function - kept for backward compatibility
  * Returns true if UNDER or TRIPLE DIPPER triggers fire
  */

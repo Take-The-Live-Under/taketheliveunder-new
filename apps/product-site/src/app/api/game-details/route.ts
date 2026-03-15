@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getGameSnapshots } from '@/lib/queries/snapshots';
 
 const ESPN_SUMMARY_URL =
   'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/summary';
@@ -430,6 +431,106 @@ export async function GET(request: Request) {
     const venue = data.gameInfo?.venue;
     const attendance = data.gameInfo?.attendance;
 
+    // -----------------------------------------------------------------------
+    // PPM SPLITS: bucket play-by-play into 10-minute windows
+    // Each play from ESPN has homeScore + awayScore (cumulative at that moment)
+    // We find the score at each 10-min game-minute boundary.
+    // -----------------------------------------------------------------------
+    interface ScoringPlay {
+      period: number;
+      clockMinutes: number;
+      clockSeconds: number;
+      homeScore: number;
+      awayScore: number;
+    }
+
+    // Collect scoring plays (plays that have updated score values)
+    const scoringPlays: ScoringPlay[] = [];
+    for (const play of plays) {
+      const periodNum = play.period?.number || 1;
+      if (periodNum > 2) continue; // skip OT for now (handled separately)
+      const clockStr: string = play.clock?.displayValue || play.clock?.value || '';
+      let cMin = 0;
+      let cSec = 0;
+      if (clockStr.includes(':')) {
+        const parts = clockStr.split(':');
+        cMin = parseInt(parts[0]) || 0;
+        cSec = parseInt(parts[1]) || 0;
+      }
+      const homeScoreAtPlay = parseInt(play.homeScore ?? play.homeTeamScore ?? '0') || 0;
+      const awayScoreAtPlay = parseInt(play.awayScore ?? play.awayTeamScore ?? '0') || 0;
+      scoringPlays.push({ period: periodNum, clockMinutes: cMin, clockSeconds: cSec, homeScore: homeScoreAtPlay, awayScore: awayScoreAtPlay });
+    }
+
+    // Convert period + clock to game minute elapsed
+    // Period 1: gameMinute = 20 - clockTime  (clock counts down from 20)
+    // Period 2: gameMinute = 20 + (20 - clockTime)
+    function toGameMinute(period: number, cMin: number, cSec: number): number {
+      const clockTime = cMin + cSec / 60;
+      if (period === 1) return 20 - clockTime;
+      return 40 - clockTime; // period 2
+    }
+
+    // For each 10-min split, find the score at the end of that window
+    // 0-10: gameMinute ~10, 10-20: gameMinute ~20 (halftime), 20-30: ~30, 30-40: ~40
+    const splitBoundaries = [
+      { label: '0–10', start: 0, end: 10 },
+      { label: '10–20', start: 10, end: 20 },
+      { label: '20–30', start: 20, end: 30 },
+      { label: '30–40', start: 30, end: 40 },
+    ];
+
+    type PpmSplit = {
+      split: string;
+      homePPM: number | null;
+      awayPPM: number | null;
+      totalPPM: number | null;
+      homePoints: number;
+      awayPoints: number;
+      complete: boolean;
+    };
+
+    const ppmSplits: PpmSplit[] = splitBoundaries.map(({ label, start, end }) => {
+      // Get last play in the previous bucket as baseline
+      const playsBeforeStart = scoringPlays.filter(p => toGameMinute(p.period, p.clockMinutes, p.clockSeconds) <= start);
+      const playsBeforeEnd = scoringPlays.filter(p => toGameMinute(p.period, p.clockMinutes, p.clockSeconds) <= end);
+
+      if (playsBeforeEnd.length === 0) {
+        return { split: label, homePPM: null, awayPPM: null, totalPPM: null, homePoints: 0, awayPoints: 0, complete: false };
+      }
+
+      const endPlay = playsBeforeEnd[playsBeforeEnd.length - 1];
+      const startPlay = playsBeforeStart.length > 0 ? playsBeforeStart[playsBeforeStart.length - 1] : { homeScore: 0, awayScore: 0 };
+
+      const homePoints = endPlay.homeScore - startPlay.homeScore;
+      const awayPoints = endPlay.awayScore - startPlay.awayScore;
+      const totalPoints = homePoints + awayPoints;
+      const minutes = end - start;
+      const complete = toGameMinute(endPlay.period, endPlay.clockMinutes, endPlay.clockSeconds) >= end - 0.5;
+
+      return {
+        split: label,
+        homePPM: complete ? Math.round((homePoints / minutes) * 100) / 100 : null,
+        awayPPM: complete ? Math.round((awayPoints / minutes) * 100) / 100 : null,
+        totalPPM: complete ? Math.round((totalPoints / minutes) * 100) / 100 : null,
+        homePoints,
+        awayPoints,
+        complete,
+      };
+    });
+
+    // -----------------------------------------------------------------------
+    // LINE MOVEMENT: pull from game snapshots (ou_line over time)
+    // -----------------------------------------------------------------------
+    const snapshots = await getGameSnapshots(gameId);
+    const lineMovementData = snapshots
+      .filter((s) => s.ou_line !== null && s.ou_line > 0)
+      .map((s) => ({
+        minute: Math.round((40 - s.minutes_remaining) * 10) / 10,
+        line: s.ou_line as number,
+        timestamp: s.created_at,
+      }));
+
     return NextResponse.json({
       gameId,
       status: gameStatus,
@@ -444,6 +545,8 @@ export async function GET(request: Request) {
         : null,
       teamStats,
       topPlayers,
+      ppmSplits,
+      lineMovement: lineMovementData,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
