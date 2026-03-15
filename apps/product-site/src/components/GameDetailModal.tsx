@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Game } from "@/types/game";
 import GameCharts from "./GameCharts";
 import GameSplitsTab from "./GameSplitsTab";
+import PlayByPlayTab from "./PlayByPlayTab";
 
 interface GameDetailModalProps {
   game: Game;
@@ -103,7 +104,7 @@ export default function GameDetailModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
-    "charts" | "stats" | "players" | "refs" | "splits"
+    "charts" | "splits" | "plays" | "stats" | "players" | "refs"
   >("charts");
 
   const fetchDetails = useCallback(async () => {
@@ -304,7 +305,7 @@ export default function GameDetailModal({
           {/* Tab Navigation — horizontal on mobile, vertical on desktop */}
           <div className="p-3 border-b lg:border-b-0 border-neutral-800">
             <div className="flex lg:flex-col gap-1">
-              {(["charts", "splits", "stats", "players", "refs"] as const).map((tab) => (
+              {(["charts", "splits", "plays", "stats", "players", "refs"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -318,6 +319,17 @@ export default function GameDetailModal({
                     {
                       charts: "CHARTS",
                       splits: "SPLITS",
+                      plays: (
+                        <span className="flex items-center justify-center lg:justify-start gap-1">
+                          PLAYS
+                          {game.status === "in" && (
+                            <span className="relative flex h-1.5 w-1.5">
+                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00ffff] opacity-75" />
+                              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#00ffff]" />
+                            </span>
+                          )}
+                        </span>
+                      ),
                       stats: "STATS",
                       players: "PLAYERS",
                       refs: "REFS",
@@ -374,6 +386,14 @@ export default function GameDetailModal({
                 {loading ? "Loading split data..." : "No data available"}
               </div>
             )
+          )}
+
+          {/* Plays Tab */}
+          {activeTab === "plays" && (
+            <PlayByPlayTab
+              gameId={game.id}
+              isLive={game.status === "in"}
+            />
           )}
 
           {details && !loading && (

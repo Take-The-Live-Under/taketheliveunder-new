@@ -175,11 +175,15 @@ export default function Home() {
     [isInitialLoad],
   );
 
+  // Smart poll: 5s when live games are active, 15s otherwise
   useEffect(() => {
     fetchGames();
-    const interval = setInterval(() => fetchGames(false, true), 15000);
+    const interval = setInterval(() => {
+      const hasLive = games.some((g) => g.status === "in");
+      fetchGames(false, hasLive); // only show refresh spinner when live
+    }, games.some((g) => g.status === "in") ? 5000 : 15000);
     return () => clearInterval(interval);
-  }, [fetchGames]);
+  }, [fetchGames, games]);
 
   // Fetch KenPom predictions when upcoming tab is selected
   useEffect(() => {
@@ -742,7 +746,7 @@ export default function Home() {
             <span className="text-neutral-600">//</span>
             <span>Last sync: {new Date(lastUpdated).toLocaleTimeString()}</span>
             <span className="text-neutral-800">|</span>
-            <span>Poll: 15s</span>
+            <span>Poll: {games.some((g) => g.status === "in") ? "5s" : "15s"}</span>
           </div>
         )}
       </div>
