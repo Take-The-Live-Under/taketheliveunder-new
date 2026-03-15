@@ -248,12 +248,12 @@ export default function GameDetailModal({
                 <p className="text-neutral-700 text-xs">@</p>
                 {game.status === "in" && (
                   <p className="text-[10px] text-[#00ffff]/70 mt-1 font-mono">
-                    {details?.period === 1
+                    {game.period === 1
                       ? "H1"
-                      : details?.period === 2
+                      : game.period === 2
                         ? "H2"
-                        : `OT${(details?.period || 3) - 2}`}{" "}
-                    {details?.clock}
+                        : `OT${(game.period || 3) - 2}`}{" "}
+                    {game.clock}
                   </p>
                 )}
               </div>

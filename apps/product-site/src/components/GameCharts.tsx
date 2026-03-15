@@ -230,7 +230,7 @@ export default function GameCharts({
   useEffect(() => {
     if (useRealtime && game.status === "in") {
       addRealtimeDataPoint();
-      const interval = setInterval(addRealtimeDataPoint, 15000);
+      const interval = setInterval(addRealtimeDataPoint, 5000);
       return () => clearInterval(interval);
     }
   }, [useRealtime, game, addRealtimeDataPoint]);
