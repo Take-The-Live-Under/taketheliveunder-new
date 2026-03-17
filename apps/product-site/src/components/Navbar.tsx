@@ -66,7 +66,6 @@ export function Navbar({
               <Logo size="sm" />
             </Link>
             <div className="hidden sm:flex items-center gap-3 border-l border-neutral-800 pl-4">
-              {navLink("/brief", "Brief")}
               {navLink("/research", "Research")}
               {navLink("/bracket", "Bracket")}
             </div>
