@@ -20,6 +20,7 @@ import { logGameSnapshots } from '@/lib/queries/snapshots';
 import { updateLineCache, cleanLineCache } from '@/lib/queries/lineHistory';
 import { analyzeMatchup } from '@/lib/allTeamFoulGameData';
 import { getTeamBadge, getGameWarnings, shouldFilterTrigger } from '@/lib/teamFilters';
+import { teamsMatch as canonicalTeamsMatch } from '@/lib/teamNormalization';
 
 const ESPN_URL =
   'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard';
@@ -198,22 +199,21 @@ function normalizeTeamName(name: string): string {
 
 /**
  * Match ESPN team name to Odds API team name
+ * Uses the canonical 366-team normalization map first, then falls back to ad-hoc matching
  */
 function teamsMatch(espnName: string, oddsName: string): boolean {
+  // Use the canonical mapping (handles NC State ↔ North Carolina State, etc.)
+  if (canonicalTeamsMatch(espnName, oddsName)) return true;
+
+  // Fallback: ad-hoc matching for teams not in the mapping
   const espnNorm = normalizeTeamName(espnName);
   const oddsNorm = normalizeTeamName(oddsName);
 
-  // Direct match
   if (espnNorm === oddsNorm) return true;
-
-  // Partial match (one contains the other)
   if (espnNorm.includes(oddsNorm) || oddsNorm.includes(espnNorm)) return true;
 
-  // Check if main part of name matches
   const espnParts = espnNorm.split(' ');
   const oddsParts = oddsNorm.split(' ');
-
-  // Match on first word (school name)
   if (espnParts[0] === oddsParts[0]) return true;
 
   return false;

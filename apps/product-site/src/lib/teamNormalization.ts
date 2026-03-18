@@ -383,6 +383,19 @@ UNIFIED_MAPPINGS.forEach((mapping, idx) => {
   if (kenpom) NAME_TO_ID.set(kenpom.toLowerCase(), idx);
 });
 
+// Additional aliases for teams the Odds API may return under a different name
+const EXTRA_ALIASES: Record<string, string> = {
+  'north carolina state wolfpack': 'nc state wolfpack',
+  'north carolina state': 'nc state wolfpack',
+};
+
+Object.entries(EXTRA_ALIASES).forEach(([alias, canonical]) => {
+  const canonicalId = NAME_TO_ID.get(canonical.toLowerCase());
+  if (canonicalId !== undefined) {
+    NAME_TO_ID.set(alias.toLowerCase(), canonicalId);
+  }
+});
+
 // Get canonical team ID from any name format
 function getTeamId(name: string): number | null {
   const lower = name.toLowerCase().trim();
