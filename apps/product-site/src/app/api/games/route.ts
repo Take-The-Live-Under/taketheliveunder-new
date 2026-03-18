@@ -426,6 +426,7 @@ export async function GET() {
       const currentPPM = calculateCurrentPPM(liveTotal, minutesRemainingReg);
 
       // Find O/U line from odds data
+      // Try both orientations since ESPN and Odds API sometimes disagree on home/away
       let ouLine: number | null = null;
       const oddsEntries = Array.from(oddsMap.entries());
       for (let i = 0; i < oddsEntries.length; i++) {
@@ -433,7 +434,10 @@ export async function GET() {
         const parts = key.split('|');
         const oddsAway = parts[0];
         const oddsHome = parts[1];
-        if (teamsMatch(awayTeam, oddsAway) && teamsMatch(homeTeam, oddsHome)) {
+        if (
+          (teamsMatch(awayTeam, oddsAway) && teamsMatch(homeTeam, oddsHome)) ||
+          (teamsMatch(awayTeam, oddsHome) && teamsMatch(homeTeam, oddsAway))
+        ) {
           ouLine = line;
           break;
         }
