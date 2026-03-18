@@ -50,6 +50,10 @@ export interface Game {
   // Bonus status - fouls against each team (opponent fouls = your free throws)
   homeBonusStatus?: BonusStatus;  // Based on away team's fouls against home
   awayBonusStatus?: BonusStatus;  // Based on home team's fouls against away
+  // Possession metrics (live games only)
+  possessions?: number | null;       // Estimated total possessions so far
+  pointsPerPoss?: number | null;     // Points per possession (PPP)
+  pace?: number | null;              // Projected possessions per 40 min
   // Team directional filters (based on season analysis)
   homeTeamBadge?: { text: string; color: string } | null;
   awayTeamBadge?: { text: string; color: string } | null;

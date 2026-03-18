@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Game } from "@/types/game";
 import TriggerBuilder from "./TriggerBuilder";
 
@@ -60,6 +61,7 @@ function getUnderTriggerStrength(requiredPPM: number | null): number {
 }
 
 export default function GameCard({ game, isPinned = false, onPin, onClick }: GameCardProps) {
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const isLive = game.status === "in";
   const isUnderTriggered = game.triggerType === "under";
   const isTripleDipper = game.triggerType === "tripleDipper";
@@ -505,6 +507,51 @@ export default function GameCard({ game, isPinned = false, onPin, onClick }: Gam
               {edge > 0 ? "+" : ""}
               {edge.toFixed(2)}
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Advanced Stats Toggle (Possessions) */}
+      {isLive && game.possessions != null && game.possessions > 0 && (
+        <div className="mb-3">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowAdvanced(!showAdvanced); }}
+            className="w-full flex items-center justify-between rounded-lg border border-neutral-800/50 bg-neutral-900/40 px-3 py-1.5 text-[10px] text-neutral-600 font-mono uppercase tracking-wide hover:text-neutral-400 hover:border-neutral-700 transition-colors"
+          >
+            <span>// ADV STATS</span>
+            <span>{showAdvanced ? "▲" : "▼"}</span>
+          </button>
+          <div
+            className={`transition-all duration-300 ease-out overflow-hidden ${
+              showAdvanced ? "max-h-24 opacity-100 mt-2" : "max-h-0 opacity-0"
+            }`}
+          >
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-lg bg-neutral-900/60 border border-neutral-800/50 p-2 text-center">
+                <div className="text-[10px] text-neutral-600 uppercase tracking-wide font-mono">
+                  POSS
+                </div>
+                <div className="text-sm font-bold text-white tabular-nums font-mono">
+                  {game.possessions}
+                </div>
+              </div>
+              <div className="rounded-lg bg-neutral-900/60 border border-neutral-800/50 p-2 text-center">
+                <div className="text-[10px] text-neutral-600 uppercase tracking-wide font-mono">
+                  PPP
+                </div>
+                <div className="text-sm font-bold text-[#00ffff] tabular-nums font-mono">
+                  {game.pointsPerPoss?.toFixed(2) ?? "—"}
+                </div>
+              </div>
+              <div className="rounded-lg bg-neutral-900/60 border border-neutral-800/50 p-2 text-center">
+                <div className="text-[10px] text-neutral-600 uppercase tracking-wide font-mono">
+                  PACE
+                </div>
+                <div className="text-sm font-bold text-white tabular-nums font-mono">
+                  {game.pace?.toFixed(1) ?? "—"}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -69,11 +69,18 @@ interface OddsAPIGame {
   }>;
 }
 
+interface GamePossessionData {
+  possessions: number;       // Estimated total possessions (both teams)
+  pointsPerPoss: number;     // Points per possession
+  pace: number;              // Projected possessions per 40 min
+}
+
 interface GameBonusData {
   homeTeamFouls: number;  // Fouls committed BY home team (against away)
   awayTeamFouls: number;  // Fouls committed BY away team (against home)
   homeBonusStatus: BonusStatus;
   awayBonusStatus: BonusStatus;
+  possessionData: GamePossessionData | null;
 }
 
 /**
@@ -173,12 +180,83 @@ async function fetchGameBonusData(gameId: string, currentPeriod: number): Promis
       }
     }
 
+    // Extract box score stats for possession calculation
+    // Poss ≈ FGA - OREB + TO + 0.475 * FTA (per team, then average both)
+    let possessionData: GamePossessionData | null = null;
+    try {
+      let totalFGA = 0, totalOREB = 0, totalTO = 0, totalFTA = 0, totalPoints = 0;
+
+      for (const team of boxscoreTeams) {
+        const stats = team.statistics || [];
+        const parseStat = (name: string): number => {
+          const val = stats.find((s: { name: string }) => s.name === name)?.displayValue || '0';
+          return parseInt(val, 10) || 0;
+        };
+        // FGA and FTA come as "made-attempted" format, parse the attempted part
+        const parseSplitStat = (name: string): { made: number; attempted: number } => {
+          const val = stats.find((s: { name: string }) => s.name === name)?.displayValue || '0-0';
+          const parts = val.split('-');
+          return { made: parseInt(parts[0], 10) || 0, attempted: parseInt(parts[1], 10) || 0 };
+        };
+
+        const fg = parseSplitStat('fieldGoalsMade-fieldGoalsAttempted');
+        const ft = parseSplitStat('freeThrowsMade-freeThrowsAttempted');
+        const oreb = parseStat('offensiveRebounds');
+        const to = parseStat('turnovers');
+
+        totalFGA += fg.attempted;
+        totalFTA += ft.attempted;
+        totalOREB += oreb;
+        totalTO += to;
+
+        // Sum points from header scores (more reliable) or calculate from box score
+        const teamId = team.team?.id;
+        const teamComp = competitors.find((c: { id?: string }) => c.id === teamId);
+        const teamPts = parseInt(teamComp?.score || '0', 10) || 0;
+        if (teamPts > 0) {
+          totalPoints += teamPts;
+        } else {
+          // Fallback: calculate from FG + 3PT + FT
+          const threes = parseSplitStat('threePointFieldGoalsMade-threePointFieldGoalsAttempted');
+          totalPoints += (fg.made - threes.made) * 2 + threes.made * 3 + ft.made;
+        }
+      }
+
+      if (totalFGA > 0) {
+        // Average both teams' possession estimates for accuracy
+        const poss = totalFGA - totalOREB + totalTO + 0.475 * totalFTA;
+        // Each team has ~equal possessions, so total game possessions = poss / 2
+        const gamePoss = Math.round(poss / 2);
+
+        if (gamePoss > 0) {
+          const ppp = Math.round((totalPoints / gamePoss) * 100) / 100;
+
+          // Get minutes elapsed from header
+          const gameStatus = header?.competitions?.[0]?.status;
+          const period = gameStatus?.period || currentPeriod;
+          const clockStr = gameStatus?.displayClock || '20:00';
+          const [cm, cs] = clockStr.split(':').map(Number);
+          const clockMins = (cm || 0) + (cs || 0) / 60;
+          const minutesElapsed = period === 1 ? (20 - clockMins) : period >= 2 ? (20 + (20 - clockMins)) : 0;
+
+          const pace = minutesElapsed > 0
+            ? Math.round((gamePoss / minutesElapsed) * 40 * 10) / 10
+            : null;
+
+          possessionData = { possessions: gamePoss, pointsPerPoss: ppp, pace };
+        }
+      }
+    } catch (possError) {
+      console.error(`Error calculating possessions for game ${gameId}:`, possError);
+    }
+
     return {
       homeTeamFouls: homeTeamCurrentHalfFouls,
       awayTeamFouls: awayTeamCurrentHalfFouls,
       // Bonus status is based on OPPONENT's fouls (your team gets free throws when opponent fouls)
       homeBonusStatus: calculateBonusStatus(awayTeamCurrentHalfFouls, isEstimated),
       awayBonusStatus: calculateBonusStatus(homeTeamCurrentHalfFouls, isEstimated),
+      possessionData,
     };
   } catch (error) {
     console.error(`Error fetching bonus data for game ${gameId}:`, error);
@@ -592,12 +670,17 @@ export async function GET() {
             .map(r => [r.gameId, r.bonusData!])
         );
 
-        // Merge bonus data into games
+        // Merge bonus + possession data into games
         for (const game of games) {
           const bonus = bonusMap.get(game.id);
           if (bonus) {
             game.homeBonusStatus = bonus.homeBonusStatus;
             game.awayBonusStatus = bonus.awayBonusStatus;
+            if (bonus.possessionData) {
+              game.possessions = bonus.possessionData.possessions;
+              game.pointsPerPoss = bonus.possessionData.pointsPerPoss;
+              game.pace = bonus.possessionData.pace;
+            }
           }
         }
       } catch (error) {
