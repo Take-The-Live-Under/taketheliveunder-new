@@ -382,11 +382,23 @@ export async function GET() {
     const todayStr = formatDateForESPN(today);
     const tomorrowStr = formatDateForESPN(easternTomorrow);
 
-    // Fetch today's ESPN games
-    const espnResponse = await fetch(`${ESPN_URL}?limit=500&groups=50&dates=${todayStr}`, {
-      next: { revalidate: 0 },
-      cache: 'no-store'
-    });
+    // Always fetch today AND yesterday from ESPN to avoid missing games
+    // that cross the date boundary (ESPN may file late-night ET games under
+    // the next UTC date, or vice versa). Dedup by event ID handles overlaps.
+    const easternYesterday = new Date(easternToday);
+    easternYesterday.setDate(easternYesterday.getDate() - 1);
+    const yesterdayStr = formatDateForESPN(easternYesterday);
+
+    const [espnResponse, yesterdayResponse] = await Promise.all([
+      fetch(`${ESPN_URL}?limit=500&groups=50&dates=${todayStr}`, {
+        next: { revalidate: 0 },
+        cache: 'no-store'
+      }),
+      fetch(`${ESPN_URL}?limit=500&groups=50&dates=${yesterdayStr}`, {
+        next: { revalidate: 0 },
+        cache: 'no-store'
+      }),
+    ]);
 
     if (!espnResponse.ok) {
       throw new Error(`ESPN API error: ${espnResponse.status}`);
@@ -395,30 +407,16 @@ export async function GET() {
     const espnData = await espnResponse.json();
     let espnEvents: ESPNEvent[] = espnData.events || [];
 
-    // If it's early morning (before 4am Eastern), also fetch yesterday's scoreboard.
-    // Late-night games that crossed midnight Eastern may only appear on the previous date's
-    // scoreboard — without this they disappear from the UI entirely.
-    if (easternToday.getHours() < 4) {
+    // Merge yesterday's games (dedup by event ID)
+    if (yesterdayResponse.ok) {
       try {
-        const easternYesterday = new Date(easternToday.getTime() - 86400000);
-        const yesterdayStr = formatDateForESPN(easternYesterday);
-        const yesterdayResponse = await fetch(`${ESPN_URL}?limit=500&groups=50&dates=${yesterdayStr}`, {
-          next: { revalidate: 0 },
-          cache: 'no-store'
-        });
-        if (yesterdayResponse.ok) {
-          const yesterdayData = await yesterdayResponse.json();
-          const yesterdayEvents: ESPNEvent[] = yesterdayData.events || [];
-          // Carry over all yesterday's games (live + recent finals + upcoming)
-          // to avoid losing visibility after midnight ET
-          const existingIds = new Set(espnEvents.map((e) => e.id));
-          const carryOver = yesterdayEvents.filter(
-            (e) => !existingIds.has(e.id)
-          );
-          espnEvents = [...carryOver, ...espnEvents];
-        }
+        const yesterdayData = await yesterdayResponse.json();
+        const yesterdayEvents: ESPNEvent[] = yesterdayData.events || [];
+        const existingIds = new Set(espnEvents.map((e) => e.id));
+        const carryOver = yesterdayEvents.filter((e) => !existingIds.has(e.id));
+        espnEvents = [...carryOver, ...espnEvents];
       } catch (error) {
-        console.error('Error fetching yesterday games:', error);
+        console.error('Error parsing yesterday games:', error);
       }
     }
 
