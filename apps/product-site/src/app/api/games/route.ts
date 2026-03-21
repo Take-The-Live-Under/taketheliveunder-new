@@ -397,7 +397,7 @@ export async function GET() {
 
     // If it's early morning (before 4am Eastern), also fetch yesterday's scoreboard.
     // Late-night games that crossed midnight Eastern may only appear on the previous date's
-    // scoreboard but still be live — without this they disappear from the UI.
+    // scoreboard — without this they disappear from the UI entirely.
     if (easternToday.getHours() < 4) {
       try {
         const easternYesterday = new Date(easternToday.getTime() - 86400000);
@@ -409,12 +409,13 @@ export async function GET() {
         if (yesterdayResponse.ok) {
           const yesterdayData = await yesterdayResponse.json();
           const yesterdayEvents: ESPNEvent[] = yesterdayData.events || [];
-          // Only carry over games that are still live — deduplicate by event id
+          // Carry over all yesterday's games (live + recent finals + upcoming)
+          // to avoid losing visibility after midnight ET
           const existingIds = new Set(espnEvents.map((e) => e.id));
-          const liveYesterday = yesterdayEvents.filter(
-            (e) => e.status?.type?.state === 'in' && !existingIds.has(e.id)
+          const carryOver = yesterdayEvents.filter(
+            (e) => !existingIds.has(e.id)
           );
-          espnEvents = [...liveYesterday, ...espnEvents];
+          espnEvents = [...carryOver, ...espnEvents];
         }
       } catch (error) {
         console.error('Error fetching yesterday games:', error);
